@@ -1,0 +1,68 @@
+---
+# Render sushy-emulator config + a systemd --user unit, and list the per-node
+# Redfish BMC URLs. No root: the unit runs in the user session.
+#   ansible-playbook sushy.yml
+# Then either run it directly:
+#   sushy-emulator --config ../sushy/conf.py \
+#     --ssl-certificate ../localhost-cert.pem --ssl-key ../localhost-key.pem -i 0.0.0.0
+# or install the user service:
+#   mkdir -p ~/.config/systemd/user
+#   cp ../sushy/sushy-emulator.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now sushy-emulator
+- name: Configure sushy-emulator (Redfish BMC)
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    out_dir: "{{ playbook_dir }}/../sushy"
+    repo_dir: "{{ playbook_dir | dirname }}"
+    venv_bin: "{{ playbook_dir | dirname }}/.venv/bin"
+    tls_cert: "{{ playbook_dir | dirname }}/certs/localhost-cert.pem"
+    tls_key: "{{ playbook_dir | dirname }}/certs/localhost-key.pem"
+    sushy_conf: "{{ playbook_dir | dirname }}/sushy/conf.py"
+
+  tasks:
+    - name: Detect OVMF firmware (for the UEFI boot loader map)
+      ansible.builtin.import_tasks: tasks/detect_ovmf.yml
+
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Ensure output dir exists
+      ansible.builtin.file:
+        path: "{{ out_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Render sushy config
+      ansible.builtin.template:
+        src: templates/sushy-emulator.conf.j2
+        dest: "{{ out_dir }}/conf.py"
+        mode: "0644"
+
+    - name: Render systemd --user unit
+      ansible.builtin.template:
+        src: templates/sushy-emulator.service.j2
+        dest: "{{ out_dir }}/sushy-emulator.service"
+        mode: "0644"
+
+    - name: Write per-node BMC (Redfish) URLs
+      ansible.builtin.copy:
+        dest: "{{ out_dir }}/bmc-urls.txt"
+        mode: "0644"
+        content: |
+          {% for c in topology %}
+          # {{ c.name }} ({{ c.mode }})  BMC LAN host {{ c.bmc_host }}:{{ sushy_port }}
+          {% for n in c.nodes %}
+          {{ n.fullname }}  {{ n.bmc_address }}
+          {% endfor %}
+          {% endfor %}
+
+    - name: Next steps
+      ansible.builtin.debug:
+        msg:
+          - "sushy config: {{ out_dir }}/conf.py  unit: {{ out_dir }}/sushy-emulator.service"
+          - "BMC URLs: {{ out_dir }}/bmc-urls.txt"
+          - "Run: sushy-emulator --config {{ sushy_conf }}"
+          - "  --ssl-certificate {{ tls_cert }} --ssl-key {{ tls_key }} -i 0.0.0.0 -p {{ sushy_port }}"

@@ -1,0 +1,61 @@
+# IPI vs agent-based
+
+Both install baremetal OpenShift with the same `platform: baremetal` networking
+(integrated keepalived + HAProxy for the API and ingress VIPs). They differ in
+how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
+`ansible/group_vars/all.yml`.
+
+## Agent-based (default)
+
+* You build a discovery ISO (`make iso`) from `install-config.yaml` +
+  `agent-config.yaml`. Nodes boot it and self-orchestrate around a rendezvous
+  node; no central provisioner is required during install.
+* Boot is by `boot_via`:
+  * `iso` (default): the ISO is attached to the VM; `virsh start` boots it. No BMC needed.
+  * `redfish`: sushy mounts the ISO as virtual media and powers the node on. This
+    is the automated, enterprise path and exercises the BMC.
+* Day-2 BMC power control:
+  * Out-of-band (host/admin to BMC) always works: run sushy and use
+    `make boot CLUSTER=<c> BMC_ACTION=on|off|reset|status`.
+  * In-cluster (the cluster manages its own nodes via metal3 `BareMetalHost`):
+    needs `platform: baremetal` (node_count >= 3). On such a cluster the agent
+    install **already creates a `BareMetalHost` per control-plane node**, but in
+    `unmanaged` state (no BMC creds). To enable power management you add the BMC
+    address + a credentials secret to those existing BMHs (`make adopt` deploys
+    the `Provisioning` CR; then patch each BMH's `spec.bmc`). Because the hosts
+    are already adopted (they have a `consumerRef`), metal3 moves them to
+    `externally provisioned` and manages power **without reprovisioning**.
+    Do NOT apply a fresh `BareMetalHost` over a running node, that triggers
+    inspection/reprovision (`make adopt` only applies new BMHs when
+    `ADOPT_HOSTS=1`, for genuinely fresh hardware).
+    On `platform: none` (single-node) the operator stays dormant (no metal3),
+    so single-node is out-of-band (`make boot`) only.
+* Best for: SNO, small/edge, environments where you cannot give the installer
+  standing BMC credentials, or air-gapped first boot.
+
+## IPI (installer-provisioned)
+
+* `openshift-install create cluster` drives metal3/Ironic, which talks to each
+  node's BMC over Redfish to mount RHCOS via virtual media, power on, and
+  inspect/provision. No prebuilt ISO; the VMs have an empty CD that sushy fills.
+* `install-config.yaml` carries `platform.baremetal.hosts[]` with each node's
+  `bmc.address` (the sushy Redfish URL), credentials, `bootMACAddress`, and
+  `networkConfig` (the same bond nmstate).
+* `provisioning_network_mode`: `Disabled` (virtual-media, default and simplest)
+  or `Managed` (metal3 runs DHCP/PXE on the provisioning LAN; the lab fills in
+  CIDR, DHCP range, cluster/bootstrap provisioning IPs, and the interface).
+* Needs a transient bootstrap VM on the host during install.
+* metal3 + a `BareMetalHost` per node are created **during install** (BMC is a
+  prerequisite), so in-cluster power management is present immediately. No
+  `make adopt` step (that is the agent-baremetal Day-2 path).
+* Best for: continuous metal3-managed lifecycle, large fleets, mirroring how
+  many production baremetal clusters are run.
+
+## What the lab wires either way
+
+* Deterministic libvirt domain UUID per node, so the Redfish System URL is stable.
+* Per-node BMC URL on the OOB LAN: `redfish-virtualmedia://172.16.<c>.1:8000/redfish/v1/Systems/<uuid>`.
+* sushy-emulator config + systemd unit (`make sushy`).
+* Power / virtual-media control: `make boot CLUSTER=c BMC_ACTION=on|off|reset|boot-iso`.
+
+See [fidelity.md](fidelity.md) for what is and isn't faithfully emulated.

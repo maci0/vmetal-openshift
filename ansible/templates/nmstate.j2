@@ -1,0 +1,86 @@
+{# nmstate networkConfig for a node, from nic_layout + node.addresses.
+   Used by agent-config and IPI hosts[]. Renders at column 0; callers indent
+   with | indent(N, true). Reads globals nic_layout, networks, default_bond_mode.
+   Each bond: untagged primary (`network`, static IP, gateway/DNS/route) or a
+   `trunk` carrier with tagged `vlans` (static IPs, isolated per tag). #}
+{% macro nmstate(node, cluster) %}
+{% set gns = namespace(i=0, primary='') %}
+interfaces:
+{% for b in nic_layout %}
+{% set ports = [] %}
+{% for k in range(b.nics) %}{% set _ = ports.append('eth' ~ gns.i) %}{% set gns.i = gns.i + 1 %}{% endfor %}
+{% set mode = b.mode | default(default_bond_mode) %}
+{% set mt = namespace(v=1500) %}
+{% for v in b.vlans | default([]) %}{% if (networks[v.network].mtu | default(1500)) > mt.v %}{% set mt.v = networks[v.network].mtu %}{% endif %}{% endfor %}
+{% if b.network is defined and (networks[b.network].mtu | default(1500)) > mt.v %}{% set mt.v = networks[b.network].mtu %}{% endif %}
+{% set bmtu = mt.v %}
+- name: {{ b.bond }}
+  type: bond
+  state: up
+{% if bmtu > 1500 %}
+  mtu: {{ bmtu }}
+{% endif %}
+{% if b.network is defined %}
+{% set gns.primary = b.bond %}
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: {{ node.addresses[b.network] }}
+      prefix-length: 24
+{% else %}
+  ipv4:
+    enabled: false
+{% endif %}
+  link-aggregation:
+    mode: {{ mode }}
+    options:
+      miimon: "100"
+{% if mode == '802.3ad' %}
+      lacp_rate: fast
+      xmit_hash_policy: layer3+4
+{% elif mode == 'balance-xor' %}
+      xmit_hash_policy: layer3+4
+{% endif %}
+    port:
+{% for p in ports %}
+    - {{ p }}
+{% endfor %}
+{% for p in ports %}
+- name: {{ p }}
+  type: ethernet
+  state: up
+{% if bmtu > 1500 %}
+  mtu: {{ bmtu }}
+{% endif %}
+{% endfor %}
+{% for v in b.vlans | default([]) %}
+- name: {{ b.bond }}.{{ v.id }}
+  type: vlan
+  state: up
+{% if networks[v.network].mtu is defined %}
+  mtu: {{ networks[v.network].mtu }}
+{% endif %}
+  vlan:
+    base-iface: {{ b.bond }}
+    id: {{ v.id }}
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: {{ node.addresses[v.network] }}
+      prefix-length: 24
+{% endfor %}
+{% endfor %}
+dns-resolver:
+  config:
+    server:
+    - {{ cluster.machine_gateway }}
+    search:
+    - {{ cluster.fqdn }}
+routes:
+  config:
+  - destination: 0.0.0.0/0
+    next-hop-address: {{ cluster.machine_gateway }}
+    next-hop-interface: {{ gns.primary }}
+{% endmacro %}

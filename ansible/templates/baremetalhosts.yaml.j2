@@ -1,0 +1,34 @@
+{#
+  BareMetalHost CRs so the installed cluster manages these nodes via the BMC
+  (power on/off, reboot, MachineHealthCheck, scaling). Apply after install:
+    oc apply -f clusters/<name>/baremetalhosts.yaml
+  For agent-based installs this is the Day-2 hook that wires the cluster to the
+  Redfish BMC; for IPI the same data already lives in install-config.
+#}
+{% for node in cluster.nodes %}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ node.fullname }}-bmc-secret
+  namespace: openshift-machine-api
+type: Opaque
+stringData:
+  username: {{ cluster.bmc_user }}
+  password: {{ cluster.bmc_pass }}
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: {{ node.fullname }}
+  namespace: openshift-machine-api
+spec:
+  online: true
+  bootMACAddress: {{ node.mac }}
+  bmc:
+    address: {{ node.bmc_address }}
+    credentialsName: {{ node.fullname }}-bmc-secret
+    disableCertificateVerification: true
+  rootDeviceHints:
+    deviceName: /dev/vda
+{% endfor %}

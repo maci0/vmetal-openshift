@@ -1,0 +1,45 @@
+---
+# Auto-detect OVMF (UEFI) firmware. Skipped if ovmf_code AND ovmf_vars are set
+# explicitly in group_vars/all.yml. Secure-boot variants are preferred.
+# Covers Arch/CachyOS, Fedora, RHEL/CentOS, Debian/Ubuntu, openSUSE.
+- name: Auto-detect OVMF firmware pair
+  when: (ovmf_code | default('')) == '' or (ovmf_vars | default('')) == ''
+  block:
+    - name: Search OVMF candidate pairs (CODE|VARS, secure-boot first)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        pairs=(
+          # Arch / CachyOS
+          "/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd|/usr/share/edk2/x64/OVMF_VARS.4m.fd"
+          "/usr/share/edk2/x64/OVMF_CODE.4m.fd|/usr/share/edk2/x64/OVMF_VARS.4m.fd"
+          # Fedora
+          "/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd|/usr/share/edk2/ovmf/OVMF_VARS.fd"
+          "/usr/share/edk2/ovmf/OVMF_CODE.fd|/usr/share/edk2/ovmf/OVMF_VARS.fd"
+          # RHEL / CentOS Stream
+          "/usr/share/OVMF/OVMF_CODE.secboot.fd|/usr/share/OVMF/OVMF_VARS.fd"
+          # Debian / Ubuntu (4M, then legacy)
+          "/usr/share/OVMF/OVMF_CODE_4M.secboot.fd|/usr/share/OVMF/OVMF_VARS_4M.fd"
+          "/usr/share/OVMF/OVMF_CODE_4M.fd|/usr/share/OVMF/OVMF_VARS_4M.fd"
+          "/usr/share/OVMF/OVMF_CODE.fd|/usr/share/OVMF/OVMF_VARS.fd"
+          # openSUSE
+          "/usr/share/qemu/ovmf-x86_64-code.bin|/usr/share/qemu/ovmf-x86_64-vars.bin"
+        )
+        for p in "${pairs[@]}"; do
+          c="${p%%|*}"; v="${p##*|}"
+          if [[ -f "$c" && -f "$v" ]]; then echo "$c|$v"; exit 0; fi
+        done
+        echo "NONE"; exit 1
+      args:
+        executable: /bin/bash
+      register: ovmf_found
+      changed_when: false
+      failed_when: ovmf_found.rc != 0
+
+    - name: Set OVMF firmware facts
+      ansible.builtin.set_fact:
+        ovmf_code: "{{ ovmf_found.stdout | trim | split('|') | first }}"
+        ovmf_vars: "{{ ovmf_found.stdout | trim | split('|') | last }}"
+
+- name: Show OVMF firmware in use
+  ansible.builtin.debug:
+    msg: "OVMF CODE={{ ovmf_code }} VARS={{ ovmf_vars }}"

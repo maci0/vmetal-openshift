@@ -1,0 +1,57 @@
+{% import 'nmstate.j2' as net with context %}
+{% set ps = lookup('file', pull_secret_file, errors='ignore') %}
+{% set sk = lookup('file', ssh_key_file, errors='ignore') %}
+apiVersion: v1
+baseDomain: {{ cluster.base_domain }}
+metadata:
+  name: {{ cluster.name }}
+controlPlane:
+  name: master
+  replicas: {{ cluster.control_plane_replicas }}
+  architecture: amd64
+compute:
+- name: worker
+  replicas: {{ cluster.worker_replicas }}
+  architecture: amd64
+networking:
+  networkType: OVNKubernetes
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  serviceNetwork:
+  - 172.30.0.0/16
+  machineNetwork:
+  - cidr: {{ cluster.machine_cidr }}
+platform:
+  baremetal:
+    apiVIPs:
+    - {{ cluster.api_vip }}
+    ingressVIPs:
+    - {{ cluster.ingress_vip }}
+    provisioningNetwork: {{ cluster.provisioning_mode | default('Disabled') }}
+{% if (cluster.provisioning_mode | default('Disabled')) == 'Managed' %}
+    provisioningNetworkCIDR: {{ cluster.provisioning_cidr }}
+    provisioningDHCPRange: {{ cluster.provisioning_dhcp_start }},{{ cluster.provisioning_dhcp_end }}
+    clusterProvisioningIP: {{ cluster.cluster_provisioning_ip }}
+    bootstrapProvisioningIP: {{ cluster.bootstrap_provisioning_ip }}
+    provisioningInterface: {{ cluster.prov_interface }}
+{% endif %}
+    hosts:
+{% for node in cluster.nodes %}
+    - name: {{ node.fullname }}
+      role: {{ node.role }}
+      bootMACAddress: {{ node.mac }}
+      bmc:
+        address: {{ node.bmc_address }}
+        username: {{ cluster.bmc_user }}
+        password: {{ cluster.bmc_pass }}
+        disableCertificateVerification: true
+      rootDeviceHints:
+        deviceName: /dev/vda
+      networkConfig:
+{{ net.nmstate(node, cluster) | indent(8, true) }}
+{% endfor %}
+pullSecret: '{{ (ps | from_json | to_json) if ps else "REPLACE_WITH_PULL_SECRET_JSON" }}'
+{% if sk %}
+sshKey: '{{ sk | trim }}'
+{% endif %}

@@ -1,0 +1,150 @@
+---
+# ============================================================================
+# Libvirt connection
+# ============================================================================
+# qemu:///system needs root or libvirt-group membership.
+libvirt_uri: qemu:///system
+storage_pool: default
+images_dir: /var/lib/libvirt/images
+
+# OVMF (UEFI) firmware. Leave empty to auto-detect across distros
+# (tasks/detect_ovmf.yml). Set explicitly to pin a specific pair.
+ovmf_code: ""
+ovmf_vars: ""
+
+# ============================================================================
+# Addressing scheme, EVERYTHING below derives from these. Nothing hardcoded.
+# ============================================================================
+base_domain: ocp.lab            # default; override per cluster
+
+# Diverse, production-like subnets, each role lives in its own RFC1918 block
+# instead of all crammed into 192.168/16:
+#   machine      10.{c}.0.0/24     data/rendezvous net (VIP, DHCP, DNS)
+#   storage      10.{c}.10.0/24    dedicated storage net
+#   oob/BMC      172.16.{c}.0/24   out-of-band management (Redfish lives here)
+#   provisioning 172.22.{c}.0/24   metal3-conventional provisioning range
+# `{c}` is the cluster index, so clusters never overlap. All nets are /24.
+# Tidy host-octet layout on the machine net:
+#   .5  api VIP        .6  ingress VIP
+#   .10 node0  .11 node1  .12 node2 ...   (static; rendezvous = node0)
+#   .128-.254 dynamic DHCP pool
+# Single-node (SNO) has no VIPs/LB, api + *.apps resolve to the node IP (.10).
+node_ip_offset: 10
+api_vip_offset: 5
+ingress_vip_offset: 6
+dhcp_pool_start: 128            # dynamic DHCP range (host octets) on each network
+dhcp_pool_end: 254
+mac_oui: "52:54:00"            # locally-administered OUI; node MACs derived from indices
+
+# Networks (subnets + how libvirt realizes each). `{c}` = cluster index.
+#   kind: nat      libvirt NAT network: gateway, DHCP, DNS, reservations, VIPs
+#   kind: isolated libvirt isolated bridge with a gateway IP
+#   kind: l2       libvirt isolated bridge, NO IP: a pure VLAN-trunk carrier
+#   kind: vlan     not a libvirt network: a tagged subinterface on a trunk bond
+#                  (static IPs, real guest-to-guest isolation by tag)
+networks:
+  machine: { cidr: "10.{c}.0.0/24", kind: nat, dns: true }
+  oob: { cidr: "172.16.{c}.0/24", kind: isolated }
+  provisioning: { cidr: "172.22.{c}.0/24", kind: vlan }
+  trunk: { kind: l2, mtu: 9000 }
+  storage: { cidr: "10.{c}.10.0/24", kind: vlan, mtu: 9000 }
+  migration: { cidr: "10.{c}.20.0/24", kind: vlan, mtu: 9000 }
+
+# NIC layout: the physical NIC/bond/VLAN shape of each node, fully configurable.
+# Mirrors an OpenShift Virtualization reference design:
+#   bond0 = 2 onboard NICs -> machine network (native) + provisioning VLAN.
+#           Provisioning stays on the onboard bond, NOT on the data card.
+#   bond1 = 4-port data card -> storage + live-migration VLANs (the CNV data
+#           plane). Live migration gets its own isolated VLAN per Red Hat guidance.
+# A bond attaches to one libvirt network (its `network`'s bridge, or a `trunk`
+# carrier) and may carry an untagged `network` and/or tagged `vlans`. The OOB/BMC
+# LAN has no guest NIC (out-of-band), so it is not in nic_layout.
+nic_layout:
+  - bond: bond0
+    nics: 2
+    mode: active-backup
+    network: machine
+    vlans:
+      - { network: provisioning, id: 20 }
+  - bond: bond1
+    nics: 4
+    mode: balance-alb   # active-active, works over libvirt. Use 802.3ad with a real switch.
+    trunk: trunk
+    vlans:
+      - { network: storage, id: 30 }
+      - { network: migration, id: 40 }
+
+# ============================================================================
+# Install method + emulated BMC (sushy Redfish) + bonding/MTU fidelity
+# ============================================================================
+# Per cluster (override with install_mode in a cluster entry):
+#   agent -> boot the discovery ISO (agent-based installer)
+#   ipi   -> metal3/Ironic drives nodes via Redfish virtual media (no ISO)
+install_mode: agent
+
+# How agent-mode nodes receive the discovery ISO:
+#   iso     -> ISO attached straight to the VM; boot with `virsh start` (no BMC).
+#   redfish -> empty drive; sushy mounts the ISO as virtual media and powers the
+#              node on (mirrors production automated boot). IPI always uses redfish.
+# Either way the BMC (sushy Redfish) is wired and BareMetalHost manifests are
+# generated, so the cluster can do Day-2 power control / reboots / scaling.
+boot_via: iso
+
+# sushy-emulator Redfish endpoint. BMCs live on each cluster's OOB LAN
+# (172.16.{c}.1). Credentials are placeholders, sushy runs without auth by
+# default; install-config still requires the fields.
+sushy_port: 8000
+bmc_username: admin
+bmc_password: password
+# IPI provisioning network: Disabled (virtual-media, simplest) or Managed (PXE).
+provisioning_network_mode: Disabled
+
+# Default bond mode for any nic_layout bond that doesn't set its own `mode`:
+#   balance-alb   active-active, no switch support needed (works over libvirt)
+#   active-backup one active NIC, simplest
+#   802.3ad       LACP active-active, the common enterprise mode with a switch
+#                 (cannot truly aggregate over libvirt bridges, see docs/fidelity.md)
+#   balance-xor / balance-rr  also active-active
+default_bond_mode: balance-alb
+
+# Control plane size + master scheduling.
+#   control_plane_count: 1 (single-node) or 3. workers = node_count - this.
+#     e.g. node_count 5 -> 3 masters + 2 workers; node_count 3 -> 3 masters (compact).
+#   masters_schedulable: auto | true | false. `auto` = schedulable only when there
+#     are no workers (compact/SNO, matching the installer default). Set `true` to
+#     also run workloads on the control plane when workers are present.
+control_plane_count_default: 3   # used when node_count > 1
+masters_schedulable: auto
+
+# NTP sources written to install-config (baremetal nodes need time sync).
+# Empty list => omit additionalNTPSources.
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+# Per-node defaults (override per cluster via memory_mib / vcpus / disks).
+default_memory_mib: 32768
+default_vcpus: 16
+default_disks:
+  - { suffix: disk0, capacity_gib: 128, target: vda }
+  - { suffix: disk1, capacity_gib: 1024, target: vdb }
+
+# ============================================================================
+# The only thing you normally edit: how many clusters, how many nodes each.
+# ============================================================================
+# Per-cluster optional overrides: base_domain, node_count, memory_mib, vcpus,
+# disks, install_mode, boot_via, provisioning_network_mode, api/ingress_vip_offset,
+# subnet_index (pin this cluster's {c} index so its subnets stay stable).
+clusters:
+  - name: cluster0
+    node_count: 3
+
+# Examples:
+#   - name: cluster0
+#     node_count: 5            # 3 masters + 2 workers
+#   - name: edge
+#     node_count: 3            # compact (masters auto-schedulable)
+#     masters_schedulable: true
+#   - name: cluster1
+#     node_count: 3
+#     memory_mib: 24576

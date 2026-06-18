@@ -1,0 +1,34 @@
+<network{% if net.dns_options is defined %} xmlns:dnsmasq="http://libvirt.org/schemas/network/dnsmasq/1.0"{% endif %}>
+  <name>{{ net.name }}</name>
+{% if net.forward == 'nat' %}
+  <forward mode="nat">
+    <nat>
+      <port start="1024" end="65535"/>
+    </nat>
+  </forward>
+{% endif %}
+  <bridge name="{{ net.bridge }}" stp="on" delay="0"/>
+{% if net.mtu is defined %}
+  <mtu size="{{ net.mtu }}"/>
+{% endif %}
+{% if net.domain is defined %}
+  <domain name="{{ net.domain }}" localOnly="yes"/>
+{% endif %}
+{% if net.gateway is defined %}
+  <ip address="{{ net.gateway }}" netmask="{{ net.netmask }}">
+    <dhcp>
+      <range start="{{ net.dhcp_start }}" end="{{ net.dhcp_end }}"/>
+{% for r in net.reservations | default([]) %}
+      <host mac="{{ r.mac }}" name="{{ r.name }}" ip="{{ r.ip }}"/>
+{% endfor %}
+    </dhcp>
+  </ip>
+{% endif %}
+{% if net.dns_options is defined %}
+  <dnsmasq:options>
+{% for opt in net.dns_options %}
+    <dnsmasq:option value="{{ opt }}"/>
+{% endfor %}
+  </dnsmasq:options>
+{% endif %}
+</network>

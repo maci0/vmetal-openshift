@@ -1,0 +1,63 @@
+<domain type="kvm">
+  <name>{{ node.fullname }}</name>
+  <uuid>{{ node.uuid }}</uuid>
+  <memory unit="MiB">{{ node.memory_mib }}</memory>
+  <vcpu placement="static">{{ node.vcpus }}</vcpu>
+  <os>
+    <type arch="x86_64" machine="q35">hvm</type>
+    <loader readonly="yes" type="pflash">{{ ovmf_code }}</loader>
+    <nvram template="{{ ovmf_vars }}"/>
+    <bios useserial="yes"/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <smm state="on"/>
+  </features>
+  <cpu mode="host-passthrough" check="none"/>
+  <devices>
+{% for d in node.disks %}
+    <disk type="file" device="disk">
+      <driver name="qemu" type="qcow2"/>
+      <source file="{{ images_dir }}/{{ node.fullname }}-{{ d.suffix }}.qcow2"/>
+      <target dev="{{ d.target }}" bus="virtio"/>
+    </disk>
+{% endfor %}
+{% if cluster.static_iso %}
+    {# agent + boot_via=iso: attach the discovery ISO directly (boot with
+       `virsh start`, no BMC needed). Otherwise the drive is empty and sushy/
+       metal3 inserts the image over Redfish virtual media. #}
+    <disk type="file" device="cdrom">
+      <driver name="qemu" type="raw"/>
+      <source file="{{ cluster.discovery_iso }}"/>
+      <target dev="sda" bus="sata"/>
+      <readonly/>
+    </disk>
+{% else %}
+    <!-- empty drive; sushy/metal3 inserts the image via Redfish virtual media -->
+    <disk type="file" device="cdrom">
+      <driver name="qemu" type="raw"/>
+      <target dev="sda" bus="sata"/>
+      <readonly/>
+    </disk>
+{% endif %}
+{% for nic in node.interfaces %}
+    <!-- {{ nic.bond }} slave ({{ nic.devname }}) -> {{ nic.attach }} -->
+    <interface type="network">
+      <source network="{{ nic.attach }}"/>
+      <mac address="{{ nic.mac }}"/>
+      <model type="virtio"/>
+{% if nic.mtu is defined %}
+      <mtu size="{{ nic.mtu }}"/>
+{% endif %}
+    </interface>
+{% endfor %}
+    <serial type="pty">
+      <target port="0"/>
+    </serial>
+    <console type="pty">
+      <target type="serial" port="0"/>
+    </console>
+    <graphics type="vnc" port="-1" autoport="yes"/>
+  </devices>
+</domain>

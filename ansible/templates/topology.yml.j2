@@ -1,0 +1,140 @@
+{#
+  Derive the full lab topology from the addressing scheme, `networks`, and
+  `nic_layout`. Rendered to YAML and parsed into the `topology` fact.
+
+  networks: map name -> {cidr, kind, dns, mtu}. kind nat/isolated/l2 become
+    libvirt networks; kind vlan are tagged subinterfaces on a trunk bond.
+  nic_layout: bonds. A bond attaches untagged to one `network`, or to a `trunk`
+    carrier with tagged `vlans`. NIC device names are eth0..N in nic_layout order.
+
+  MAC: <oui>:<cluster-index>:<bond*16 + nic>:<node-octet>. Node IPs (machine +
+  each vlan) are static; the machine net also has DHCP reservations for them.
+#}
+{% for c in clusters %}
+{%   set ci = c.subnet_index | default(loop.index0) %}
+{%   set domain = c.name ~ '.' ~ (c.base_domain | default(base_domain)) %}
+{%   set ncount = c.node_count | default(1) | int %}
+{%   set cp = (1 if ncount == 1 else (c.control_plane_count | default(control_plane_count_default))) | int %}
+{%   set workers = ncount - cp %}
+{%   set sched = c.masters_schedulable | default(masters_schedulable) | string %}
+{%   set masters_sched = true if sched == 'True' or sched == 'true' else (false if sched == 'False' or sched == 'false' else (workers == 0)) %}
+{%   set machine_cidr = networks.machine.cidr | replace('{c}', ci | string) %}
+{%   set mp3 = machine_cidr.split('/')[0].rsplit('.', 1)[0] %}
+{%   set api_o = c.api_vip_offset | default(api_vip_offset) | int %}
+{%   set ing_o = c.ingress_vip_offset | default(ingress_vip_offset) | int %}
+{%   set api_vip = (mp3 ~ '.' ~ node_ip_offset) if ncount == 1 else (mp3 ~ '.' ~ api_o) %}
+{%   set ingress_vip = (mp3 ~ '.' ~ node_ip_offset) if ncount == 1 else (mp3 ~ '.' ~ ing_o) %}
+{%   set mode = c.install_mode | default(install_mode) %}
+{%   set boot = c.boot_via | default(boot_via) %}
+{%   set static_iso = (mode == 'agent') and (boot == 'iso') %}
+{%   set oob_cidr = (networks.oob.cidr | replace('{c}', ci | string)) if networks.oob is defined else '' %}
+{%   set bmc_host = (oob_cidr.split('/')[0].rsplit('.', 1)[0] ~ '.1') if oob_cidr else (mp3 ~ '.1') %}
+{#   provisioning interface for IPI Managed: the vlan/bond carrying it #}
+{%   set pn = namespace(dev='') %}
+{%   for b in nic_layout %}
+{%     if b.network | default('') == 'provisioning' %}{% set pn.dev = b.bond %}{% endif %}
+{%     for v in b.vlans | default([]) %}{% if v.network == 'provisioning' %}{% set pn.dev = b.bond ~ '.' ~ v.id %}{% endif %}{% endfor %}
+{%   endfor %}
+{%   set prov_cidr = (networks.provisioning.cidr | replace('{c}', ci | string)) if networks.provisioning is defined else '' %}
+{%   set prov_p3 = prov_cidr.split('/')[0].rsplit('.', 1)[0] if prov_cidr else '' %}
+- name: {{ c.name }}
+  fqdn: {{ domain }}
+  base_domain: {{ c.base_domain | default(base_domain) }}
+  sno: {{ ncount == 1 }}
+  mode: {{ mode }}
+  static_iso: {{ static_iso }}
+  api_vip: {{ api_vip }}
+  ingress_vip: {{ ingress_vip }}
+  control_plane_replicas: {{ cp }}
+  worker_replicas: {{ workers }}
+  masters_schedulable: {{ masters_sched }}
+  machine_net: {{ c.name }}-machine
+  machine_cidr: {{ machine_cidr }}
+  machine_gateway: {{ mp3 }}.1
+  rendezvous_ip: {{ mp3 }}.{{ node_ip_offset }}
+  discovery_iso: {{ playbook_dir }}/../build/discovery_image_{{ c.name }}.iso
+  bmc_host: {{ bmc_host }}
+  bmc_user: {{ bmc_username }}
+  bmc_pass: {{ bmc_password }}
+{%   if prov_cidr %}
+  provisioning_mode: {{ c.provisioning_network_mode | default(provisioning_network_mode) }}
+  provisioning_cidr: {{ prov_cidr }}
+  provisioning_dhcp_start: {{ prov_p3 }}.10
+  provisioning_dhcp_end: {{ prov_p3 }}.100
+  cluster_provisioning_ip: {{ prov_p3 }}.2
+  bootstrap_provisioning_ip: {{ prov_p3 }}.3
+  prov_interface: {{ pn.dev }}
+{%   endif %}
+  networks:
+{%   for nname, n in networks.items() %}
+{%     if n.kind in ['nat', 'isolated', 'l2'] %}
+{%       set p3 = (n.cidr | replace('{c}', ci | string)).split('/')[0].rsplit('.', 1)[0] if n.cidr is defined else '' %}
+    - name: {{ c.name }}-{{ nname }}
+      role: {{ nname }}
+      kind: {{ n.kind }}
+      bridge: br{{ ci }}{{ nname[0] }}
+      forward: {{ 'nat' if n.kind == 'nat' else 'none' }}
+{%       if n.mtu is defined %}
+      mtu: {{ n.mtu }}
+{%       endif %}
+{%       if n.cidr is defined %}
+      gateway: {{ p3 }}.1
+      netmask: 255.255.255.0
+      dhcp_start: {{ p3 }}.{{ dhcp_pool_start }}
+      dhcp_end: {{ p3 }}.{{ dhcp_pool_end }}
+{%       endif %}
+{%       if n.dns | default(false) %}
+      domain: {{ domain }}
+      dns_options:
+        - "address=/.apps.{{ domain }}/{{ ingress_vip }}"
+        - "address=/api.{{ domain }}/{{ api_vip }}"
+        - "address=/api-int.{{ domain }}/{{ api_vip }}"
+      reservations:
+{%         for nidx in range(ncount) %}
+        - name: {{ c.name }}-node{{ nidx }}
+          mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_ip_offset + nidx) }}"
+          ip: {{ p3 }}.{{ node_ip_offset + nidx }}
+{%         endfor %}
+{%       endif %}
+{%     endif %}
+{%   endfor %}
+  nodes:
+{%   for nidx in range(ncount) %}
+{%     set node_o = node_ip_offset + nidx %}
+{%     set ns = namespace(i=0) %}
+    - name: node{{ nidx }}
+      fullname: {{ c.name }}-node{{ nidx }}
+      role: {{ 'master' if nidx < cp else 'worker' }}
+      ip: {{ mp3 }}.{{ node_o }}
+      mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_o) }}"
+      uuid: {{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}
+      bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}"
+      memory_mib: {{ c.memory_mib | default(default_memory_mib) }}
+      vcpus: {{ c.vcpus | default(default_vcpus) }}
+      addresses:
+{%     for nname, n in networks.items() %}
+{%       if n.cidr is defined and n.kind in ['nat', 'vlan'] %}
+        {{ nname }}: {{ (n.cidr | replace('{c}', ci | string)).split('/')[0].rsplit('.', 1)[0] }}.{{ node_o }}
+{%       endif %}
+{%     endfor %}
+      interfaces:
+{%     for b in nic_layout %}
+{%       set bidx = loop.index0 %}
+{%       set attach = b.network | default(b.trunk) %}
+{%       for k in range(b.nics) %}
+        - devname: eth{{ ns.i }}
+          bond: {{ b.bond }}
+          attach: {{ c.name }}-{{ attach }}
+          mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:{{ '%02x' | format(bidx * 16 + k) }}:{{ '%02x' | format(node_o) }}"
+{%         if networks[attach].mtu is defined %}
+          mtu: {{ networks[attach].mtu }}
+{%         endif %}
+{%         set ns.i = ns.i + 1 %}
+{%       endfor %}
+{%     endfor %}
+      disks:
+{%     for d in c.disks | default(default_disks) %}
+        - { suffix: {{ d.suffix }}, capacity_gib: {{ d.capacity_gib }}, target: {{ d.target }} }
+{%     endfor %}
+{%   endfor %}
+{% endfor %}

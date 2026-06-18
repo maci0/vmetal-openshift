@@ -1,0 +1,16 @@
+[Unit]
+Description=sushy-emulator (Redfish BMC for libvirt)
+After=libvirtd.service network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart={{ venv_bin }}/sushy-emulator \
+  --config {{ sushy_conf }} \
+  --ssl-certificate {{ tls_cert }} \
+  --ssl-key {{ tls_key }} \
+  -i 0.0.0.0 -p {{ sushy_port }}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

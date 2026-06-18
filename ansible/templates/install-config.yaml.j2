@@ -1,0 +1,39 @@
+{% set ps = lookup('file', pull_secret_file, errors='ignore') %}
+{% set sk = lookup('file', ssh_key_file, errors='ignore') %}
+apiVersion: v1
+baseDomain: {{ cluster.base_domain }}
+metadata:
+  name: {{ cluster.name }}
+controlPlane:
+  name: master
+  replicas: {{ cluster.control_plane_replicas }}
+  architecture: amd64
+  hyperthreading: Enabled
+compute:
+- name: worker
+  replicas: {{ cluster.worker_replicas }}
+  architecture: amd64
+  hyperthreading: Enabled
+networking:
+  networkType: OVNKubernetes
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  serviceNetwork:
+  - 172.30.0.0/16
+  machineNetwork:
+  - cidr: {{ cluster.machine_cidr }}
+platform:
+{% if cluster.sno %}
+  none: {}
+{% else %}
+  baremetal:
+    apiVIPs:
+    - {{ cluster.api_vip }}
+    ingressVIPs:
+    - {{ cluster.ingress_vip }}
+{% endif %}
+pullSecret: '{{ (ps | from_json | to_json) if ps else "REPLACE_WITH_PULL_SECRET_JSON" }}'
+{% if sk %}
+sshKey: '{{ sk | trim }}'
+{% endif %}

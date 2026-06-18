@@ -1,0 +1,10 @@
+{# Day-1 manifest making control-plane nodes schedulable when workers exist.
+   Placed in <install-dir>/openshift/ so the agent installer applies it. Without
+   workers the installer already sets mastersSchedulable=true, so this is only
+   rendered when worker_replicas > 0 and masters_schedulable is true. #}
+apiVersion: config.openshift.io/v1
+kind: Scheduler
+metadata:
+  name: cluster
+spec:
+  mastersSchedulable: true

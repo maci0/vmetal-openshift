@@ -1,0 +1,60 @@
+---
+# Tear down every cluster in `clusters`: destroy/undefine VMs, remove their
+# volumes, and remove their networks. Scoped strictly to the derived topology,
+# unrelated libvirt networks/domains/volumes are never touched.
+#
+#   ansible-playbook cleanup.yml
+#
+- name: Tear down virtual baremetal OCP lab
+  hosts: local
+  gather_facts: false
+  become: "{{ use_become | default(true) }}"
+
+  tasks:
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Destroy and undefine domains (with nvram + storage)
+      ansible.builtin.shell: |
+        set -o pipefail
+        d="{{ item.1.fullname }}"
+        if virsh -c {{ libvirt_uri }} domstate "$d" >/dev/null 2>&1; then
+          virsh -c {{ libvirt_uri }} destroy "$d" 2>/dev/null || true
+          virsh -c {{ libvirt_uri }} undefine "$d" --nvram --remove-all-storage 2>/dev/null || true
+          echo "REMOVED $d"
+        fi
+      args:
+        executable: /bin/bash
+      loop: "{{ topology | subelements('nodes') }}"
+      loop_control:
+        label: "{{ item.1.fullname }}"
+      register: domdel
+      changed_when: "'REMOVED' in domdel.stdout"
+
+    - name: Delete leftover volumes
+      ansible.builtin.shell: |
+        set -o pipefail
+        {% for d in item.1.disks %}
+        vol="{{ item.1.fullname }}-{{ d.suffix }}.qcow2"
+        if virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }} "$vol" >/dev/null 2>&1; then
+          virsh -c {{ libvirt_uri }} vol-delete "$vol" --pool {{ storage_pool }}
+          echo "DELETED $vol"
+        fi
+        {% endfor %}
+      args:
+        executable: /bin/bash
+      loop: "{{ topology | subelements('nodes') }}"
+      loop_control:
+        label: "{{ item.1.fullname }}"
+      register: voldel
+      changed_when: "'DELETED' in voldel.stdout"
+
+    - name: Destroy and undefine networks
+      community.libvirt.virt_net:
+        name: "{{ item.1.name }}"
+        state: absent
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ topology | subelements('networks') }}"
+      loop_control:
+        label: "{{ item.1.name }}"

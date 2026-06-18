@@ -1,0 +1,43 @@
+# === Secrets: never commit ===
+pull-secret.json
+*-key.pem
+*.key
+
+# Local TLS material (certs/)
+certs/
+
+# Downloaded installer + built ISOs (build/)
+build/
+*.iso
+
+# Python venv + caches
+.venv/
+__pycache__/
+*.py[cod]
+
+# Ansible
+*.retry
+topology.json
+ansible/topology.json
+ansible/collections/
+
+# Generated sushy config + systemd unit + BMC list
+sushy/
+
+# Generated docs
+docs/*.pdf
+
+# Installer working dirs (state, logs, auth, generated manifests + configs with secrets)
+clusters/*/
+!clusters/.gitkeep
+.openshift_install.log
+.openshift_install_state.json
+auth/
+*.log
+
+# Editor / OS cruft
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store

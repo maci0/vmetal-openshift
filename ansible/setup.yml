@@ -1,0 +1,97 @@
+---
+# Create libvirt networks, volumes, and VMs for every cluster in `clusters`.
+# Topology (subnets, MACs, bridges, VIPs) is derived, see group_vars/all.yml.
+# Idempotent: re-running only creates what is missing.
+#
+#   ansible-playbook setup.yml            # qemu:///system (needs root)
+#   ansible-playbook setup.yml -K         # prompt for sudo if not in libvirt group
+#
+- name: Provision virtual baremetal OCP lab
+  hosts: local
+  gather_facts: false
+  become: "{{ use_become | default(true) }}"
+
+  tasks:
+    - name: Validate cluster definitions
+      ansible.builtin.import_tasks: tasks/validate.yml
+
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Detect OVMF firmware paths
+      ansible.builtin.import_tasks: tasks/detect_ovmf.yml
+
+    - name: Ensure storage pool is active
+      community.libvirt.virt_pool:
+        name: "{{ storage_pool }}"
+        state: active
+        uri: "{{ libvirt_uri }}"
+
+    - name: List existing libvirt networks
+      community.libvirt.virt_net:
+        command: list_nets
+        uri: "{{ libvirt_uri }}"
+      register: existing_nets
+
+    - name: Define networks (when absent)
+      community.libvirt.virt_net:
+        command: define
+        name: "{{ item.1.name }}"
+        xml: "{{ lookup('template', 'templates/network.xml.j2') }}"
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ topology | subelements('networks') }}"
+      loop_control:
+        label: "{{ item.1.name }}"
+      vars:
+        net: "{{ item.1 }}"
+      when: item.1.name not in existing_nets.list_nets
+
+    - name: Start networks and enable autostart
+      community.libvirt.virt_net:
+        name: "{{ item.1.name }}"
+        state: active
+        autostart: true
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ topology | subelements('networks') }}"
+      loop_control:
+        label: "{{ item.1.name }}"
+
+    - name: Create node volumes (idempotent)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        {% for d in item.1.disks %}
+        vol="{{ item.1.fullname }}-{{ d.suffix }}.qcow2"
+        if ! virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }} "$vol" >/dev/null 2>&1; then
+          virsh -c {{ libvirt_uri }} vol-create-as {{ storage_pool }} "$vol" {{ d.capacity_gib }}G --format qcow2
+          echo "CREATED $vol"
+        fi
+        {% endfor %}
+      args:
+        executable: /bin/bash
+      loop: "{{ topology | subelements('nodes') }}"
+      loop_control:
+        label: "{{ item.1.fullname }}"
+      register: volcreate
+      changed_when: "'CREATED' in volcreate.stdout"
+
+    - name: Define domains
+      community.libvirt.virt:
+        command: define
+        xml: "{{ lookup('template', 'templates/domain.xml.j2') }}"
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ topology | subelements('nodes') }}"
+      loop_control:
+        label: "{{ item.1.fullname }}"
+      vars:
+        cluster: "{{ item.0 }}"
+        node: "{{ item.1 }}"
+
+    - name: Start domains
+      community.libvirt.virt:
+        name: "{{ item.1.fullname }}"
+        state: running
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ topology | subelements('nodes') }}"
+      loop_control:
+        label: "{{ item.1.fullname }}"

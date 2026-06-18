@@ -1,0 +1,124 @@
+---
+# Render install configs per cluster from the derived topology. No libvirt, no
+# root. Output: clusters/<name>/.
+#   agent clusters -> install-config.yaml (agent flavor) + agent-config.yaml
+#                     + baremetalhosts.yaml (Day-2 BMC adoption)
+#   ipi clusters   -> install-config.yaml (baremetal hosts[] with BMC)
+#
+#   ansible-playbook generate-configs.yml
+#   ansible-playbook generate-configs.yml -e ssh_key_file=~/.ssh/id_rsa.pub
+- name: Generate OpenShift install configs
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    pull_secret_file: "{{ playbook_dir }}/../pull-secret.json"
+    ssh_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519.pub"
+    out_dir: "{{ playbook_dir }}/../clusters"
+
+  tasks:
+    - name: Validate cluster definitions
+      ansible.builtin.import_tasks: tasks/validate.yml
+
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Ensure per-cluster output dirs exist
+      ansible.builtin.file:
+        path: "{{ out_dir }}/{{ item.name }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Render agent install-config.yaml
+      ansible.builtin.template:
+        src: templates/install-config.yaml.j2
+        dest: "{{ out_dir }}/{{ item.name }}/install-config.yaml"
+        mode: "0600"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+      when: item.mode == 'agent'
+
+    - name: Render agent-config.yaml
+      ansible.builtin.template:
+        src: templates/agent-config.yaml.j2
+        dest: "{{ out_dir }}/{{ item.name }}/agent-config.yaml"
+        mode: "0600"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+      when: item.mode == 'agent'
+
+    - name: Ensure openshift/ manifests dir for schedulable-masters clusters
+      ansible.builtin.file:
+        path: "{{ out_dir }}/{{ item.name }}/openshift"
+        state: directory
+        mode: "0755"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.mode == 'agent' and item.masters_schedulable and item.worker_replicas | int > 0
+
+    - name: Render Scheduler manifest (masters schedulable with workers)
+      ansible.builtin.template:
+        src: templates/scheduler.yaml.j2
+        dest: "{{ out_dir }}/{{ item.name }}/openshift/cluster-scheduler-02-config.yml"
+        mode: "0644"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+      when: item.mode == 'agent' and item.masters_schedulable and item.worker_replicas | int > 0
+
+    - name: Render BareMetalHost manifests (Day-2 BMC adoption)
+      ansible.builtin.template:
+        src: templates/baremetalhosts.yaml.j2
+        dest: "{{ out_dir }}/{{ item.name }}/baremetalhosts.yaml"
+        mode: "0600"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+      when: item.mode == 'agent'
+
+    # IPI creates metal3 + BareMetalHosts during install, so the Provisioning CR
+    # is only a Day-2 artifact for AGENT baremetal clusters (>= 3 nodes).
+    - name: Render metal3 Provisioning CR (agent baremetal Day-2 adoption)
+      ansible.builtin.template:
+        src: templates/provisioning.yaml.j2
+        dest: "{{ out_dir }}/{{ item.name }}/provisioning.yaml"
+        mode: "0644"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+      when: not item.sno and item.mode == 'agent'
+
+    - name: Render IPI install-config.yaml (baremetal hosts with BMC)
+      ansible.builtin.template:
+        src: templates/install-config.ipi.yaml.j2
+        dest: "{{ out_dir }}/{{ item.name }}/install-config.yaml"
+        mode: "0600"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+      when: item.mode == 'ipi'
+
+    - name: Done
+      ansible.builtin.debug:
+        msg: >-
+          Wrote configs for {{ topology | map(attribute='name') | join(', ') }}
+          under {{ out_dir }}/.

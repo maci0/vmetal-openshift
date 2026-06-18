@@ -1,0 +1,23 @@
+---
+# Render the derived topology to JSON for tests / inspection. No libvirt, no root.
+#   ansible-playbook dump-topology.yml -e out=/tmp/topology.json
+- name: Dump derived topology
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    out: topology.json
+  tasks:
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Write topology JSON
+      ansible.builtin.copy:
+        content: "{{ topology | to_nice_json }}"
+        dest: "{{ out }}"
+        mode: "0644"
+
+    - name: Show where it went
+      ansible.builtin.debug:
+        msg: "Wrote {{ topology | length }} cluster(s) to {{ out }}"

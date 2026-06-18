@@ -1,0 +1,31 @@
+---
+# Make the HOST resolve each cluster's api / api-int / *.apps names.
+# libvirt's per-network dnsmasq answers these (via localOnly + address= options),
+# but the host resolver must be told to forward the cluster domain to it. This
+# writes a NetworkManager dnsmasq drop-in per cluster: server=/<fqdn>/<gateway>.
+# Needs the NetworkManager dnsmasq plugin (dns=dnsmasq) and root.
+#   ansible-playbook host-dns.yml -K
+- name: Configure host split-DNS for cluster domains
+  hosts: local
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Write NetworkManager dnsmasq forward per cluster
+      ansible.builtin.copy:
+        dest: "/etc/NetworkManager/dnsmasq.d/ocp-{{ item.name }}.conf"
+        mode: "0644"
+        content: "server=/{{ item.fqdn }}/{{ item.machine_gateway }}\n"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.fqdn }} -> {{ item.machine_gateway }}"
+      notify: Reload NetworkManager
+
+  handlers:
+    - name: Reload NetworkManager
+      ansible.builtin.service:
+        name: NetworkManager
+        state: reloaded

@@ -1,0 +1,26 @@
+{% import 'nmstate.j2' as net with context %}
+apiVersion: v1beta1
+kind: AgentConfig
+metadata:
+  name: {{ cluster.name }}
+rendezvousIP: {{ cluster.rendezvous_ip }}
+{% if ntp_servers | default([]) %}
+additionalNTPSources:
+{% for s in ntp_servers %}
+- {{ s }}
+{% endfor %}
+{% endif %}
+hosts:
+{% for node in cluster.nodes %}
+- hostname: {{ node.fullname }}
+  role: {{ node.role }}
+  rootDeviceHints:
+    deviceName: /dev/vda
+  interfaces:
+{%   for nic in node.interfaces %}
+  - name: {{ nic.devname }}
+    macAddress: {{ nic.mac }}
+{%   endfor %}
+  networkConfig:
+{{ net.nmstate(node, cluster) | indent(4, true) }}
+{% endfor %}

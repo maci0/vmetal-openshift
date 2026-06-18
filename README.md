@@ -143,7 +143,7 @@ make down                       # tear everything down
    agent clusters, `agent-config.yaml` and `baremetalhosts.yaml` (Day-2 BMC
    adoption). `build-iso.sh` wraps that and builds the agent ISO.
 4. **setup.yml** creates the libvirt networks, volumes, and VMs.
-5. **sushy-emulator** presents each VM as a Redfish BMC; `boot.yml` powers nodes
+5. **sushy-emulator** presents each VM as a Redfish BMC; `bmc.yml` powers nodes
    and mounts virtual media.
 
 ## 🗂 Cluster topologies
@@ -182,28 +182,10 @@ integrated keepalived + HAProxy.
 ### NIC layout (configurable, `nic_layout`)
 
 Mirrors an OpenShift Virtualization reference design: 2 onboard NICs bonded for the
-machine network (provisioning VLAN on the same onboard bond), plus a 4-port data
-card bonded (active-active) as a VLAN trunk for storage + live-migration. A bond
-attaches to one libvirt network (its `network`'s bridge, or an L2 `trunk`) and may
-carry an untagged `network` and/or tagged `vlans` (real guest-to-guest isolation
-per tag).
-
-```yaml
-nic_layout:
-  - bond: bond0           # onboard
-    nics: 2
-    mode: active-backup
-    network: machine      # untagged primary
-    vlans:
-      - { network: provisioning, id: 20 }
-  - bond: bond1           # 4-port data card
-    nics: 4
-    mode: balance-alb     # active-active; use 802.3ad with a real switch
-    trunk: trunk
-    vlans:
-      - { network: storage, id: 30 }
-      - { network: migration, id: 40 }
-```
+machine network (provisioning VLAN on the same bond), plus a 4-port data card
+bonded (active-active) as a VLAN trunk for storage + live-migration. Configure it
+in `ansible/group_vars/all.yml` (see [variables](docs/variables.md)); a bond may
+carry an untagged `network` and/or tagged `vlans` with real per-tag isolation.
 
 ```mermaid
 flowchart LR
@@ -261,7 +243,7 @@ See [docs/ipi-vs-agent.md](docs/ipi-vs-agent.md).
 
 ```bash
 make sushy                                   # render sushy/conf.py + unit + bmc-urls.txt
-make boot CLUSTER=cluster0 BMC_ACTION=on     # status | on | off | reset | boot-iso
+make bmc CLUSTER=cluster0 BMC_ACTION=on     # status | on | off | reset | boot-iso
 make adopt CLUSTER=cluster0                  # in-cluster BMH power mgmt (baremetal only)
 ```
 BMC URLs are `redfish-virtualmedia://172.16.<c>.1:8000/redfish/v1/Systems/<uuid>`.
@@ -277,18 +259,18 @@ KEEP=1 scripts/e2e.sh
 ## 📁 Layout
 
 ```
-Makefile                  check / bootstrap / configs / iso / sushy / host-dns / up / down / boot / adopt / lint / e2e / pdf
+Makefile                  check / bootstrap / configs / iso / sushy / host-dns / up / down / bmc / adopt / lint / e2e / pdf
 scripts/                  bootstrap, build-iso, check-prereqs, adopt, test-dns, lint, e2e, export-pdf
 build/                    downloaded installer + built ISOs (git-ignored)
 certs/                    local TLS material for sushy (git-ignored)
-ansible/
+ansible/                  see ansible/README.md for the full map
   group_vars/all.yml      addressing scheme + clusters (the file you edit)
   setup.yml cleanup.yml   provision / teardown
   generate-configs.yml    render install-config / agent-config / BareMetalHost / Scheduler
-  sushy.yml boot.yml      Redfish config + power/virtual-media
+  sushy.yml bmc.yml       Redfish config + power / boot / virtual-media
   host-dns.yml            host split-DNS for the cluster domains
   dump-topology.yml       render derived topology to JSON (test oracle)
-  templates/*.j2          topology, libvirt XML, install/agent configs, nmstate macro
+  templates/               topology.yml.j2 + libvirt/ + install/ + sushy/
   tasks/                  detect_ovmf, validate
 tests/render_check.py     offline template + XML validation
 docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, examples, troubleshooting

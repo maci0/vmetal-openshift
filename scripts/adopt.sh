@@ -3,7 +3,7 @@
 # Applies the metal3 Provisioning CR (deploys metal3/ironic) and the BMH objects,
 # so the cluster power-manages its own nodes via the Redfish BMC.
 # Only works on platform: baremetal (node_count >= 3). Single-node clusters are
-# platform: none: the operator stays dormant, use out-of-band `make boot` there.
+# platform: none: the operator stays dormant, use out-of-band `make bmc` there.
 #   scripts/adopt.sh [cluster]
 set -euo pipefail
 

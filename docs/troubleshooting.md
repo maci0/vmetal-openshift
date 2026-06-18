@@ -10,7 +10,7 @@ Run `make check` first; it catches most environment problems up front.
 * **Redfish unreachable** at `https://<host>:8000`: check the process is up and
   the TLS cert/key paths are right; `curl -sk https://localhost:8000/redfish/v1/`
   should return JSON with `RedfishVersion`.
-* **`make boot` virtual-media insert fails**: the ISO must be served over HTTP.
+* **`make bmc` virtual-media insert fails**: the ISO must be served over HTTP.
   From the repo root run `python -m http.server 8080` and pass
   `-e iso_base_url=http://<host-on-OOB-LAN>:8080`. sushy fetches the image by URL.
 * **Wrong System URL**: BMC URLs use the deterministic domain UUID. If you
@@ -29,7 +29,7 @@ Run `make check` first; it catches most environment problems up front.
   ```bash
   curl -sk -X POST -H 'Content-Type: application/json' -d '{"ResetType":"On"}' \
     https://<oob-ip>:8000/redfish/v1/Systems/<node-uuid>/Actions/ComputerSystem.Reset
-  # or: make boot CLUSTER=<c> BMC_ACTION=on
+  # or: make bmc CLUSTER=<c> BMC_ACTION=on
   ```
   Once the node rejoins and the webhook reschedules, set `online: true` again so
   metal3 stops trying to keep it off. This is a real baremetal consideration, not
@@ -43,7 +43,7 @@ Run `make check` first; it catches most environment problems up front.
 * **VM boots to UEFI shell, no disk**: expected on first boot of an agent ISO
   cluster only if the ISO is not attached. For `boot_via: iso` confirm
   `build/discovery_image_<cluster>.iso` exists (`make iso`). For `boot_via: redfish`
-  insert media via `make boot ... BMC_ACTION=boot-iso`.
+  insert media via `make bmc ... BMC_ACTION=boot-iso`.
 * **OVMF / firmware error on define**: `tasks/detect_ovmf.yml` picked a missing
   path, or none was found. Install `edk2-ovmf` / `OVMF`, or pin `ovmf_code` /
   `ovmf_vars` in `group_vars/all.yml`.

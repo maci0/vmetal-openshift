@@ -37,13 +37,13 @@
 
     - name: Render sushy config
       ansible.builtin.template:
-        src: templates/sushy-emulator.conf.j2
+        src: templates/sushy/sushy-emulator.conf.j2
         dest: "{{ out_dir }}/conf.py"
         mode: "0644"
 
     - name: Render systemd --user unit
       ansible.builtin.template:
-        src: templates/sushy-emulator.service.j2
+        src: templates/sushy/sushy-emulator.service.j2
         dest: "{{ out_dir }}/sushy-emulator.service"
         mode: "0644"
 

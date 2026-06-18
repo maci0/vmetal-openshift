@@ -83,12 +83,14 @@ nic_layout:
 install_mode: agent
 
 # How agent-mode nodes receive the discovery ISO:
-#   iso     -> ISO attached straight to the VM; boot with `virsh start` (no BMC).
 #   redfish -> empty drive; sushy mounts the ISO as virtual media and powers the
-#              node on (mirrors production automated boot). IPI always uses redfish.
+#              node on (mirrors production automated boot). The default.
+#   iso     -> ISO attached straight to the VM; boot with `virsh start` (no BMC,
+#              no HTTP server). Simplest for a quick local run.
 # Either way the BMC (sushy Redfish) is wired and BareMetalHost manifests are
 # generated, so the cluster can do Day-2 power control / reboots / scaling.
-boot_via: iso
+# redfish needs sushy running and the ISO served over HTTP (see make bmc / bmc.yml).
+boot_via: redfish
 
 # sushy-emulator Redfish endpoint. BMCs live on each cluster's OOB LAN
 # (172.16.{c}.1). Credentials are placeholders, sushy runs without auth by

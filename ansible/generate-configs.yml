@@ -35,7 +35,7 @@
 
     - name: Render agent install-config.yaml
       ansible.builtin.template:
-        src: templates/install-config.yaml.j2
+        src: templates/install/install-config.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/install-config.yaml"
         mode: "0600"
       loop: "{{ topology }}"
@@ -47,7 +47,7 @@
 
     - name: Render agent-config.yaml
       ansible.builtin.template:
-        src: templates/agent-config.yaml.j2
+        src: templates/install/agent-config.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/agent-config.yaml"
         mode: "0600"
       loop: "{{ topology }}"
@@ -69,7 +69,7 @@
 
     - name: Render Scheduler manifest (masters schedulable with workers)
       ansible.builtin.template:
-        src: templates/scheduler.yaml.j2
+        src: templates/install/scheduler.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/openshift/cluster-scheduler-02-config.yml"
         mode: "0644"
       loop: "{{ topology }}"
@@ -81,7 +81,7 @@
 
     - name: Render BareMetalHost manifests (Day-2 BMC adoption)
       ansible.builtin.template:
-        src: templates/baremetalhosts.yaml.j2
+        src: templates/install/baremetalhosts.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/baremetalhosts.yaml"
         mode: "0600"
       loop: "{{ topology }}"
@@ -95,7 +95,7 @@
     # is only a Day-2 artifact for AGENT baremetal clusters (>= 3 nodes).
     - name: Render metal3 Provisioning CR (agent baremetal Day-2 adoption)
       ansible.builtin.template:
-        src: templates/provisioning.yaml.j2
+        src: templates/install/provisioning.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/provisioning.yaml"
         mode: "0644"
       loop: "{{ topology }}"
@@ -107,7 +107,7 @@
 
     - name: Render IPI install-config.yaml (baremetal hosts with BMC)
       ansible.builtin.template:
-        src: templates/install-config.ipi.yaml.j2
+        src: templates/install/install-config.ipi.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/install-config.yaml"
         mode: "0600"
       loop: "{{ topology }}"

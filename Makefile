@@ -6,7 +6,8 @@
 #   make sushy                render sushy Redfish config + systemd unit
 #   make host-dns             point the host resolver at the cluster domains
 #   make up / make down       provision / tear down (all clusters in group_vars)
-#   make boot CLUSTER=c BMC_ACTION=on   power/virtual-media via Redfish BMC (out-of-band)
+#   make bmc CLUSTER=c BMC_ACTION=...  Redfish BMC: status|on|off|force-off|reset|
+#                                       cycle|pxe|boot-disk|boot-iso|set-boot|media-* (NODE=node0)
 #   make adopt CLUSTER=c                in-cluster BMH adoption (platform baremetal only)
 #   make lint / make e2e      offline checks / live test
 #   make pdf                  export docs/architecture.pdf
@@ -17,12 +18,15 @@
 
 CLUSTER      ?= cluster0
 BMC_ACTION   ?= status
+NODE         ?=
+BOOTDEV      ?= Pxe
+ISO_BASE_URL ?=
 ANSIBLE_ARGS ?=
 OCP_CHANNEL  ?= stable
 OCP_VERSION  ?=          # e.g. 4.22.0; empty = newest in channel
 AP           := $(abspath $(shell [ -x .venv/bin/ansible-playbook ] && echo .venv/bin/ansible-playbook || echo ansible-playbook))
 
-.PHONY: check bootstrap configs iso sushy host-dns up down boot adopt lint e2e pdf clean help
+.PHONY: check bootstrap configs iso sushy host-dns up down bmc adopt lint e2e pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -51,8 +55,9 @@ up:
 down:
 	cd ansible && $(AP) cleanup.yml $(ANSIBLE_ARGS)
 
-boot:
-	cd ansible && $(AP) boot.yml -e cluster=$(CLUSTER) -e bmc_action=$(BMC_ACTION)
+bmc:
+	cd ansible && $(AP) bmc.yml -e cluster=$(CLUSTER) -e bmc_action=$(BMC_ACTION) \
+	  -e node=$(NODE) -e bootdev=$(BOOTDEV) -e iso_base_url=$(ISO_BASE_URL)
 
 adopt:
 	./scripts/adopt.sh $(CLUSTER)

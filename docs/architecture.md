@@ -134,11 +134,6 @@ flowchart LR
 End-to-end, from a bare host to a running cluster.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{
-  'primaryColor':'#6366f1','primaryTextColor':'#fff','primaryBorderColor':'#3730a3',
-  'lineColor':'#64748b','actorBkg':'#0ea5e9','actorTextColor':'#fff',
-  'actorBorder':'#075985','signalColor':'#334155','signalTextColor':'#1f2937',
-  'noteBkgColor':'#fef3c7','noteTextColor':'#92400e','noteBorderColor':'#f59e0b'}}}%%
 sequenceDiagram
   autonumber
   actor U as You
@@ -157,13 +152,13 @@ sequenceDiagram
   OI-->>U: build/discovery_image_<cluster>.iso
 
   U->>A: ansible-playbook setup.yml
-  Note over A: derive topology →<br/>networks (machine/oob/prov/storage)<br/>· volumes · VMs w/ bonded NICs
+  Note over A: derive topology →<br/>networks · volumes · VMs w/ bonded NICs
 
-  alt boot_via = iso (default)
+  alt boot_via = redfish (default) / IPI
+    U->>S: make bmc BMC_ACTION=boot-iso
+    S->>N: Redfish VirtualMedia (ISO) + PowerOn
+  else boot_via = iso
     A->>N: virsh start (boots the attached ISO, no BMC)
-  else boot_via = redfish / IPI
-    U->>S: sushy-emulator (TLS, on OOB LAN)
-    S->>N: Redfish PowerOn + VirtualMedia (per node)
   end
 
   N->>N: bond up · rendezvous · bootstrap ·<br/>form control plane
@@ -201,14 +196,10 @@ flowchart LR
 
 ## BMC power management (metal3 → Redfish → libvirt)
 
-Setting `online` on a `BareMetalHost` (or `make boot`) drives the whole emulated
+Setting `online` on a `BareMetalHost` (or `make bmc`) drives the whole emulated
 chain. This is what powered node2 off/on in the lab.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{
-  'primaryColor':'#6366f1','primaryTextColor':'#fff','primaryBorderColor':'#3730a3',
-  'lineColor':'#64748b','actorBkg':'#0ea5e9','actorTextColor':'#fff',
-  'actorBorder':'#075985','noteBkgColor':'#fef3c7','noteTextColor':'#92400e','noteBorderColor':'#f59e0b'}}}%%
 sequenceDiagram
   autonumber
   actor U as Admin
@@ -224,7 +215,7 @@ sequenceDiagram
   S->>L: virsh destroy / shutdown
   L->>N: power off
   Note over BMO,N: online=true reverses it (PowerOn). Status: poweredOn + state.
-  Note over U: If the BMO/webhook pod was on that node,<br/>recover out-of-band via the BMC (curl Redfish / make boot).
+  Note over U: If the BMO/webhook pod was on that node,<br/>recover out-of-band via the BMC (curl Redfish / make bmc).
 ```
 
 ## Test layers

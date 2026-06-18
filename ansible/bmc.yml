@@ -1,0 +1,158 @@
+---
+# Control cluster nodes through the emulated Redfish BMC (sushy-emulator).
+# The BMC path used in enterprise/automated installs and for Day-2 ops.
+#
+#   ansible-playbook bmc.yml -e cluster=cluster0 -e bmc_action=on
+#   ansible-playbook bmc.yml -e cluster=cluster0 -e node=node1 -e bmc_action=cycle
+#
+# bmc_action:
+#   status        show power state + one-time-boot + virtual media (default)
+#   on            power on
+#   off           graceful shutdown (ACPI)
+#   force-off     hard power off
+#   reset         graceful restart
+#   cycle         hard power cycle (force restart)
+#   pxe           one-time PXE boot, then power on
+#   boot-disk     one-time disk boot, then power on
+#   boot-iso      insert discovery ISO as virtual media, one-time CD boot, power on
+#   set-boot      set one-time boot to `bootdev` (Pxe|Cd|Hdd|BiosSetup), no power change
+#   media-insert  insert the discovery ISO as virtual media
+#   media-eject   eject virtual media
+#
+# node: limit to one node (e.g. node0); default = all nodes in the cluster.
+# bootdev: device for `set-boot` (default Pxe).
+# media-insert / boot-iso need the ISO served over HTTP, e.g. from the repo root:
+#   python -m http.server 8080
+# then pass -e iso_base_url=http://<host-on-oob-lan>:8080
+- name: Redfish BMC control
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    cluster: cluster0
+    bmc_action: status
+    node: ""
+    bootdev: Pxe
+    iso_base_url: ""
+    power_map:
+      "on": PowerOn
+      "off": PowerGracefulShutdown
+      force-off: PowerForceOff
+      reset: PowerGracefulRestart
+      cycle: PowerForceRestart
+      pxe: PowerOn
+      boot-disk: PowerOn
+      boot-iso: PowerOn
+    bootdev_map:
+      pxe: Pxe
+      boot-disk: Hdd
+      boot-iso: Cd
+
+  tasks:
+    - name: Validate cluster definitions
+      ansible.builtin.import_tasks: tasks/validate.yml
+
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Select target cluster
+      ansible.builtin.set_fact:
+        tgt: "{{ topology | selectattr('name', 'equalto', cluster) | first }}"
+
+    - name: Resolve BMC endpoint + target nodes
+      ansible.builtin.set_fact:
+        bmc_base: "{{ tgt.bmc_host | default(tgt.machine_gateway) }}:{{ sushy_port }}"
+        nodes: "{{ (tgt.nodes | selectattr('name', 'equalto', node) | list) if node else tgt.nodes }}"
+
+    - name: Fail on unknown node
+      ansible.builtin.assert:
+        that: nodes | length > 0
+        fail_msg: "node '{{ node }}' not found in cluster '{{ cluster }}'"
+        quiet: true
+
+    - name: Insert discovery ISO as virtual media
+      community.general.redfish_command:
+        category: Manager
+        command: VirtualMediaInsert
+        baseuri: "{{ bmc_base }}"
+        username: "{{ tgt.bmc_user }}"
+        password: "{{ tgt.bmc_pass }}"
+        validate_certs: false
+        resource_id: "{{ item.uuid }}"
+        virtual_media:
+          image_url: "{{ iso_base_url }}/discovery_image_{{ cluster }}.iso"
+          media_types: [CD, DVD]
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      when: bmc_action in ['media-insert', 'boot-iso']
+
+    - name: Eject virtual media
+      community.general.redfish_command:
+        category: Manager
+        command: VirtualMediaEject
+        baseuri: "{{ bmc_base }}"
+        username: "{{ tgt.bmc_user }}"
+        password: "{{ tgt.bmc_pass }}"
+        validate_certs: false
+        resource_id: "{{ item.uuid }}"
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      when: bmc_action == 'media-eject'
+
+    - name: Set one-time boot device
+      community.general.redfish_command:
+        category: Systems
+        command: SetOneTimeBoot
+        baseuri: "{{ bmc_base }}"
+        username: "{{ tgt.bmc_user }}"
+        password: "{{ tgt.bmc_pass }}"
+        validate_certs: false
+        resource_id: "{{ item.uuid }}"
+        bootdevice: "{{ bootdev_map[bmc_action] | default(bootdev) }}"
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      when: bmc_action in ['pxe', 'boot-disk', 'boot-iso', 'set-boot']
+
+    - name: Power / reset
+      community.general.redfish_command:
+        category: Systems
+        command: "{{ power_map[bmc_action] }}"
+        baseuri: "{{ bmc_base }}"
+        username: "{{ tgt.bmc_user }}"
+        password: "{{ tgt.bmc_pass }}"
+        validate_certs: false
+        resource_id: "{{ item.uuid }}"
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      when: bmc_action in power_map
+
+    - name: Query power + boot + media (status)
+      ansible.builtin.uri:
+        url: "https://{{ bmc_base }}/redfish/v1/Systems/{{ item.uuid }}"
+        method: GET
+        user: "{{ tgt.bmc_user }}"
+        password: "{{ tgt.bmc_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        return_content: true
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      register: rf
+      when: bmc_action == 'status'
+
+    - name: Show status
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.item.fullname }}: power={{ item.json.PowerState | default('?') }}
+          boot={{ item.json.Boot.BootSourceOverrideTarget | default('?') }}
+          ({{ item.json.Boot.BootSourceOverrideEnabled | default('?') }})
+      loop: "{{ rf.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.fullname }}"
+      when: bmc_action == 'status'

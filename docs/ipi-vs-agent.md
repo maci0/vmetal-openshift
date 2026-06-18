@@ -16,7 +16,7 @@ how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
     is the automated, enterprise path and exercises the BMC.
 * Day-2 BMC power control:
   * Out-of-band (host/admin to BMC) always works: run sushy and use
-    `make boot CLUSTER=<c> BMC_ACTION=on|off|reset|status`.
+    `make bmc CLUSTER=<c> BMC_ACTION=on|off|reset|status`.
   * In-cluster (the cluster manages its own nodes via metal3 `BareMetalHost`):
     needs `platform: baremetal` (node_count >= 3). On such a cluster the agent
     install **already creates a `BareMetalHost` per control-plane node**, but in
@@ -29,7 +29,7 @@ how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
     inspection/reprovision (`make adopt` only applies new BMHs when
     `ADOPT_HOSTS=1`, for genuinely fresh hardware).
     On `platform: none` (single-node) the operator stays dormant (no metal3),
-    so single-node is out-of-band (`make boot`) only.
+    so single-node is out-of-band (`make bmc`) only.
 * Best for: SNO, small/edge, environments where you cannot give the installer
   standing BMC credentials, or air-gapped first boot.
 
@@ -56,6 +56,6 @@ how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
 * Deterministic libvirt domain UUID per node, so the Redfish System URL is stable.
 * Per-node BMC URL on the OOB LAN: `redfish-virtualmedia://172.16.<c>.1:8000/redfish/v1/Systems/<uuid>`.
 * sushy-emulator config + systemd unit (`make sushy`).
-* Power / virtual-media control: `make boot CLUSTER=c BMC_ACTION=on|off|reset|boot-iso`.
+* Power / virtual-media control: `make bmc CLUSTER=c BMC_ACTION=on|off|reset|boot-iso`.
 
 See [fidelity.md](fidelity.md) for what is and isn't faithfully emulated.

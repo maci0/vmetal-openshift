@@ -38,7 +38,7 @@
       community.libvirt.virt_net:
         command: define
         name: "{{ item.1.name }}"
-        xml: "{{ lookup('template', 'templates/network.xml.j2') }}"
+        xml: "{{ lookup('template', 'templates/libvirt/network.xml.j2') }}"
         uri: "{{ libvirt_uri }}"
       loop: "{{ topology | subelements('networks') }}"
       loop_control:
@@ -78,7 +78,7 @@
     - name: Define domains
       community.libvirt.virt:
         command: define
-        xml: "{{ lookup('template', 'templates/domain.xml.j2') }}"
+        xml: "{{ lookup('template', 'templates/libvirt/domain.xml.j2') }}"
         uri: "{{ libvirt_uri }}"
       loop: "{{ topology | subelements('nodes') }}"
       loop_control:

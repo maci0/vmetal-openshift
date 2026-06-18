@@ -40,8 +40,8 @@ def check(label, clusters):
     v = dict(base)
     v["clusters"] = clusters
     topo = yaml.safe_load(env.get_template("topology.yml.j2").render(**v))
-    nt = env.get_template("network.xml.j2")
-    dt = env.get_template("domain.xml.j2")
+    nt = env.get_template("libvirt/network.xml.j2")
+    dt = env.get_template("libvirt/domain.xml.j2")
     subs, brs, macs = set(), set(), set()
     nic_total = sum(b["nics"] for b in base["nic_layout"])
     for c in topo:

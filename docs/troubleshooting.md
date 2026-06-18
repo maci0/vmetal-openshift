@@ -1,5 +1,7 @@
 # Troubleshooting
 
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · **Troubleshooting**</sub>
+
 Run `make check` first; it catches most environment problems up front.
 
 ## sushy / Redfish

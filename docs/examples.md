@@ -1,10 +1,12 @@
 # Rendered config examples
 
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · **Examples** · [Troubleshooting](troubleshooting.md)</sub>
+
 Produced by `ansible-playbook generate-configs.yml` from the topology, not
 written by hand. Pull secrets and passwords are redacted here. Regenerate with
 `make configs` (output in `clusters/<name>/`). The default `nic_layout` is a
-2-NIC onboard bond (machine, untagged) plus a 4-port LACP card carrying the
-storage + provisioning networks as VLANs.
+2-NIC onboard bond (machine + provisioning VLAN) plus a 4-port active-active card
+carrying the storage + live-migration networks as VLANs.
 
 ## SNO, agent (`node_count: 1`)
 

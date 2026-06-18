@@ -1,5 +1,7 @@
 # Disconnected (air-gapped) install
 
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · **Disconnected** · [Variables](variables.md) · [Examples](examples.md) · [Troubleshooting](troubleshooting.md)</sub>
+
 By default the machine network NATs to the host uplink, so the lab is
 **connected**: nodes pull the release payload and operator images from the
 internet. Production baremetal is frequently disconnected. This documents what

@@ -1,5 +1,7 @@
 # Fidelity: what this lab does and does not emulate
 
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · **Fidelity** · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Troubleshooting](troubleshooting.md)</sub>
+
 This is a single-host KVM lab. It reproduces the OpenShift baremetal **control
 and config surface** faithfully, but the physical layer underneath is emulated.
 Know the gaps before trusting a result.

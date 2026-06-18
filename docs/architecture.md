@@ -1,5 +1,11 @@
 # Architecture & Flow
 
+<sub>[Home](../README.md) · **Architecture** · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Troubleshooting](troubleshooting.md)</sub>
+
+How the pieces fit: per-cluster networks, the node NIC/bond/VLAN layout, the
+sushy Redfish emulation, the install flow, cluster topologies, BMC power
+management, and the test layers. Diagrams render in light and dark mode.
+
 ## Networks
 
 Each cluster gets a block of isolated libvirt networks, one per role (derived,

@@ -1,5 +1,7 @@
 # IPI vs agent-based
 
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · **IPI vs agent** · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Troubleshooting](troubleshooting.md)</sub>
+
 Both install baremetal OpenShift with the same `platform: baremetal` networking
 (integrated keepalived + HAProxy for the API and ingress VIPs). They differ in
 how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in

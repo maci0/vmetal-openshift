@@ -183,34 +183,12 @@ integrated keepalived + HAProxy.
 
 Mirrors an OpenShift Virtualization reference design: 2 onboard NICs bonded for the
 machine network (provisioning VLAN on the same bond), plus a 4-port data card
-bonded (active-active) as a VLAN trunk for storage + live-migration. Configure it
-in `ansible/group_vars/all.yml` (see [variables](docs/variables.md)); a bond may
+bonded (active-active) as a VLAN trunk for storage + live-migration. A bond may
 carry an untagged `network` and/or tagged `vlans` with real per-tag isolation.
-
-```mermaid
-flowchart LR
-  e0["eth0"]; e1["eth1"]; e2["eth2"]; e3["eth3"]; e4["eth4"]; e5["eth5"]
-  b0["bond0<br/>active-backup"]
-  b1["bond1<br/>active-active"]
-  m["machine (untagged)<br/>VIP · DHCP · DNS"]
-  p["bond0.20 · provisioning"]
-  s["bond1.30 · storage (9000)"]
-  mig["bond1.40 · live-migration (9000)"]
-  e0 --> b0; e1 --> b0
-  e2 --> b1; e3 --> b1; e4 --> b1; e5 --> b1
-  b0 --> m; b0 --> p; b1 --> s; b1 --> mig
-  classDef nic fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
-  classDef bond fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef untag fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
-  classDef vlan fill:#f59e0b,stroke:#92400e,color:#1f2937,stroke-width:2px;
-  class e0,e1,e2,e3,e4,e5 nic;
-  class b0,b1 bond;
-  class m untag;
-  class p,s,mig vlan;
-```
-
-Edit it to change NIC counts, bonds, modes, or which networks ride which bond.
-See [fidelity.md](docs/fidelity.md) for the VLAN/L2 caveats.
+Configure it in `ansible/group_vars/all.yml` (see [variables](docs/variables.md));
+the [NIC diagram](docs/architecture.md#node-nic-layout-default-nic_layout) and
+VLAN/L2 caveats are in the [architecture](docs/architecture.md) and
+[fidelity](docs/fidelity.md) docs.
 
 ## 🔌 DNS
 

@@ -1,16 +1,47 @@
+<div align="center">
+
 # vmetal-openshift
 
-Virtual **baremetal OpenShift** lab on a single KVM host (virtual "metal"). `sushy-tools` emulates
-Redfish BMCs on an out-of-band LAN, libvirt VMs stand in for baremetal nodes
-(bonded NICs, jumbo storage), and either the **agent-based** or **IPI** installer
-provisions them. Networks, volumes, VMs, and the install configs are all rendered
-by Ansible from one data-driven, non-hardcoded topology.
+**Virtual baremetal OpenShift, on a single KVM host.**
 
-Docs: [architecture](docs/architecture.md) (more diagrams),
-[requirements + sizing](docs/requirements.md),
-[IPI vs agent](docs/ipi-vs-agent.md), [fidelity / limitations](docs/fidelity.md),
-[disconnected](docs/disconnected.md), [variables](docs/variables.md),
-[rendered examples](docs/examples.md), [troubleshooting](docs/troubleshooting.md).
+Redfish BMC emulation · agent &amp; IPI installs · bonded NICs + VLAN trunks · in-cluster
+BareMetalHost power management, all from one data-driven Ansible topology.
+
+![OpenShift](https://img.shields.io/badge/OpenShift-4.x-EE0000?logo=redhatopenshift&logoColor=white)
+![Install](https://img.shields.io/badge/install-agent%20%7C%20IPI-1f6feb)
+![Platform](https://img.shields.io/badge/platform-libvirt%2FKVM-10b981)
+![BMC](https://img.shields.io/badge/BMC-sushy%20Redfish-0ea5e9)
+![ansible--lint](https://img.shields.io/badge/ansible--lint-production-6366f1?logo=ansible&logoColor=white)
+![shellcheck](https://img.shields.io/badge/shellcheck-clean-2ea44f)
+
+[Architecture](docs/architecture.md) ·
+[Requirements](docs/requirements.md) ·
+[IPI vs agent](docs/ipi-vs-agent.md) ·
+[Fidelity](docs/fidelity.md) ·
+[Disconnected](docs/disconnected.md) ·
+[Variables](docs/variables.md) ·
+[Examples](docs/examples.md) ·
+[Troubleshooting](docs/troubleshooting.md)
+
+</div>
+
+---
+
+`sushy-tools` emulates Redfish BMCs on an out-of-band LAN, libvirt VMs stand in for
+baremetal nodes (bonded NICs, jumbo storage), and the **agent-based** or **IPI**
+installer provisions them. Networks, volumes, VMs, and the install configs are all
+rendered by Ansible from one non-hardcoded topology.
+
+## Highlights
+
+- 🖥️ **Redfish BMC emulation** (sushy-tools): power + virtual media, per-node URLs
+- 🔀 **Agent-based and IPI** installs from the same derived topology
+- 🧩 **Data-driven**: edit one `clusters` list; subnets, MACs, VIPs, bridges, UUIDs all computed
+- 🪢 **Production NIC layout**: onboard bond + 4-port active-active VLAN trunk (storage + live-migration), jumbo MTU
+- 🌐 **Two VIPs** (api / ingress) via integrated keepalived + HAProxy; libvirt split-DNS
+- ⚡ **In-cluster BareMetalHost** power management (metal3 → Redfish → libvirt)
+- 📦 **Multi-cluster**: SNO, compact, or dedicated workers; schedulable masters
+- 🧪 **Tested**: offline lint + render checks + live e2e; ansible-lint production profile
 
 ```mermaid
 flowchart LR
@@ -42,7 +73,20 @@ flowchart LR
   class ocp d;
 ```
 
-## Prerequisites
+## Contents
+
+[Prerequisites](#-prerequisites) ·
+[Quick start](#-quick-start) ·
+[How it fits together](#-how-it-fits-together) ·
+[Topologies](#-cluster-topologies) ·
+[Networks](#-networks) ·
+[DNS](#-dns) ·
+[Install modes](#-install-modes) ·
+[BMC control](#-bmc-control) ·
+[Tests](#-tests) ·
+[Layout](#-layout)
+
+## ✅ Prerequisites
 
 Host packages (the rest is installed into a venv by `make bootstrap`):
 
@@ -52,17 +96,20 @@ Host packages (the rest is installed into a venv by `make bootstrap`):
 * **nmstate** (`nmstatectl`): needed to build an agent ISO with bonded/VLAN config
 * **Python 3** + `uv` (or `pip`), and `curl`, `jq`, `tar`, `openssl`
 * a **pull secret** at `pull-secret.json` ([console.redhat.com](https://console.redhat.com/openshift/install/pull-secret))
-* optional, for docs: `pandoc`, `mmdc`, `chromium`; for `oc`/`make adopt`: `oc` or `kubectl`
+* optional: `pandoc` / `mmdc` / `chromium` (docs PDF); `oc` or `kubectl` (`make adopt`)
 
 Installed by `make bootstrap` (into `.venv` / `build/`): `sushy-tools`,
 `ansible-core` + `community.libvirt` + `community.general`, `ansible-lint`,
 `yamllint`, `libvirt-python`, `lxml`, and a pinned `openshift-install`.
 
-Example (Fedora/RHEL): `sudo dnf install -y libvirt qemu-kvm edk2-ovmf NetworkManager-dnsmasq nmstate jq`.
-Run **`make check`** to verify everything before you start. Full sizing in
+Example (Fedora/RHEL):
+```bash
+sudo dnf install -y libvirt qemu-kvm edk2-ovmf NetworkManager-dnsmasq nmstate jq
+```
+Run **`make check`** to verify everything first. Full sizing in
 [docs/requirements.md](docs/requirements.md).
 
-## Quick start
+## 🚀 Quick start
 
 ```bash
 make check                      # verify host prerequisites
@@ -72,11 +119,10 @@ make sushy                      # render the sushy Redfish config + unit
 make up ANSIBLE_ARGS="-e use_become=false"   # provision libvirt (in the libvirt group)
 make down                       # tear everything down
 ```
-`make help` lists every target. Each cluster must be single-node
-(`node_count: 1`) or `>= 3`; a 2-node cluster has no valid control-plane topology
-and is rejected up front.
+`make help` lists every target. A cluster must be single-node (`node_count: 1`) or
+`>= 3`; a 2-node cluster has no valid control-plane topology and is rejected up front.
 
-## How it fits together
+## 🧭 How it fits together
 
 1. **bootstrap** installs `sushy-tools`, `ansible-core`, the `community.libvirt`
    and `community.general` collections, a self-contained `openshift-install` in
@@ -100,7 +146,7 @@ and is rejected up front.
 5. **sushy-emulator** presents each VM as a Redfish BMC; `boot.yml` powers nodes
    and mounts virtual media.
 
-## Cluster topologies
+## 🗂 Cluster topologies
 
 `node_count` plus `control_plane_count` (1 or 3) decide the shape; the rest are
 workers. `masters_schedulable` (`auto`/`true`/`false`) controls whether workloads
@@ -116,7 +162,9 @@ With workers present, `masters_schedulable: true` renders a day-1 `Scheduler`
 manifest (`openshift/cluster-scheduler-02-config.yml`). Day-2 equivalent:
 `oc patch scheduler cluster --type merge -p '{"spec":{"mastersSchedulable":true}}'`.
 
-## Networks (per cluster, diverse RFC1918)
+## 🌐 Networks
+
+Per cluster, diverse RFC1918 blocks (`{c}` = cluster index):
 
 | Network | Subnet | Carried on | Purpose |
 |---------|--------|-----------|---------|
@@ -133,12 +181,12 @@ integrated keepalived + HAProxy.
 
 ### NIC layout (configurable, `nic_layout`)
 
-Mirrors an OpenShift Virtualization reference design: 2 onboard NICs bonded for
-the machine network (with the provisioning VLAN on the same onboard bond), plus a
-4-port data card bonded (active-active) as a VLAN trunk for storage +
-live-migration. A bond attaches to one libvirt network (its `network`'s bridge,
-or an L2 `trunk`) and may carry an untagged `network` and/or tagged `vlans` (real
-guest-to-guest isolation per tag).
+Mirrors an OpenShift Virtualization reference design: 2 onboard NICs bonded for the
+machine network (provisioning VLAN on the same onboard bond), plus a 4-port data
+card bonded (active-active) as a VLAN trunk for storage + live-migration. A bond
+attaches to one libvirt network (its `network`'s bridge, or an L2 `trunk`) and may
+carry an untagged `network` and/or tagged `vlans` (real guest-to-guest isolation
+per tag).
 
 ```yaml
 nic_layout:
@@ -156,8 +204,6 @@ nic_layout:
       - { network: storage, id: 30 }
       - { network: migration, id: 40 }
 ```
-Edit it to change NIC counts, bonds, modes, or which networks ride which bond.
-See [fidelity.md](docs/fidelity.md) for the VLAN/L2 caveats.
 
 ```mermaid
 flowchart LR
@@ -181,13 +227,15 @@ flowchart LR
   class p,s,mig vlan;
 ```
 
-## DNS (libvirt only)
+Edit it to change NIC counts, bonds, modes, or which networks ride which bond.
+See [fidelity.md](docs/fidelity.md) for the VLAN/L2 caveats.
 
-The machine network's dnsmasq is authoritative (`localOnly`) for the cluster
-domain and answers `api` / `api-int` (API VIP) and `*.apps` (ingress VIP) for the
-**guests** directly. To make the **host** resolve them too, its resolver must
-forward the cluster domain to that dnsmasq. Enable the NetworkManager dnsmasq
-plugin once:
+## 🔌 DNS
+
+The machine network's dnsmasq is authoritative (`localOnly`) for the cluster domain
+and answers `api` / `api-int` (API VIP) and `*.apps` (ingress VIP) for the **guests**
+directly. To make the **host** resolve them too, point its resolver at that dnsmasq.
+Enable the NetworkManager dnsmasq plugin once:
 ```bash
 printf '[main]\ndns=dnsmasq\n' | sudo tee /etc/NetworkManager/conf.d/00-dnsmasq.conf
 sudo systemctl restart NetworkManager
@@ -198,7 +246,7 @@ make host-dns ANSIBLE_ARGS="-K"
 ```
 Verify with `scripts/test-dns.sh`.
 
-## Install modes
+## 🛠 Install modes
 
 * **agent** (default): boot the discovery ISO. `boot_via: iso` attaches it to the
   VM (no BMC); `boot_via: redfish` mounts it via sushy and powers on (enterprise
@@ -209,41 +257,44 @@ Verify with `scripts/test-dns.sh`.
 
 See [docs/ipi-vs-agent.md](docs/ipi-vs-agent.md).
 
-## BMC control
+## ⚡ BMC control
 
 ```bash
 make sushy                                   # render sushy/conf.py + unit + bmc-urls.txt
 make boot CLUSTER=cluster0 BMC_ACTION=on     # status | on | off | reset | boot-iso
+make adopt CLUSTER=cluster0                  # in-cluster BMH power mgmt (baremetal only)
 ```
 BMC URLs are `redfish-virtualmedia://172.16.<c>.1:8000/redfish/v1/Systems/<uuid>`.
 
-## Tests
+## 🧪 Tests
 
 ```bash
-make lint            # offline, CI-safe: syntax-check, yamllint, shellcheck, render, config parse
+make lint            # offline, CI-safe: syntax-check, ansible-lint, yamllint, shellcheck, render, config parse
 make e2e             # live: provision, assert nets/domains/NIC bonding/DNS/Redfish, teardown
 KEEP=1 scripts/e2e.sh
 ```
 
-## Layout
+## 📁 Layout
 
 ```
-Makefile                  check / bootstrap / configs / iso / sushy / up / down / boot / adopt / lint / e2e / pdf
-scripts/                  bootstrap, build-iso, check-prereqs, adopt, host-dns(via ansible), test-dns, lint, e2e, export-pdf
+Makefile                  check / bootstrap / configs / iso / sushy / host-dns / up / down / boot / adopt / lint / e2e / pdf
+scripts/                  bootstrap, build-iso, check-prereqs, adopt, test-dns, lint, e2e, export-pdf
 build/                    downloaded installer + built ISOs (git-ignored)
 certs/                    local TLS material for sushy (git-ignored)
 ansible/
   group_vars/all.yml      addressing scheme + clusters (the file you edit)
   setup.yml cleanup.yml   provision / teardown
-  generate-configs.yml    render install-config / agent-config / BareMetalHost
+  generate-configs.yml    render install-config / agent-config / BareMetalHost / Scheduler
   sushy.yml boot.yml      Redfish config + power/virtual-media
+  host-dns.yml            host split-DNS for the cluster domains
   dump-topology.yml       render derived topology to JSON (test oracle)
   templates/*.j2          topology, libvirt XML, install/agent configs, nmstate macro
   tasks/                  detect_ovmf, validate
 tests/render_check.py     offline template + XML validation
-docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, troubleshooting
+docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, examples, troubleshooting
 ```
 
-## TODO
-* macOS
-* first-class disconnected switch (see docs/disconnected.md)
+## 📋 TODO
+
+* macOS host support
+* first-class disconnected switch (see [docs/disconnected.md](docs/disconnected.md))

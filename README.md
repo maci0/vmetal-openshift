@@ -42,6 +42,26 @@ flowchart LR
   class ocp d;
 ```
 
+## Prerequisites
+
+Host packages (the rest is installed into a venv by `make bootstrap`):
+
+* **libvirt + qemu-kvm** with hardware virtualization (`/dev/kvm`)
+* **OVMF / edk2** UEFI firmware (path auto-detected per distro)
+* **NetworkManager** with the dnsmasq plugin (or systemd-resolved) for split-DNS
+* **nmstate** (`nmstatectl`): needed to build an agent ISO with bonded/VLAN config
+* **Python 3** + `uv` (or `pip`), and `curl`, `jq`, `tar`, `openssl`
+* a **pull secret** at `pull-secret.json` ([console.redhat.com](https://console.redhat.com/openshift/install/pull-secret))
+* optional, for docs: `pandoc`, `mmdc`, `chromium`; for `oc`/`make adopt`: `oc` or `kubectl`
+
+Installed by `make bootstrap` (into `.venv` / `build/`): `sushy-tools`,
+`ansible-core` + `community.libvirt` + `community.general`, `ansible-lint`,
+`yamllint`, `libvirt-python`, `lxml`, and a pinned `openshift-install`.
+
+Example (Fedora/RHEL): `sudo dnf install -y libvirt qemu-kvm edk2-ovmf NetworkManager-dnsmasq nmstate jq`.
+Run **`make check`** to verify everything before you start. Full sizing in
+[docs/requirements.md](docs/requirements.md).
+
 ## Quick start
 
 ```bash

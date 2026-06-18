@@ -29,6 +29,17 @@ OI="$ROOT/build/openshift-install/openshift-install"
 [[ -x "$OI" ]] || OI="$(command -v openshift-install || true)"
 [[ -n "$OI" && -x "$OI" ]] || die "openshift-install not found, run scripts/bootstrap.sh"
 
+# Clear stale artifacts from a prior build BEFORE rendering, so old manifests
+# (e.g. openshift/cluster-scheduler-02-config.yml) never leak into a new ISO.
+# generate-configs re-renders the install/agent yamls fresh.
+if [[ -d "$CLUSTER_DIR" ]]; then
+  log "Clearing previous build artifacts in $CLUSTER_DIR"
+  rm -rf "$CLUSTER_DIR/openshift" "$CLUSTER_DIR/auth"
+  rm -f "$CLUSTER_DIR"/agent.*.iso \
+        "$CLUSTER_DIR/.openshift_install_state.json" \
+        "$CLUSTER_DIR/.openshift_install.log"
+fi
+
 log "Rendering install + agent configs"
 ( cd ansible && "$AP" generate-configs.yml )
 
@@ -40,14 +51,6 @@ if [[ ! -f "$CLUSTER_DIR/agent-config.yaml" ]]; then
   die "'$CLUSTER' is an IPI cluster (no discovery ISO). Provision with:
        openshift-install --dir clusters/$CLUSTER create cluster"
 fi
-
-# agent create image consumes the yaml files and is not happy re-running over
-# stale state, so clear prior generated artifacts (keep the freshly-rendered yamls).
-log "Clearing previous build artifacts in $CLUSTER_DIR"
-rm -f "$CLUSTER_DIR"/agent.*.iso \
-      "$CLUSTER_DIR/.openshift_install_state.json" \
-      "$CLUSTER_DIR/.openshift_install.log"
-rm -rf "$CLUSTER_DIR/auth"
 
 log "Building discovery ISO ($("$OI" version | head -1))"
 "$OI" --dir "$CLUSTER_DIR" agent create image

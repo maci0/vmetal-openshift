@@ -109,9 +109,11 @@ spec:
         resources: { requests: { cpu: "500m", memory: "256Mi" } }
 YAML
   oc -n "$NS" wait --for=condition=complete job/stress --timeout="$(( SECS + 240 ))s" >/dev/null 2>&1 || true
-  # sum cpu bogo-ops/s (real time) across pods
+  # sum cpu bogo-ops/s (real time) across pods. stress-ng metrics row:
+  #   stress-ng: metrc: [N] cpu <ops> <real> <usr> <sys> <bogo/s-real> <bogo/s-usrsys>
+  # bogo-ops/s (real time) is the second-to-last field.
   oc -n "$NS" logs -l job-name=stress --tail=-1 2>/dev/null \
-    | awk '/cpu/ && /bogo ops\/s/ {next} /[[:space:]]cpu[[:space:]]/{for(i=1;i<=NF;i++)if($i=="cpu"){print $(i+4)}}' \
+    | awk '/metrc/ && / cpu /{print $(NF-1)}' \
     | awk '{s+=$1} END{printf "%.0f", s+0}'
   oc -n "$NS" delete job stress >/dev/null 2>&1 || true
 }

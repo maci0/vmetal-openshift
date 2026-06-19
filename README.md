@@ -280,8 +280,13 @@ host kernel does it transparently per-VM.
 
 ### Validation (3 masters + 2 workers)
 
-`scripts/bench-memory.sh` runs a stress-ng workload on the cluster under each
-setting and records host memory and guest throughput. <!-- BENCH-RESULTS -->
+`make bench` runs a stress-ng workload on the cluster under each setting and
+records host memory and guest throughput (`scripts/plot-bench.py` renders the
+chart).
+
+![memory optimization benchmark](docs/bench.png)
+
+<!-- BENCH-RESULTS -->
 
 ## 🧪 Tests
 

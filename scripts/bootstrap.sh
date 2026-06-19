@@ -25,8 +25,9 @@ warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
 # --- 1. Python venv + deps ---
 if [[ ! -d .venv || -n "${FORCE:-}" ]]; then
   log "Creating Python venv (.venv)"
-  # libvirt-python + lxml are required by the community.libvirt modules.
-  deps=(sushy-tools ansible-core yamllint ansible-lint libvirt-python lxml)
+  # libvirt-python + lxml are required by the community.libvirt modules;
+  # matplotlib renders the benchmark chart (scripts/plot-bench.py).
+  deps=(sushy-tools ansible-core yamllint ansible-lint libvirt-python lxml pyyaml jinja2 matplotlib)
   if command -v uv >/dev/null 2>&1; then
     uv venv
     uv pip install --python .venv/bin/python "${deps[@]}"

@@ -113,3 +113,14 @@ for state in baseline ksm zswap ksm+zswap; do
   IFS='|' read -r u k st co r p <<<"${RES[$state]}"
   printf "%-12s %12s %12s %14s %14s %8s %14s\n" "$state" "$u" "$k" "$st" "$co" "$r" "$p"
 done
+
+out="$ROOT/build/bench-results.csv"
+mkdir -p "$ROOT/build"
+{
+  echo "state,host_used_mib,ksm_saved_mib,zswap_stored_mib,zswap_compr_mib,perf_ops_s"
+  for state in baseline ksm zswap ksm+zswap; do
+    IFS='|' read -r u k st co r p <<<"${RES[$state]}"
+    echo "$state,$u,$k,$st,$co,$p"
+  done
+} > "$out"
+log "wrote $out  (plot: $ROOT/.venv/bin/python scripts/plot-bench.py)"

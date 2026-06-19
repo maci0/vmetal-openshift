@@ -281,15 +281,34 @@ disk swap wants pure-RAM compression; zswap only helps with a disk-swap backstop
 
 ### Validation (3 masters + 2 workers)
 
-`make bench` runs a stress-ng workload on the cluster under each setting
-(baseline, KSM, and zram swept across zstd/lz4/lzo, with and without KSM) and
-records host memory and guest throughput (`scripts/plot-bench.py` renders the
-chart). KSM is unmerged (`run=2`) and swap drained between states, and the cluster
-is sized to fit RAM, so the baseline genuinely uses no swap.
+`make bench` runs a CPU workload (`openssl speed`) on the cluster under each
+setting and records host memory + guest throughput; `scripts/plot-bench.py`
+renders the chart. For an honest baseline it forces `vm.swappiness=0` and
+`swapoff`s zram (no proactive swapping), unmerges KSM (`run=2`), and lets each
+optimization reach steady state before measuring (KSM scans to convergence then
+dials down; zram fills until eviction settles).
 
 ![memory optimization benchmark](docs/bench.png)
 
-<!-- BENCH-RESULTS -->
+Measured on a 3 control-plane + 2 worker cluster (92 GiB allocated, 128 GiB host):
+
+| setting | host RAM | KSM saved | zram data → compr | ratio | swap | CPU (M k/s) |
+|---------|---------:|----------:|------------------:|:-----:|-----:|------------:|
+| baseline | 117.8 GiB | 0 | n/a | n/a | **0** | 24.5 |
+| KSM | 92.6 GiB | **27.0 GiB** | n/a | n/a | 0 | 24.5 |
+| zram (zstd) | 94.6 GiB | 0 | 35.6 → 12.9 GiB | **2.8×** | 37 GiB | 24.3 |
+| KSM + zram (zstd) | 90.9 GiB | 11.9 GiB | 25.6 → 9.3 GiB | 2.7× | 26 GiB | 24.5 |
+| zram (lz4) | 100.3 GiB | 0 | 33.4 → 16.3 GiB | 2.0× | 35 GiB | 24.5 |
+| KSM + zram (lz4) | 96.7 GiB | 8.3 GiB | 29.0 → 14.5 GiB | 2.0× | 30 GiB | 24.4 |
+
+Takeaways:
+* **KSM** reclaims ~27 GiB by deduping the identical RHCOS pages across nodes (its
+  effect shrinks under load, where pages diverge).
+* **zram** compresses cold pages **2.8× with zstd** vs 2.0× with lz4 (lz4 is faster
+  but less dense); zstd is the better default here.
+* **Performance is flat (~24.5M)** across all settings: at steady state KSM and
+  zram cost ~0 throughput. (An *aggressive* KSM scan during the run cut perf ~4×,
+  which is why the harness converges then dials KSM back before measuring.)
 
 ## 🧪 Tests
 

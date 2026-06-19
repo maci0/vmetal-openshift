@@ -162,9 +162,10 @@ default_disks:
 # control plane + workers.
 clusters:
   - name: cluster0
-    node_count: 5            # 3 masters + 2 workers
-    master_memory_mib: 20480  # 3 x 20 GiB
-    worker_memory_mib: 16384  # 2 x 16 GiB  -> 92 GiB total, fits a 128 GiB host (no-swap baseline)
+    node_count: 1            # SNO (single control plane)
+    day2_workers: 2          # + 2 workers joined day-2 (edge: single master, multi worker)
+    master_memory_mib: 20480  # SNO node
+    worker_memory_mib: 16384  # day-2 workers
     master_vcpus: 8
     worker_vcpus: 6
 

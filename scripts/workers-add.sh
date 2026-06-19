@@ -15,10 +15,15 @@ log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 
 [[ -x "$ROOT/.venv/bin/ansible-playbook" ]] && AP="$ROOT/.venv/bin/ansible-playbook" || AP="ansible-playbook"
 [[ -x "$ROOT/.venv/bin/python" ]] && PY="$ROOT/.venv/bin/python" || PY=python3
-OI="$ROOT/build/openshift-install/openshift-install"; [[ -x "$OI" ]] || OI="$(command -v openshift-install || true)"
-[[ -n "$OI" && -x "$OI" ]] || die "openshift-install not found; run scripts/bootstrap.sh"
 command -v oc >/dev/null || die "oc not found"
 command -v jq >/dev/null || die "jq required"
+# `oc adm node-image create` needs a 4.17+ client; prefer the matching oc that
+# bootstrap.sh fetched, fall back to a manual one, then the system oc.
+OCN="$ROOT/build/openshift-install/oc"
+[[ -x "$OCN" ]] || OCN="$ROOT/build/oc422/oc"
+[[ -x "$OCN" ]] || OCN="oc"
+ocver="$("$OCN" version --client -o json 2>/dev/null | jq -r '.releaseClientVersion // .clientVersion.gitVersion' 2>/dev/null || echo 0)"
+case "$ocver" in 4.1[0-6].*|0) die "need an oc >= 4.17 for 'adm node-image' (have $ocver); fetch the matching client into build/oc422/oc" ;; esac
 
 kubeconfig="$ROOT/clusters/$CLUSTER/auth/kubeconfig"
 [[ -f "$kubeconfig" ]] || die "no kubeconfig for '$CLUSTER' (install the cluster first)"
@@ -35,15 +40,15 @@ rm -f "$topo"
 log "Adding ${#WORKERS[@]} worker(s): ${WORKERS[*]}"
 
 log "Provisioning worker VMs + rendering nodes-config.yaml"
-ap workers.yml -e cluster="$CLUSTER" -e worker_action=add "${BECOME[@]}"
+ap workers.yml -e cluster_name="$CLUSTER" -e worker_action=add "${BECOME[@]}"
 
-log "Building agent node-image against the running cluster"
+log "Building add-nodes image against the running cluster ($("$OCN" version --client 2>/dev/null | head -1))"
 work="$ROOT/build/nodeimg-$CLUSTER"
 rm -rf "$work"; mkdir -p "$work"
 cp "$ROOT/build/nodes-config-$CLUSTER.yaml" "$work/nodes-config.yaml"
-"$OI" agent create node-image --dir "$work"
+"$OCN" adm node-image create --dir "$work"
 iso="$(find "$work" -maxdepth 1 -name '*.iso' | head -1)"
-[[ -n "$iso" ]] || die "node-image build produced no ISO"
+[[ -n "$iso" ]] || die "node-image build produced no ISO (see $work/report.json)"
 cp "$iso" "$ROOT/build/node_$CLUSTER.iso"
 
 log "Serving ISO + booting workers over redfish"

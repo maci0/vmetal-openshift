@@ -38,5 +38,5 @@ for w in "${WORKERS[@]}"; do
 done
 
 log "Destroying worker VMs"
-ap workers.yml -e cluster="$CLUSTER" -e worker_action=remove "${BECOME[@]}"
+ap workers.yml -e cluster_name="$CLUSTER" -e worker_action=remove "${BECOME[@]}"
 log "done"

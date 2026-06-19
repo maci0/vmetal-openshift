@@ -188,7 +188,9 @@
       loop_control:
         label: "{{ item.fullname }}"
       register: cdrom_attached
-      until: "'discovery_image' in (cdrom_attached.get_xml | default(''))"
+      # sushy names attached media '<base>-iso-<uuid>.img' (discovery_image_* or
+      # node_*), so '-iso-' is the generic "media is attached" marker.
+      until: "'-iso-' in (cdrom_attached.get_xml | default(''))"
       retries: 20
       delay: 3
       when: bmc_action == 'boot-iso'

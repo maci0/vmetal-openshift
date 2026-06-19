@@ -4,16 +4,19 @@
 # image, boot it, approve CSRs) is driven by scripts/workers-add.sh; this playbook
 # only handles the libvirt side and renders nodes-config.yaml.
 #
-#   ansible-playbook workers.yml -e cluster=cluster0 -e worker_action=add
-#   ansible-playbook workers.yml -e cluster=cluster0 -e worker_action=remove
+#   ansible-playbook workers.yml -e cluster_name=cluster0 -e worker_action=add
+#   ansible-playbook workers.yml -e cluster_name=cluster0 -e worker_action=remove
 #
 # The networks already exist (created at install time) and are left untouched.
 - name: Day-2 worker VMs
   hosts: local
   gather_facts: false
   become: "{{ use_become | default(true) }}"
+  # cluster_name (not `cluster`) is the CLI arg: the nodes-config template binds
+  # `cluster` to the topology dict, and an `-e cluster=` extra-var would outrank
+  # that task var.
   vars:
-    cluster: cluster0
+    cluster_name: cluster0
     worker_action: add
   tasks:
     - name: Build topology from addressing scheme
@@ -22,12 +25,12 @@
 
     - name: Select target cluster
       ansible.builtin.set_fact:
-        tgt: "{{ topology | selectattr('name', 'equalto', cluster) | first }}"
+        tgt: "{{ topology | selectattr('name', 'equalto', cluster_name) | first }}"
 
     - name: Require day2_workers to be defined
       ansible.builtin.assert:
         that: tgt.day2_workers | default([]) | length > 0
-        fail_msg: "cluster '{{ cluster }}' has no day2_workers; set day2_workers: N in group_vars."
+        fail_msg: "cluster '{{ cluster_name }}' has no day2_workers; set day2_workers: N in group_vars."
         quiet: true
 
     - name: Add day-2 workers
@@ -39,7 +42,7 @@
         - name: Render nodes-config.yaml for the agent node-image
           ansible.builtin.copy:
             content: "{{ lookup('template', 'templates/install/nodes-config.yaml.j2') }}"
-            dest: "{{ playbook_dir }}/../build/nodes-config-{{ cluster }}.yaml"
+            dest: "{{ playbook_dir }}/../build/nodes-config-{{ cluster_name }}.yaml"
             mode: "0644"
           vars:
             cluster: "{{ tgt }}"

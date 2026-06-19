@@ -61,6 +61,17 @@ else
   chmod 0755 "$INSTALL_DIR/openshift-install"
 fi
 
+# matching oc client (the system oc may be too old; `oc adm node-image` needs 4.17+)
+if [[ -x "$INSTALL_DIR/oc" && -z "${FORCE:-}" ]]; then
+  log "oc present ($("$INSTALL_DIR/oc" version --client 2>/dev/null | head -1))"
+else
+  OC_TARBALL="$BUILD_DIR/openshift-client-linux.tar.gz"
+  log "Downloading oc client ($RELEASE_PATH, $ARCH)"
+  curl -fL --retry 3 -o "$OC_TARBALL" "${MIRROR}/${RELEASE_PATH}/openshift-client-linux.tar.gz"
+  tar -xzf "$OC_TARBALL" -C "$INSTALL_DIR" oc
+  chmod 0755 "$INSTALL_DIR/oc"
+fi
+
 # --- 4. TLS cert for sushy-emulator ---
 if [[ ! -f "$CERTS_DIR/localhost-cert.pem" || ! -f "$CERTS_DIR/localhost-key.pem" || -n "${FORCE:-}" ]]; then
   log "Generating self-signed TLS cert in $CERTS_DIR"

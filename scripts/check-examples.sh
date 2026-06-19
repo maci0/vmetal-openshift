@@ -17,7 +17,12 @@ fi
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-gen() { ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP/$1" -e "$2" >/dev/null ); }
+# Deterministic render regardless of host: always supply a (dummy) ssh key so the
+# sshKey line is present, and rely on redaction. Pull secret may be absent on CI;
+# its line is redacted too.
+echo "ssh-ed25519 AAAAdummy check-examples" > "$TMP/id.pub"
+gen() { ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP/$1" \
+          -e ssh_key_file="$TMP/id.pub" -e "$2" >/dev/null ); }
 gen sno  '{"clusters":[{"name":"sno","node_count":1}]}'
 gen prod '{"clusters":[{"name":"prod","node_count":3}]}'
 gen ipi  '{"clusters":[{"name":"ipi0","node_count":3,"install_mode":"ipi","provisioning_network_mode":"Managed"}]}'

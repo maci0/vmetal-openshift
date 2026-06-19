@@ -94,6 +94,11 @@ Host packages (the rest is installed into a venv by `make bootstrap`):
 * **OVMF / edk2** UEFI firmware (path auto-detected per distro)
 * **NetworkManager** with the dnsmasq plugin (or systemd-resolved) for split-DNS
 * **nmstate** (`nmstatectl`): needed to build an agent ISO with bonded/VLAN config
+* **nested virtualization** (host `kvm_intel`/`kvm_amd` `nested=1`): only needed to
+  run **OpenShift Virtualization** (VMs *on* the cluster). The node VMs already use
+  CPU `host-passthrough` so the virt extensions are exposed. Enable on the host:
+  `echo 'options kvm_intel nested=1' | sudo tee /etc/modprobe.d/kvm-nested.conf`
+  (`kvm_amd` on AMD), then reload the module or reboot
 * **Python 3** + `uv` (or `pip`), and `curl`, `jq`, `tar`, `openssl`
 * a **pull secret** at `pull-secret.json` ([console.redhat.com](https://console.redhat.com/openshift/install/pull-secret))
 * optional: `pandoc` / `mmdc` / `chromium` (docs PDF); `oc` or `kubectl` (`make adopt`)

@@ -18,6 +18,17 @@ if [[ -w /dev/kvm ]]; then pass "/dev/kvm writable (hardware virtualization)"
 elif [[ -e /dev/kvm ]]; then warn "/dev/kvm exists but not writable (add user to kvm group)"
 else bad "/dev/kvm missing: enable VT-x/AMD-V, or you are in a VM without nested virt"; fi
 
+# Nested virtualization: the OCP nodes are VMs; running OpenShift Virtualization
+# (CNV) workloads means VMs INSIDE those nodes, which needs nested virt on the host.
+nested="$(cat /sys/module/kvm_intel/parameters/nested /sys/module/kvm_amd/parameters/nested 2>/dev/null | head -1)"
+if [[ "$nested" == "Y" || "$nested" == "1" ]]; then
+  pass "nested virtualization enabled (OpenShift Virtualization workloads will run)"
+else
+  warn "nested virtualization OFF: needed only for OpenShift Virtualization (VMs on the cluster).
+       Enable: echo 'options kvm_intel nested=1' | sudo tee /etc/modprobe.d/kvm-nested.conf
+       (use kvm_amd on AMD), then reload the module or reboot."
+fi
+
 echo "== libvirt =="
 if have virsh; then pass "virsh present"; else bad "virsh missing (install libvirt-client)"; fi
 if have virsh && virsh -c qemu:///system version >/dev/null 2>&1; then

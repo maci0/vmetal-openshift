@@ -23,7 +23,7 @@ rows = list(csv.DictReader(open(src)))
 states = [r["state"] for r in rows]
 used = [int(r["host_used_mib"]) / 1024 for r in rows]
 ksm = [int(r["ksm_saved_mib"]) / 1024 for r in rows]
-zsw = [int(r["zswap_compr_mib"]) / 1024 for r in rows]
+zsw = [int(r["zram_compr_mib"]) / 1024 for r in rows]
 perf = [int(r["perf_ops_s"]) for r in rows]
 
 x = range(len(states))
@@ -34,7 +34,7 @@ fig.suptitle("vmetal-openshift: memory optimization (3 masters + 2 workers)", fo
 w = 0.27
 ax1.bar([i - w for i in x], used, w, label="host RAM used (GiB)", color="#ef4444")
 ax1.bar([i for i in x], ksm, w, label="KSM saved (GiB)", color="#10b981")
-ax1.bar([i + w for i in x], zsw, w, label="zswap compressed (GiB)", color="#6366f1")
+ax1.bar([i + w for i in x], zsw, w, label="zram compressed (GiB)", color="#6366f1")
 ax1.set_xticks(list(x))
 ax1.set_xticklabels(states, rotation=30, ha="right", fontsize=8)
 ax1.set_ylabel("GiB")

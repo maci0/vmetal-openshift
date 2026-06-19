@@ -153,7 +153,7 @@ clusters:
   - name: cluster0
     node_count: 5            # 3 masters + 2 workers
     master_memory_mib: 20480  # 3 x 20 GiB
-    worker_memory_mib: 16384  # 2 x 16 GiB  -> 92 GiB total, fits 128 GiB host (clean baseline)
+    worker_memory_mib: 16384  # 2 x 16 GiB  -> 92 GiB total, fits a 128 GiB host (no-swap baseline)
     master_vcpus: 8
     worker_vcpus: 6
 

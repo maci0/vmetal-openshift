@@ -264,26 +264,28 @@ How a page of guest RAM is handled, in order:
    pages, shared libs, the same RHCOS files across nodes) into one copy-on-write
    page. Shrinks the footprint before anything is compressed.
 2. **cgroup wall (libvirt hook)** intercepts each VM at launch, finds its
-   transient `machine-qemu-*.scope`, and isolates its memory from the host. Host
+   transient `machine-qemu-*.scope`, and caps its memory with `memory.high`. Host
    apps and services stay on raw RAM, unrestricted.
 3. **The squeeze (`memory.high`)** caps the VM's *uncompressed* RAM. When it hits
    the cap the kernel reclaims that VM's coldest pages early instead of OOM-killing.
-4. **zswap (compress)** catches those evicted pages and packs them, zstd-compressed,
-   into a RAM pool (`memory.zswap.max = max`) instead of writing them to disk.
+4. **zram (compress)** is the host swap: a compressed-RAM block device (zstd). The
+   reclaimed cold pages compress into RAM, never touching disk.
 
-Net effect: identical pages collapse (KSM), cold pages compress (zswap), and the
-host kernel does it transparently per-VM.
+Net effect: identical pages collapse (KSM), cold pages compress (zram), and the
+host kernel does it transparently per-VM. (zram, not zswap: a single host with no
+disk swap wants pure-RAM compression; zswap only helps with a disk-swap backstop.)
 
-> Persist across reboots: `ksmtuned` for KSM, and kernel cmdline
-> `zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=30`. `make check`
-> warns when KSM is off.
+> Persist across reboots: `ksmtuned` for KSM, and a zram-generator config
+> (`/etc/systemd/zram-generator.conf`) for the zram swap. `make check` warns when
+> KSM is off.
 
 ### Validation (3 masters + 2 workers)
 
 `make bench` runs a stress-ng workload on the cluster under each setting
-(baseline, KSM, and zswap swept across zstd/lz4/lzo, with and without KSM) and
+(baseline, KSM, and zram swept across zstd/lz4/lzo, with and without KSM) and
 records host memory and guest throughput (`scripts/plot-bench.py` renders the
-chart). KSM is unmerged (`run=2`) between states so the baseline is honest.
+chart). KSM is unmerged (`run=2`) and swap drained between states, and the cluster
+is sized to fit RAM, so the baseline genuinely uses no swap.
 
 ![memory optimization benchmark](docs/bench.png)
 

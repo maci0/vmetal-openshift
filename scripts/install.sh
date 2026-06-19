@@ -8,7 +8,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 CLUSTER="${1:-${CLUSTER:-cluster0}}"
-HTTP_PORT="${HTTP_PORT:-8080}"
+HTTP_PORT="${HTTP_PORT:-8099}"
 
 die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
 log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }

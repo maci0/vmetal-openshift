@@ -13,8 +13,8 @@ Run `make check` first; it catches most environment problems up front.
   the TLS cert/key paths are right; `curl -sk https://localhost:8000/redfish/v1/`
   should return JSON with `RedfishVersion`.
 * **`make bmc` virtual-media insert fails**: the ISO must be served over HTTP.
-  From the repo root run `python -m http.server 8080` and pass
-  `-e iso_base_url=http://<host-on-OOB-LAN>:8080`. sushy fetches the image by URL.
+  From the repo root run `python -m http.server 8099` and pass
+  `-e iso_base_url=http://<host-on-OOB-LAN>:8099`. sushy fetches the image by URL.
 * **Wrong System URL**: BMC URLs use the deterministic domain UUID. If you
   redefined a VM, re-run `make sushy` to regenerate `sushy/bmc-urls.txt`.
 

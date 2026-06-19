@@ -26,7 +26,7 @@ BMC_ACTION   ?= status
 NODE         ?=
 BOOTDEV      ?= Pxe
 ISO_BASE_URL ?=
-HTTP_PORT    ?= 8080
+HTTP_PORT    ?= 8099
 ANSIBLE_ARGS ?=
 OCP_CHANNEL  ?= stable
 OCP_VERSION  ?=          # e.g. 4.22.0; empty = newest in channel

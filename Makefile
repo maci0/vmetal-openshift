@@ -1,5 +1,7 @@
 # vmetal-openshift convenience targets.
 #   make check                verify host prerequisites
+#   make optimize             host memory tuning: KSM + zswap + per-VM cgroup hook
+#   make optimize-undo        revert the memory tuning
 #   make bootstrap [OCP_VERSION=4.22.0]   host prep (venv, deps, installer, cert)
 #   make sushy-install        render + start the sushy Redfish BMC (systemd --user)
 #   make install CLUSTER=c     one-shot: build ISO, provision, boot, wait for cluster
@@ -37,14 +39,20 @@ AP           := $(abspath $(shell [ -x .venv/bin/ansible-playbook ] && echo .ven
 PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3))
 
 .DEFAULT_GOAL := help
-.PHONY: check bootstrap install configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt workers-add workers-remove status creds lint e2e pdf clean help
+.PHONY: check optimize optimize-undo bootstrap install configs iso sushy sushy-install host-dns up down \
+        serve-iso bmc adopt workers-add workers-remove status creds lint e2e bench pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
 
 check:
 	./scripts/check-prereqs.sh
+
+optimize:
+	./scripts/optimize-host.sh apply
+
+optimize-undo:
+	./scripts/optimize-host.sh undo
 
 bootstrap:
 	OCP_CHANNEL=$(OCP_CHANNEL) OCP_VERSION=$(OCP_VERSION) ./scripts/bootstrap.sh
@@ -103,6 +111,9 @@ lint:
 
 e2e:
 	./scripts/e2e.sh
+
+bench:
+	./scripts/bench-memory.sh $(CLUSTER)
 
 pdf:
 	./scripts/export-pdf.sh

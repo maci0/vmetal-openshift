@@ -246,11 +246,49 @@ make adopt CLUSTER=cluster0                  # in-cluster BMH power mgmt (bareme
 ```
 BMC URLs are `redfish-virtualmedia://172.16.<c>.1:8000/redfish/v1/Systems/<uuid>`.
 
+## ⚡ Memory optimization
+
+Every node runs the *same* RHCOS image, so most guest RAM is identical or cold.
+`make optimize` turns three host features into a pipeline that lets a cluster's
+nominal RAM far exceed what it actually consumes, without touching the host OS.
+`make optimize-undo` reverts it.
+
+```bash
+make optimize        # KSM + zswap + per-VM cgroup hook
+make optimize-undo   # revert
+```
+
+How a page of guest RAM is handled, in order:
+
+1. **KSM (dedup)** scans the VMs' active RAM and merges identical pages (zero
+   pages, shared libs, the same RHCOS files across nodes) into one copy-on-write
+   page. Shrinks the footprint before anything is compressed.
+2. **cgroup wall (libvirt hook)** intercepts each VM at launch, finds its
+   transient `machine-qemu-*.scope`, and isolates its memory from the host. Host
+   apps and services stay on raw RAM, unrestricted.
+3. **The squeeze (`memory.high`)** caps the VM's *uncompressed* RAM. When it hits
+   the cap the kernel reclaims that VM's coldest pages early instead of OOM-killing.
+4. **zswap (compress)** catches those evicted pages and packs them, zstd-compressed,
+   into a RAM pool (`memory.zswap.max = max`) instead of writing them to disk.
+
+Net effect: identical pages collapse (KSM), cold pages compress (zswap), and the
+host kernel does it transparently per-VM.
+
+> Persist across reboots: `ksmtuned` for KSM, and kernel cmdline
+> `zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=30`. `make check`
+> warns when KSM is off.
+
+### Validation (3 masters + 2 workers)
+
+`scripts/bench-memory.sh` runs a stress-ng workload on the cluster under each
+setting and records host memory and guest throughput. <!-- BENCH-RESULTS -->
+
 ## 🧪 Tests
 
 ```bash
 make lint            # offline, CI-safe: syntax-check, ansible-lint, yamllint, shellcheck, render, config parse
 make e2e             # live: provision, assert nets/domains/NIC bonding/DNS/Redfish, teardown
+make bench           # memory/perf matrix: baseline / KSM / zswap / KSM+zswap
 KEEP=1 scripts/e2e.sh
 ```
 

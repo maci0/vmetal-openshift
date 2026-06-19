@@ -1,0 +1,46 @@
+---
+# Provision-time host preflight (Ansible side). Complements the pre-bootstrap
+# shell gate scripts/check-prereqs.sh, failing fast before any libvirt resource
+# is created. Runs after detect_ovmf so ovmf_code is resolved.
+- name: Check /dev/kvm
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: kvm_dev
+
+- name: Assert hardware virtualization is available
+  ansible.builtin.assert:
+    that: kvm_dev.stat.exists
+    fail_msg: >-
+      /dev/kvm missing: enable VT-x/AMD-V in firmware, or (if this host is itself
+      a VM) enable nested virtualization on the hypervisor.
+    quiet: true
+
+- name: Check OVMF firmware file
+  ansible.builtin.stat:
+    path: "{{ ovmf_code }}"
+  register: ovmf_stat
+  when: ovmf_code | length > 0
+
+- name: Assert OVMF firmware is present
+  ansible.builtin.assert:
+    that: (ovmf_code | length > 0) and ovmf_stat.stat.exists | default(false)
+    fail_msg: >-
+      OVMF firmware not found ({{ ovmf_code | default('unset') }}). Install
+      edk2/OVMF, or set ovmf_code / ovmf_vars in group_vars/all.yml.
+    quiet: true
+
+- name: Read nested virtualization state (Intel or AMD)
+  ansible.builtin.set_fact:
+    nested_on: >-
+      {{ (lookup('ansible.builtin.file', '/sys/module/kvm_intel/parameters/nested', errors='ignore')
+          or lookup('ansible.builtin.file', '/sys/module/kvm_amd/parameters/nested', errors='ignore')
+          or 'N') | trim in ['Y', '1'] }}
+
+- name: Warn if nested virtualization is off (OpenShift Virtualization only)
+  ansible.builtin.debug:
+    msg: >-
+      Nested virtualization is OFF. It is needed only to run OpenShift
+      Virtualization (VMs on the cluster). Enable on the host:
+      echo 'options kvm_intel nested=1' | sudo tee /etc/modprobe.d/kvm-nested.conf
+      (kvm_amd on AMD), then reload the module or reboot.
+  when: not nested_on

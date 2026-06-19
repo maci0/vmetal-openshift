@@ -15,40 +15,56 @@
       ansible.builtin.set_fact:
         topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
 
-    - name: Destroy and undefine domains (with nvram + storage)
-      ansible.builtin.shell: |
-        set -o pipefail
-        d="{{ item.1.fullname }}"
-        if virsh -c {{ libvirt_uri }} domstate "$d" >/dev/null 2>&1; then
-          virsh -c {{ libvirt_uri }} destroy "$d" 2>/dev/null || true
-          virsh -c {{ libvirt_uri }} undefine "$d" --nvram --remove-all-storage 2>/dev/null || true
-          echo "REMOVED $d"
-        fi
-      args:
-        executable: /bin/bash
+    - name: Check which domains exist
+      ansible.builtin.command: "virsh -c {{ libvirt_uri }} domstate {{ item.1.fullname }}"
       loop: "{{ topology | subelements('nodes') }}"
       loop_control:
         label: "{{ item.1.fullname }}"
-      register: domdel
-      changed_when: "'REMOVED' in domdel.stdout"
+      register: domstate
+      changed_when: false
+      failed_when: false
+
+    - name: Destroy running domains
+      ansible.builtin.command: "virsh -c {{ libvirt_uri }} destroy {{ item.item.1.fullname }}"
+      loop: "{{ domstate.results }}"
+      loop_control:
+        label: "{{ item.item.1.fullname }}"
+      when: item.rc == 0 and 'running' in item.stdout
+      changed_when: true
+      failed_when: false
+
+    - name: Undefine domains (with nvram + storage)
+      ansible.builtin.command: >-
+        virsh -c {{ libvirt_uri }} undefine {{ item.item.1.fullname }}
+        --nvram --remove-all-storage
+      loop: "{{ domstate.results }}"
+      loop_control:
+        label: "{{ item.item.1.fullname }}"
+      when: item.rc == 0
+      changed_when: true
+      failed_when: false
+
+    - name: Check which volumes remain
+      ansible.builtin.command: >-
+        virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }}
+        {{ item.0.fullname }}-{{ item.1.suffix }}.qcow2
+      loop: "{{ topology | map(attribute='nodes') | flatten | subelements('disks') }}"
+      loop_control:
+        label: "{{ item.0.fullname }}-{{ item.1.suffix }}"
+      register: voldel_info
+      changed_when: false
+      failed_when: false
 
     - name: Delete leftover volumes
-      ansible.builtin.shell: |
-        set -o pipefail
-        {% for d in item.1.disks %}
-        vol="{{ item.1.fullname }}-{{ d.suffix }}.qcow2"
-        if virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }} "$vol" >/dev/null 2>&1; then
-          virsh -c {{ libvirt_uri }} vol-delete "$vol" --pool {{ storage_pool }}
-          echo "DELETED $vol"
-        fi
-        {% endfor %}
-      args:
-        executable: /bin/bash
-      loop: "{{ topology | subelements('nodes') }}"
+      ansible.builtin.command: >-
+        virsh -c {{ libvirt_uri }} vol-delete --pool {{ storage_pool }}
+        {{ item.item.0.fullname }}-{{ item.item.1.suffix }}.qcow2
+      loop: "{{ voldel_info.results }}"
       loop_control:
-        label: "{{ item.1.fullname }}"
-      register: voldel
-      changed_when: "'DELETED' in voldel.stdout"
+        label: "{{ item.item.0.fullname }}-{{ item.item.1.suffix }}"
+      when: item.rc == 0
+      changed_when: true
+      failed_when: false
 
     - name: Destroy and undefine networks
       community.libvirt.virt_net:

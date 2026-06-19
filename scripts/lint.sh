@@ -32,21 +32,24 @@ pass "playbooks parse"
 
 echo "== yamllint =="
 if [[ -x "$YAMLLINT" ]] || command -v "$YAMLLINT" >/dev/null 2>&1; then
-  "$YAMLLINT" -c "$ROOT/.yamllint" ansible/ && pass "yaml clean"
+  "$YAMLLINT" -c "$ROOT/.yamllint" ansible/
+  pass "yaml clean"
 else
   skip "yamllint not installed"
 fi
 
 echo "== ansible-lint =="
 if [[ -x "$ANSIBLELINT" ]] || command -v "$ANSIBLELINT" >/dev/null 2>&1; then
-  ( cd ansible && "$ANSIBLELINT" -q ) && pass "ansible-lint (production profile)"
+  ( cd ansible && "$ANSIBLELINT" -q )
+  pass "ansible-lint (production profile)"
 else
   skip "ansible-lint not installed"
 fi
 
 echo "== shellcheck =="
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck scripts/*.sh && pass "shell clean"
+  shellcheck scripts/*.sh
+  pass "shell clean"
 else
   skip "shellcheck not installed"
 fi

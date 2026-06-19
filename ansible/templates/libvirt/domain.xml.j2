@@ -16,11 +16,18 @@
   </features>
   <cpu mode="host-passthrough" check="none"/>
   <devices>
+{# Per-device boot order: disk first (order 1), cdrom second (order 2). On an
+   empty disk (first boot) the firmware falls through to the ISO; once the image
+   is written, reboots boot the disk. This avoids a fragile one-time-boot and the
+   "booted the installation image again" stall after install. #}
 {% for d in node.disks %}
     <disk type="file" device="disk">
       <driver name="qemu" type="qcow2"/>
       <source file="{{ images_dir }}/{{ node.fullname }}-{{ d.suffix }}.qcow2"/>
       <target dev="{{ d.target }}" bus="virtio"/>
+{% if loop.first %}
+      <boot order="1"/>
+{% endif %}
     </disk>
 {% endfor %}
 {% if cluster.static_iso %}
@@ -32,6 +39,7 @@
       <source file="{{ cluster.discovery_iso }}"/>
       <target dev="sda" bus="sata"/>
       <readonly/>
+      <boot order="2"/>
     </disk>
 {% else %}
     <!-- empty drive; sushy/metal3 inserts the image via Redfish virtual media -->
@@ -39,6 +47,7 @@
       <driver name="qemu" type="raw"/>
       <target dev="sda" bus="sata"/>
       <readonly/>
+      <boot order="2"/>
     </disk>
 {% endif %}
 {% for nic in node.interfaces %}

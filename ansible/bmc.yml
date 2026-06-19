@@ -14,7 +14,8 @@
 #   cycle         hard power cycle (force restart)
 #   pxe           one-time PXE boot, then power on
 #   boot-disk     one-time disk boot, then power on
-#   boot-iso      insert discovery ISO as virtual media, one-time CD boot, power on
+#   boot-iso      insert discovery ISO as virtual media + cold power on (disk-first
+#                 boot order falls through to the ISO on an empty disk)
 #   set-boot      set one-time boot to `bootdev` (Pxe|Cd|Hdd|BiosSetup), no power change
 #   media-insert  insert the discovery ISO as virtual media
 #   media-eject   eject virtual media
@@ -81,8 +82,10 @@
       when: bmc_action in ['media-insert', 'boot-iso']
 
     # boot-iso uses a cold sequence: power OFF, insert (sushy writes the cdrom
-    # into the domain), set one-time Cd, then cold power ON so the firmware boots
-    # the freshly attached media. sushy does not reliably attach on a live reset.
+    # into the domain), then cold power ON. The domain's per-device boot order
+    # (disk=1, cdrom=2) means an empty disk boots the ISO and, once installed,
+    # reboots boot the disk, so no one-time-boot override is needed. sushy does
+    # not reliably attach media on a live reset, hence the cold cycle.
     - name: Power off before inserting boot media
       community.libvirt.virt:
         name: "{{ item.fullname }}"
@@ -154,7 +157,7 @@
       loop: "{{ nodes }}"
       loop_control:
         label: "{{ item.fullname }}"
-      when: bmc_action in ['pxe', 'boot-disk', 'boot-iso', 'set-boot']
+      when: bmc_action in ['pxe', 'boot-disk', 'set-boot']
 
     - name: Power / reset
       community.general.redfish_command:

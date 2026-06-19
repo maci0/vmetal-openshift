@@ -26,7 +26,7 @@ Know the gaps before trusting a result.
 |-----|---------------------|-------------|
 | Physical switch | libvirt bridges are flat L2 segments | no real switch features |
 | LACP (`802.3ad`) | no LACP partner on a bridge | config is faithful but will not truly aggregate |
-| Active-active bonds | balance-alb/802.3ad expose the bond IP on multiple slave MACs | trips the agent installer's "no IP collision" host validation on bonded VLANs and blocks install; default is `active-backup` |
+| Active-active bonds | balance-alb/802.3ad expose the bond IP on multiple slave MACs | trips the agent installer's "no IP collision" host validation on bonded VLANs and blocks install; the data bond uses `balance-tlb` (active-active TX, stable single MAC) instead |
 | VLAN gateway/DHCP | trunk VLANs ride a no-IP L2 bridge | VLANs are guest-to-guest only (real isolation by tag), no per-VLAN libvirt gateway/DHCP; the machine net stays untagged so it keeps NAT/DHCP/DNS/VIP |
 | NIC bonding failover timing | virtio links do not flap like real ports | failover tests are not representative |
 | Out-of-band isolation | sushy runs on the host, BMCs are virtual | OOB LAN is logical, not a separate management plane |
@@ -39,14 +39,17 @@ Know the gaps before trusting a result.
 
 Each bond in `nic_layout` sets its own `mode` (or inherits `default_bond_mode`):
 
-* `active-backup` (default, both bonds): one active NIC, single MAC. Reliable, and
-  the only mode that passes the agent installer's IP-collision validation on
-  bonded VLANs.
-* `balance-alb` / `802.3ad` / `balance-xor`: active-active. They present the bond
-  IP on multiple slave MACs, which the assisted-service host validation reads as
-  an IP collision and **blocks the install**. They also cannot truly aggregate
-  over a libvirt bridge (no switch/LACP partner), so they are cosmetic here.
-  Configurable for config fidelity, but not for a working install on this lab.
+* `balance-tlb` (default for the data bond): active-active on transmit, needs no
+  switch, and keeps a **stable single MAC** (RX on one slave). Outbound traffic is
+  load-balanced, and because the bond IP maps to one MAC it passes the agent
+  installer's IP-collision validation. The sweet spot for active-active here.
+* `active-backup` (default for the machine bond): one active NIC, single MAC.
+  Simplest, always works.
+* `balance-alb` / `802.3ad` / `balance-xor`: active-active that put the bond IP on
+  **multiple slave MACs**, which the assisted-service host validation reads as an
+  IP collision and **blocks the install**. `balance-alb` adds receive-side ARP MAC
+  rewriting; `802.3ad` also needs a real switch. They also cannot truly aggregate
+  over a libvirt bridge, so they are cosmetic here. Avoid for a working install.
 
 ## Bottom line
 

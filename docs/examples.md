@@ -47,7 +47,7 @@ sshKey: 'ssh-ed25519 AAAA...'
 
 The nmstate is the production NIC shape: `bond0` (active-backup) over the 2
 onboard NICs holds the static machine IP, default route, and DNS; `bond1`
-(active-backup, MTU 9000) over the 4-port card is a VLAN trunk, no IP;
+(balance-tlb, active-active TX, MTU 9000) over the 4-port card is a VLAN trunk, no IP;
 `bond0.20` carries the provisioning VLAN (onboard); `bond1.30` (storage) and
 `bond1.40` (live-migration) ride the data card with static IPs, jumbo MTU.
 
@@ -121,7 +121,7 @@ hosts:
       ipv4:
         enabled: false
       link-aggregation:
-        mode: active-backup
+        mode: balance-tlb
         options:
           miimon: "100"
         port:

@@ -68,8 +68,9 @@ nic_layout:
       - { network: provisioning, id: 20 }
   - bond: bond1
     nics: 4
-    mode: active-backup   # see default_bond_mode: active-active modes trip the
-                          # agent installer's IP-collision check on bonded VLANs.
+    mode: balance-tlb   # active-active TX, stable single MAC (no switch needed).
+                        # Unlike balance-alb/802.3ad it does NOT put the bond IP on
+                        # multiple MACs, so it passes the agent IP-collision check.
     trunk: trunk
     vlans:
       - { network: storage, id: 30 }
@@ -103,12 +104,14 @@ bmc_password: password
 provisioning_network_mode: Disabled
 
 # Default bond mode for any nic_layout bond that doesn't set its own `mode`.
-# active-backup is the reliable default: active-active modes (balance-alb, 802.3ad,
-# balance-xor) present the bond IP on multiple slave MACs, which trips the agent
-# installer's "no IP collision" host validation on bonded VLANs and blocks install.
-# Active-active also cannot truly aggregate over libvirt bridges (see docs/fidelity.md),
-# so it is cosmetic here. Use active-backup unless you have a real switch + reason.
-#   active-backup (default) / balance-alb / 802.3ad / balance-xor / balance-rr
+#   active-backup  one active NIC, single MAC. Simplest, always works.
+#   balance-tlb    active-active TX, stable single MAC, no switch needed. Passes
+#                  the agent IP-collision check (data bond default).
+#   balance-alb / 802.3ad / balance-xor  active-active that put the bond IP on
+#                  multiple slave MACs -> trips the agent installer's "no IP
+#                  collision" host validation on bonded VLANs and BLOCKS install.
+#                  Avoid these here (also cannot truly aggregate over a libvirt
+#                  bridge; see docs/fidelity.md). 802.3ad also needs a real switch.
 default_bond_mode: active-backup
 
 # Control plane size + master scheduling.

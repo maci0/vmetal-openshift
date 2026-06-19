@@ -12,6 +12,8 @@
 #   make bmc CLUSTER=c BMC_ACTION=...  Redfish BMC: status|on|off|force-off|reset|
 #                                       cycle|pxe|boot-disk|boot-iso|set-boot|media-* (NODE=node0)
 #   make adopt CLUSTER=c                in-cluster BMH adoption (platform baremetal only)
+#   make workers-add CLUSTER=c          add day-2 workers (set day2_workers: N first)
+#   make workers-remove CLUSTER=c       drain + delete the day-2 workers
 #   make status CLUSTER=c     nodes + operators + BareMetalHosts
 #   make creds CLUSTER=c      console URL + kubeadmin + kubeconfig
 #   make lint / make e2e      offline checks / live test
@@ -36,7 +38,7 @@ PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check bootstrap install configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt status creds lint e2e pdf clean help
+        serve-iso bmc adopt workers-add workers-remove status creds lint e2e pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -89,6 +91,12 @@ bmc:
 
 adopt:
 	ADOPT_HOSTS=$(ADOPT_HOSTS) $(PY) scripts/adopt.py $(CLUSTER)
+
+workers-add:
+	./scripts/workers-add.sh $(CLUSTER)
+
+workers-remove:
+	./scripts/workers-remove.sh $(CLUSTER)
 
 lint:
 	./scripts/lint.sh

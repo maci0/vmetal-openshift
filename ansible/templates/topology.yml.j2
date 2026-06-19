@@ -16,6 +16,7 @@
 {%   set ncount = c.node_count | default(1) | int %}
 {%   set cp = (1 if ncount == 1 else (c.control_plane_count | default(control_plane_count_default))) | int %}
 {%   set workers = ncount - cp %}
+{%   set day2_count = c.day2_workers | default(0) | int %}
 {%   set sched = c.masters_schedulable | default(masters_schedulable) | string %}
 {%   set masters_sched = true if sched == 'True' or sched == 'true' else (false if sched == 'False' or sched == 'false' else (workers == 0)) %}
 {%   set machine_cidr = networks.machine.cidr | replace('{c}', ci | string) %}
@@ -95,6 +96,11 @@
           mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_ip_offset + nidx) }}"
           ip: {{ p3 }}.{{ node_ip_offset + nidx }}
 {%         endfor %}
+{%         for widx in range(day2_count) %}
+        - name: {{ c.name }}-day2-worker{{ widx }}
+          mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_ip_offset + ncount + widx) }}"
+          ip: {{ p3 }}.{{ node_ip_offset + ncount + widx }}
+{%         endfor %}
 {%       endif %}
 {%     endif %}
 {%   endfor %}
@@ -105,6 +111,45 @@
     - name: node{{ nidx }}
       fullname: {{ c.name }}-node{{ nidx }}
       role: {{ 'master' if nidx < cp else 'worker' }}
+      ip: {{ mp3 }}.{{ node_o }}
+      mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_o) }}"
+      uuid: {{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}
+      bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}"
+      memory_mib: {{ c.memory_mib | default(default_memory_mib) }}
+      vcpus: {{ c.vcpus | default(default_vcpus) }}
+      addresses:
+{%     for nname, n in networks.items() %}
+{%       if n.cidr is defined and n.kind in ['nat', 'vlan'] %}
+        {{ nname }}: {{ (n.cidr | replace('{c}', ci | string)).split('/')[0].rsplit('.', 1)[0] }}.{{ node_o }}
+{%       endif %}
+{%     endfor %}
+      interfaces:
+{%     for b in nic_layout %}
+{%       set bidx = loop.index0 %}
+{%       set attach = b.network | default(b.trunk) %}
+{%       for k in range(b.nics) %}
+        - devname: eth{{ ns.i }}
+          bond: {{ b.bond }}
+          attach: {{ c.name }}-{{ attach }}
+          mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:{{ '%02x' | format(bidx * 16 + k) }}:{{ '%02x' | format(node_o) }}"
+{%         if networks[attach].mtu is defined %}
+          mtu: {{ networks[attach].mtu }}
+{%         endif %}
+{%         set ns.i = ns.i + 1 %}
+{%       endfor %}
+{%     endfor %}
+      disks:
+{%     for d in c.disks | default(default_disks) %}
+        - { suffix: {{ d.suffix }}, capacity_gib: {{ d.capacity_gib }}, target: {{ d.target }} }
+{%     endfor %}
+{%   endfor %}
+  day2_workers:
+{%   for widx in range(day2_count) %}
+{%     set node_o = node_ip_offset + ncount + widx %}
+{%     set ns = namespace(i=0) %}
+    - name: day2-worker{{ widx }}
+      fullname: {{ c.name }}-day2-worker{{ widx }}
+      role: worker
       ip: {{ mp3 }}.{{ node_o }}
       mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_o) }}"
       uuid: {{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}

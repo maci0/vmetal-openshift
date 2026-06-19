@@ -142,6 +142,10 @@ default_disks:
 # Per-cluster optional overrides: base_domain, node_count, memory_mib, vcpus,
 # disks, install_mode, boot_via, provisioning_network_mode, api/ingress_vip_offset,
 # subnet_index (pin this cluster's {c} index so its subnets stay stable).
+# day2_workers: N defines extra worker VMs added AFTER install with
+# `make workers-add` (agent node-image join); `make workers-remove` tears them down.
+# Works for any cluster, including SNO (node_count 1) for an edge-style single
+# control plane + workers.
 clusters:
   - name: cluster0
     node_count: 3

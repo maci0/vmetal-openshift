@@ -1,0 +1,111 @@
+---
+# Day-2 workers for an existing cluster. Provisions (or removes) the extra worker
+# VMs defined by a cluster's `day2_workers` count. The join itself (build a node
+# image, boot it, approve CSRs) is driven by scripts/workers-add.sh; this playbook
+# only handles the libvirt side and renders nodes-config.yaml.
+#
+#   ansible-playbook workers.yml -e cluster=cluster0 -e worker_action=add
+#   ansible-playbook workers.yml -e cluster=cluster0 -e worker_action=remove
+#
+# The networks already exist (created at install time) and are left untouched.
+- name: Day-2 worker VMs
+  hosts: local
+  gather_facts: false
+  become: "{{ use_become | default(true) }}"
+  vars:
+    cluster: cluster0
+    worker_action: add
+  tasks:
+    - name: Build topology from addressing scheme
+      ansible.builtin.set_fact:
+        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Select target cluster
+      ansible.builtin.set_fact:
+        tgt: "{{ topology | selectattr('name', 'equalto', cluster) | first }}"
+
+    - name: Require day2_workers to be defined
+      ansible.builtin.assert:
+        that: tgt.day2_workers | default([]) | length > 0
+        fail_msg: "cluster '{{ cluster }}' has no day2_workers; set day2_workers: N in group_vars."
+        quiet: true
+
+    - name: Add day-2 workers
+      when: worker_action == 'add'
+      block:
+        - name: Detect OVMF firmware paths
+          ansible.builtin.import_tasks: tasks/detect_ovmf.yml
+
+        - name: Render nodes-config.yaml for the agent node-image
+          ansible.builtin.copy:
+            content: "{{ lookup('template', 'templates/install/nodes-config.yaml.j2') }}"
+            dest: "{{ playbook_dir }}/../build/nodes-config-{{ cluster }}.yaml"
+            mode: "0644"
+          vars:
+            cluster: "{{ tgt }}"
+
+        - name: Check which worker volumes already exist
+          ansible.builtin.command: >-
+            virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }}
+            {{ item.0.fullname }}-{{ item.1.suffix }}.qcow2
+          loop: "{{ tgt.day2_workers | subelements('disks') }}"
+          loop_control:
+            label: "{{ item.0.fullname }}-{{ item.1.suffix }}"
+          register: w_volinfo
+          changed_when: false
+          failed_when: false
+
+        - name: Create missing worker volumes
+          ansible.builtin.command: >-
+            virsh -c {{ libvirt_uri }} vol-create-as {{ storage_pool }}
+            {{ item.item.0.fullname }}-{{ item.item.1.suffix }}.qcow2
+            {{ item.item.1.capacity_gib }}G --format qcow2
+          loop: "{{ w_volinfo.results }}"
+          loop_control:
+            label: "{{ item.item.0.fullname }}-{{ item.item.1.suffix }}"
+          when: item.rc != 0
+          changed_when: true
+
+        - name: Define worker domains
+          community.libvirt.virt:
+            command: define
+            xml: "{{ lookup('template', 'templates/libvirt/domain.xml.j2') }}"
+            uri: "{{ libvirt_uri }}"
+          loop: "{{ tgt.day2_workers }}"
+          loop_control:
+            label: "{{ item.fullname }}"
+          vars:
+            cluster: "{{ tgt }}"
+            node: "{{ item }}"
+
+    - name: Remove day-2 workers
+      when: worker_action == 'remove'
+      block:
+        - name: Check which worker domains exist
+          ansible.builtin.command: "virsh -c {{ libvirt_uri }} domstate {{ item.fullname }}"
+          loop: "{{ tgt.day2_workers }}"
+          loop_control:
+            label: "{{ item.fullname }}"
+          register: w_domstate
+          changed_when: false
+          failed_when: false
+
+        - name: Destroy running worker domains
+          ansible.builtin.command: "virsh -c {{ libvirt_uri }} destroy {{ item.item.fullname }}"
+          loop: "{{ w_domstate.results }}"
+          loop_control:
+            label: "{{ item.item.fullname }}"
+          when: item.rc == 0 and 'running' in item.stdout
+          changed_when: true
+          failed_when: false
+
+        - name: Undefine worker domains (with nvram + storage)
+          ansible.builtin.command: >-
+            virsh -c {{ libvirt_uri }} undefine {{ item.item.fullname }}
+            --nvram --remove-all-storage
+          loop: "{{ w_domstate.results }}"
+          loop_control:
+            label: "{{ item.item.fullname }}"
+          when: item.rc == 0
+          changed_when: true
+          failed_when: false

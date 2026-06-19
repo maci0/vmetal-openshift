@@ -1,0 +1,18 @@
+{% import 'nmstate.j2' as net with context %}
+{# nodes-config.yaml for `openshift-install agent create node-image`: day-2 worker
+   hosts added to an existing cluster. Same per-host shape as agent-config hosts
+   (interfaces + bonded/VLAN networkConfig), but role is always worker. #}
+hosts:
+{% for node in cluster.day2_workers %}
+- hostname: {{ node.fullname }}
+  role: worker
+  rootDeviceHints:
+    deviceName: /dev/vda
+  interfaces:
+{%   for nic in node.interfaces %}
+  - name: {{ nic.devname }}
+    macAddress: {{ nic.mac }}
+{%   endfor %}
+  networkConfig:
+{{ net.nmstate(node, cluster) | indent(4, true) }}
+{% endfor %}

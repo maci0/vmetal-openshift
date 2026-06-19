@@ -15,6 +15,7 @@ playbooks (run from this dir, e.g. ansible-playbook setup.yml):
   generate-configs.yml render install-config / agent-config / BMH / Scheduler / Provisioning
   sushy.yml            render sushy Redfish config + systemd unit + BMC URL list
   bmc.yml              Redfish power / boot-device / virtual-media control
+  workers.yml          provision / remove day-2 worker VMs (worker_action=add|remove)
   host-dns.yml         point the host resolver at each cluster domain
   dump-topology.yml    render the derived topology to JSON (test oracle)
 

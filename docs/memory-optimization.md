@@ -67,7 +67,7 @@ Reboot the VMs (`make down` / `make up`) so the hook squeezes them.
   aggressive `vm.swappiness=150` at runtime that proactively swaps even with free
   RAM; lower it if you want the cluster to stay in RAM until truly pressured).
 
-`make check` warns when KSM is off.
+`make check` warns when KSM, zram, or the hook is off.
 
 ## Tuning knobs
 

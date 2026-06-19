@@ -42,6 +42,20 @@ else
        (or one-off: echo 1 | sudo tee /sys/kernel/mm/ksm/run)"
 fi
 
+# zram: compressed-RAM swap that absorbs the per-VM squeeze (see make optimize).
+if grep -q zram /proc/swaps 2>/dev/null; then
+  pass "zram swap active ($(zramctl --output ALGORITHM /dev/zram0 2>/dev/null | tail -1 | tr -d ' ')); compresses evicted node memory"
+else
+  warn "no zram swap: run 'make optimize' (or configure zram-generator) so squeezed pages compress in RAM."
+fi
+
+# libvirt hook: per-VM memory.high squeeze that pushes cold pages into zram.
+if [[ -x /etc/libvirt/hooks/qemu ]]; then
+  pass "libvirt qemu hook installed (per-VM memory.high squeeze)"
+else
+  warn "libvirt qemu hook not installed: run 'make optimize' to enable the per-VM memory squeeze."
+fi
+
 echo "== libvirt =="
 if have virsh; then pass "virsh present"; else bad "virsh missing (install libvirt-client)"; fi
 if have virsh && virsh -c qemu:///system version >/dev/null 2>&1; then

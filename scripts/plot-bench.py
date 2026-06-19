@@ -31,16 +31,21 @@ width = max(12, len(states) * 1.5)
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(width, 5))
 fig.suptitle("vmetal-openshift: memory optimization (3 masters + 2 workers)", fontsize=13, weight="bold")
 
-w = 0.27
-ax1.bar([i - w for i in x], used, w, label="host RAM used (GiB)", color="#ef4444")
-ax1.bar([i for i in x], ksm, w, label="KSM saved (GiB)", color="#10b981")
-ax1.bar([i + w for i in x], zsw, w, label="zram compressed (GiB)", color="#6366f1")
+saved = [used[0] - u for u in used]   # RAM saved vs the baseline (first row)
+w = 0.2
+ax1.bar([i - 1.5 * w for i in x], used, w, label="host RAM used (GiB)", color="#ef4444")
+ax1.bar([i - 0.5 * w for i in x], saved, w, label="RAM saved vs baseline (GiB)", color="#f59e0b")
+ax1.bar([i + 0.5 * w for i in x], ksm, w, label="KSM merged (GiB)", color="#10b981")
+ax1.bar([i + 1.5 * w for i in x], zsw, w, label="zram compressed (GiB)", color="#6366f1")
 ax1.set_xticks(list(x))
 ax1.set_xticklabels(states, rotation=30, ha="right", fontsize=8)
 ax1.set_ylabel("GiB")
 ax1.set_title("Memory")
 ax1.legend(fontsize=8)
 ax1.grid(axis="y", alpha=0.3)
+for i, v in zip(x, saved):
+    if v > 0.5:
+        ax1.text(i - 0.5 * w, v, f"{v:.0f}", ha="center", va="bottom", fontsize=7, color="#92400e")
 
 ax2.bar(list(x), perf, 0.5, color="#f59e0b")
 ax2.set_xticks(list(x))

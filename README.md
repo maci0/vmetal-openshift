@@ -296,14 +296,14 @@ dials down; zram fills until eviction settles).
 
 Measured on a 3 control-plane + 2 worker cluster (92 GiB allocated, 128 GiB host):
 
-| setting | host RAM | KSM saved | zram data → compr | ratio | swap | CPU (M k/s) |
-|---------|---------:|----------:|------------------:|:-----:|-----:|------------:|
-| baseline | 117.8 GiB | 0 | n/a | n/a | **0** | 24.5 |
-| KSM | 92.6 GiB | **27.0 GiB** | n/a | n/a | 0 | 24.5 |
-| zram (zstd) | 94.6 GiB | 0 | 35.6 → 12.9 GiB | **2.8×** | 37 GiB | 24.3 |
-| KSM + zram (zstd) | 90.9 GiB | 11.9 GiB | 25.6 → 9.3 GiB | 2.7× | 26 GiB | 24.5 |
-| zram (lz4) | 100.3 GiB | 0 | 33.4 → 16.3 GiB | 2.0× | 35 GiB | 24.5 |
-| KSM + zram (lz4) | 96.7 GiB | 8.3 GiB | 29.0 → 14.5 GiB | 2.0× | 30 GiB | 24.4 |
+| setting | host RAM | **saved vs baseline** | KSM merged | zram data → compr | ratio | swap | CPU (M k/s) |
+|---------|---------:|----------------------:|-----------:|------------------:|:-----:|-----:|------------:|
+| baseline | 117.8 GiB | n/a | 0 | n/a | n/a | **0** | 24.5 |
+| KSM | 92.6 GiB | **25.2 GiB** | 27.0 GiB | n/a | n/a | 0 | 24.5 |
+| zram (zstd) | 94.6 GiB | **23.2 GiB** | 0 | 35.6 → 12.9 GiB | **2.8×** | 37 GiB | 24.3 |
+| KSM + zram (zstd) | 90.9 GiB | **26.9 GiB** | 11.9 GiB | 25.6 → 9.3 GiB | 2.7× | 26 GiB | 24.5 |
+| zram (lz4) | 100.3 GiB | **17.5 GiB** | 0 | 33.4 → 16.3 GiB | 2.0× | 35 GiB | 24.5 |
+| KSM + zram (lz4) | 96.7 GiB | **21.1 GiB** | 8.3 GiB | 29.0 → 14.5 GiB | 2.0× | 30 GiB | 24.4 |
 
 Takeaways:
 * **KSM** reclaims ~27 GiB by deduping the identical RHCOS pages across nodes (its

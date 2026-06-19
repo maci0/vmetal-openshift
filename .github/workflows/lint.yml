@@ -1,0 +1,29 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: System tools
+        run: sudo apt-get update && sudo apt-get install -y shellcheck libxml2-utils jq
+
+      - name: Python + Ansible deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core ansible-lint yamllint jinja2 pyyaml
+          ansible-galaxy collection install -r ansible/requirements.yml
+
+      - name: make lint
+        run: make lint

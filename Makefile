@@ -24,7 +24,9 @@ ISO_BASE_URL ?=
 ANSIBLE_ARGS ?=
 OCP_CHANNEL  ?= stable
 OCP_VERSION  ?=          # e.g. 4.22.0; empty = newest in channel
+ADOPT_HOSTS  ?=
 AP           := $(abspath $(shell [ -x .venv/bin/ansible-playbook ] && echo .venv/bin/ansible-playbook || echo ansible-playbook))
+PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3))
 
 .PHONY: check bootstrap configs iso sushy host-dns up down bmc adopt lint e2e pdf clean help
 
@@ -60,7 +62,7 @@ bmc:
 	  -e node=$(NODE) -e bootdev=$(BOOTDEV) -e iso_base_url=$(ISO_BASE_URL)
 
 adopt:
-	./scripts/adopt.sh $(CLUSTER)
+	ADOPT_HOSTS=$(ADOPT_HOSTS) $(PY) scripts/adopt.py $(CLUSTER)
 
 lint:
 	./scripts/lint.sh

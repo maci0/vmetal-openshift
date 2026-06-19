@@ -106,8 +106,20 @@ Example (Fedora/RHEL):
 ```bash
 sudo dnf install -y libvirt qemu-kvm edk2-ovmf NetworkManager-dnsmasq nmstate jq
 ```
-Run **`make check`** to verify everything first. Full sizing in
-[docs/requirements.md](docs/requirements.md).
+
+**Host memory by mode** (VMs run concurrently on one host; vCPU oversubscribes,
+RAM does not):
+
+| Mode | VMs | RAM (lab default) | RAM (OpenShift minimums) |
+|------|-----|-------------------|--------------------------|
+| SNO (`node_count: 1`) | 1 | ~34 GiB | ~18 GiB |
+| Agent 3-node | 3 | ~98 GiB | ~52 GiB |
+| IPI 3-node | 3 + bootstrap VM | ~114 GiB | ~68 GiB |
+| each extra worker | +1 | +~32 GiB | +~10 GiB |
+
+Defaults are 16 vCPU / 32 GiB / 128 + 1024 GiB (thin) per node; shrink via
+per-cluster `memory_mib` / `vcpus` / `disks`. Run **`make check`** to verify the
+host first. Full sizing in [docs/requirements.md](docs/requirements.md).
 
 ## 🚀 Quick start
 

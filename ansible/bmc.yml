@@ -95,32 +95,38 @@
         label: "{{ item.fullname }}"
       when: bmc_action == 'media-insert'
 
+    # sushy-emulator exposes VirtualMedia under Systems (not Managers), so POST
+    # straight to the InsertMedia action. redfish_command's category=Manager path
+    # silently no-ops against this emulator.
     - name: Insert discovery ISO as virtual media
-      community.general.redfish_command:
-        category: Manager
-        command: VirtualMediaInsert
-        baseuri: "{{ bmc_base }}"
-        username: "{{ tgt.bmc_user }}"
+      ansible.builtin.uri:
+        url: "https://{{ bmc_base }}/redfish/v1/Systems/{{ item.uuid }}/VirtualMedia/Cd/Actions/VirtualMedia.InsertMedia"
+        method: POST
+        user: "{{ tgt.bmc_user }}"
         password: "{{ tgt.bmc_pass }}"
+        force_basic_auth: true
         validate_certs: false
-        resource_id: "{{ item.uuid }}"
-        virtual_media:
-          image_url: "{{ iso_base_url }}/discovery_image_{{ cluster }}.iso"
-          media_types: [CD, DVD]
+        body_format: json
+        body:
+          Image: "{{ iso_base_url }}/discovery_image_{{ cluster }}.iso"
+          Inserted: true
+        status_code: [200, 202, 204]
       loop: "{{ nodes }}"
       loop_control:
         label: "{{ item.fullname }}"
       when: bmc_action in ['media-insert', 'boot-iso']
 
     - name: Eject virtual media
-      community.general.redfish_command:
-        category: Manager
-        command: VirtualMediaEject
-        baseuri: "{{ bmc_base }}"
-        username: "{{ tgt.bmc_user }}"
+      ansible.builtin.uri:
+        url: "https://{{ bmc_base }}/redfish/v1/Systems/{{ item.uuid }}/VirtualMedia/Cd/Actions/VirtualMedia.EjectMedia"
+        method: POST
+        user: "{{ tgt.bmc_user }}"
         password: "{{ tgt.bmc_pass }}"
+        force_basic_auth: true
         validate_certs: false
-        resource_id: "{{ item.uuid }}"
+        body_format: json
+        body: {}
+        status_code: [200, 202, 204]
       loop: "{{ nodes }}"
       loop_control:
         label: "{{ item.fullname }}"

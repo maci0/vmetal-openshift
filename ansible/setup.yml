@@ -96,7 +96,9 @@
         cluster: "{{ item.0 }}"
         node: "{{ item.1 }}"
 
-    - name: Start domains
+    # Only auto-start for boot_via=iso (the ISO is attached). For redfish / IPI
+    # the nodes stay off until the BMC powers them on with virtual media.
+    - name: Start domains (boot_via=iso clusters)
       community.libvirt.virt:
         name: "{{ item.1.fullname }}"
         state: running
@@ -104,3 +106,4 @@
       loop: "{{ topology | subelements('nodes') }}"
       loop_control:
         label: "{{ item.1.fullname }}"
+      when: item.0.static_iso

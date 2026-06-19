@@ -1,0 +1,10 @@
+# Run `pre-commit install` once; then `make lint` runs on every commit.
+repos:
+  - repo: local
+    hooks:
+      - id: vmetal-lint
+        name: make lint
+        entry: scripts/lint.sh
+        language: system
+        pass_filenames: false
+        always_run: true

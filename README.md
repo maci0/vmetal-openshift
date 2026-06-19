@@ -129,15 +129,18 @@ host first. Full sizing in [docs/requirements.md](docs/requirements.md).
 ## 🚀 Quick start
 
 ```bash
-make check                      # verify host prerequisites
-make bootstrap                  # venv, deps, installer, cert
-make iso CLUSTER=cluster0       # render configs + build the agent discovery ISO
-make sushy                      # render the sushy Redfish config + unit
-make up ANSIBLE_ARGS="-e use_become=false"   # provision libvirt (in the libvirt group)
-make down                       # tear everything down
+make check                       # verify host prerequisites
+make bootstrap                   # venv, deps, installer, cert
+make sushy-install               # start the sushy Redfish BMC (systemd --user)
+make install CLUSTER=cluster0    # one-shot: build ISO, provision, boot, wait for the cluster
+make status                      # nodes + operators + BareMetalHosts
+make creds                       # console URL + kubeadmin password
+make down                        # tear everything down
 ```
-`make help` lists every target. A cluster must be single-node (`node_count: 1`) or
-`>= 3`; a 2-node cluster has no valid control-plane topology and is rejected up front.
+`make` (no target) lists everything. A cluster must be single-node (`node_count: 1`)
+or `>= 3`; a 2-node cluster has no valid control-plane topology and is rejected up
+front. Prefer step-by-step? `make iso` -> `make up` -> (redfish) `make bmc
+BMC_ACTION=boot-iso` -> wait; `make install` just chains those.
 
 ## 🧭 How it fits together
 
@@ -255,7 +258,7 @@ KEEP=1 scripts/e2e.sh
 
 ```
 Makefile                  check / bootstrap / configs / iso / sushy / host-dns / up / down / bmc / adopt / lint / e2e / pdf
-scripts/                  bootstrap, build-iso, check-prereqs, adopt, test-dns, lint, e2e, export-pdf
+scripts/                  bootstrap, install, build-iso, check-prereqs, adopt(.py), status, creds, test-dns, lint, e2e, export-pdf
 build/                    downloaded installer + built ISOs (git-ignored)
 certs/                    local TLS material for sushy (git-ignored)
 ansible/                  see ansible/README.md for the full map
@@ -275,3 +278,8 @@ docs/                     architecture, requirements, ipi-vs-agent, fidelity, di
 
 * macOS host support
 * first-class disconnected switch (see [docs/disconnected.md](docs/disconnected.md))
+* live-migration network wiring into the HyperConverged CR (CNV)
+
+## License
+
+[MIT](LICENSE)

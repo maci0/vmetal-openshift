@@ -2,6 +2,8 @@
 # Check host prerequisites for the virtual baremetal OCP lab.
 # Prints PASS / WARN / FAIL per item. Exits non-zero if any hard requirement fails.
 #   scripts/check-prereqs.sh
+# Intentionally no `set -e`: this is a checker that must run every probe and
+# report all results, not abort on the first failing test.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

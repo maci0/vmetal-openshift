@@ -34,13 +34,13 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | Variable | Default | Meaning |
 |----------|---------|---------|
 | `install_mode` | `agent` | `agent` or `ipi` (override per cluster) |
-| `boot_via` | `iso` | agent ISO delivery: `iso` (attach) or `redfish` (virtual media) |
+| `boot_via` | `redfish` | agent ISO delivery: `redfish` (sushy virtual media) or `iso` (attach directly) |
 | `sushy_port` | `8000` | Redfish endpoint port |
 | `bmc_username` / `bmc_password` | `admin` / `password` | BMC creds in configs (sushy ignores) |
 | `provisioning_network_mode` | `Disabled` | IPI provisioning: `Disabled` or `Managed` |
 | `control_plane_count_default` | `3` | masters when `node_count > 1` (workers = node_count - this) |
 | `masters_schedulable` | `auto` | `auto` (schedulable only when no workers) / `true` / `false` |
-| `default_bond_mode` | `balance-alb` | fallback bond mode when a `nic_layout` bond omits `mode` (`balance-alb` / `active-backup` / `802.3ad` / `balance-xor` / `balance-rr`) |
+| `default_bond_mode` | `active-backup` | fallback bond mode when a `nic_layout` bond omits `mode`. Use `active-backup` or `balance-tlb` (active-active TX, stable MAC); `balance-alb` / `802.3ad` / `balance-xor` break the agent install (IP collision, see [fidelity](fidelity.md)) |
 | `ntp_servers` | `0/1.pool.ntp.org` | `additionalNTPSources`; empty to omit |
 
 ## Per-node sizing

@@ -32,8 +32,9 @@ command -v jq >/dev/null || die "jq required"
 topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
 read -r STATIC_ISO BMC_HOST FQDN < <(
   jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.static_iso) \(.bmc_host) \(.fqdn)"' "$topo"
-)
+) || true
 rm -f "$topo"
+[[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology (check group_vars/all.yml clusters)"
 
 if [[ "$STATIC_ISO" == "true" ]]; then
   log "boot_via=iso: VMs are booting the attached ISO"

@@ -21,24 +21,7 @@ CHROME="$(command -v chromium || command -v chromium-browser || command -v googl
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # 1. Render mermaid blocks to PNG and rewrite them as image links.
-MMDC="$MMDC" python3 - "$SRC" "$WORK" <<'PY'
-import sys, re, os, subprocess, shlex
-src, work = sys.argv[1], sys.argv[2]
-mmdc = shlex.split(os.environ["MMDC"])
-text = open(src).read()
-n = 0
-def repl(m):
-    global n
-    mmd = os.path.join(work, f"d{n}.mmd")
-    png = os.path.join(work, f"d{n}.png")
-    open(mmd, "w").write(m.group(1))
-    subprocess.run(mmdc + ["-i", mmd, "-o", png, "-b", "white", "-w", "1600"], check=True)
-    n += 1
-    return f"![]({png})"
-text = re.sub(r"```mermaid\n(.*?)```", repl, text, flags=re.S)
-open(os.path.join(work, "patched.md"), "w").write(text)
-print(f"rendered {n} diagram(s)")
-PY
+MMDC="$MMDC" python3 "$ROOT/scripts/render_md_mermaid.py" "$SRC" "$WORK"
 
 # 2. Markdown -> standalone HTML (images inlined).
 cat >"$WORK/style.css" <<'CSS'

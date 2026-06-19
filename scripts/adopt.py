@@ -87,7 +87,9 @@ def main():
     if existing:
         log(f"{len(existing)} existing BMH(s): enabling BMC (power management)")
         secrets, hosts = {}, []
-        for d in yaml.safe_load_all(open(bmh_file)):
+        with open(bmh_file) as fh:
+            docs = list(yaml.safe_load_all(fh))
+        for d in docs:
             if not d:
                 continue
             if d["kind"] == "Secret":

@@ -66,11 +66,7 @@ TMP="$(mktemp -d)"
 ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" >/dev/null )
 ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
     -e '{"clusters":[{"name":"ipichk","node_count":3,"install_mode":"ipi"}]}' >/dev/null )
-"$PY" - "$TMP" <<'PY'
-import sys, glob, yaml
-for f in glob.glob(sys.argv[1] + "/*/*.yaml"):
-    list(yaml.safe_load_all(open(f)))   # multi-doc (BMH) aware
-PY
+"$PY" tests/parse_configs.py "$TMP"
 pass "install/agent/ipi configs parse"
 rm -rf "$TMP"
 

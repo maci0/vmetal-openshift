@@ -71,6 +71,15 @@
         fail_msg: "node '{{ node }}' not found in cluster '{{ cluster }}'"
         quiet: true
 
+    - name: Require iso_base_url for media actions
+      ansible.builtin.assert:
+        that: iso_base_url | length > 0
+        fail_msg: >-
+          bmc_action '{{ bmc_action }}' needs the ISO served over HTTP. Pass
+          -e iso_base_url=http://<host-on-oob-lan>:8099 (or use 'make install').
+        quiet: true
+      when: bmc_action in ['media-insert', 'boot-iso']
+
     # boot-iso uses a cold sequence: power OFF, insert (sushy writes the cdrom
     # into the domain), set one-time Cd, then cold power ON so the firmware boots
     # the freshly attached media. sushy does not reliably attach on a live reset.

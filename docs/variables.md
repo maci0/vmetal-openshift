@@ -1,6 +1,6 @@
 # Variables reference
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · **Variables** · [Examples](examples.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · **Variables** · [Examples](examples.md) · [Memory](memory-optimization.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 All knobs live in `ansible/group_vars/all.yml`. Most installs only touch the
 `clusters` list. Everything else has a sensible default and is derived.
@@ -50,6 +50,8 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | `default_memory_mib` | `32768` | RAM per node |
 | `default_vcpus` | `16` | vCPUs per node |
 | `default_disks` | 128 + 1024 GiB | boot + storage qcow2 disks |
+| `disk_cache` | `none` | qcow2 cache mode (`none` keeps host RAM free for VMs/zram; `writeback`/`unsafe` faster, more RAM, see [memory](memory-optimization.md)) |
+| `disk_io` | `native` | qcow2 I/O mode (`native` with cache=none, `threads` with writeback) |
 
 ## Per-cluster keys (`clusters[]`)
 

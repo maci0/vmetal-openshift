@@ -22,7 +22,10 @@
    "booted the installation image again" stall after install. #}
 {% for d in node.disks %}
     <disk type="file" device="disk">
-      <driver name="qemu" type="qcow2"/>
+      {# cache=none + io=native: direct I/O, no host page cache (host cache would
+         compete with the VM RAM/zram we work to free). discard/detect_zeroes keep
+         the thin qcow2 small. #}
+      <driver name="qemu" type="qcow2" cache="{{ disk_cache | default('none') }}" io="{{ disk_io | default('native') }}" discard="unmap" detect_zeroes="unmap"/>
       <source file="{{ images_dir }}/{{ node.fullname }}-{{ d.suffix }}.qcow2"/>
       <target dev="{{ d.target }}" bus="virtio"/>
 {% if loop.first %}

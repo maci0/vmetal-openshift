@@ -132,6 +132,17 @@ ntp_servers:
 # Per-node defaults (override per cluster via memory_mib / vcpus / disks).
 default_memory_mib: 32768
 default_vcpus: 16
+
+# Disk driver tuning for the qcow2 node disks.
+#   disk_cache: none      direct I/O, no host page cache. Best for this lab: host
+#                         cache would compete with the VM RAM/zram we free. Use
+#                         writeback for faster disk if you have RAM to spare (it
+#                         caches in host RAM and honours flushes), or unsafe for a
+#                         throwaway cluster (fastest, no crash safety).
+#   disk_io: native       pairs with cache=none (use threads with writeback).
+# discard=unmap + detect_zeroes=unmap (always on) keep the thin qcow2 small.
+disk_cache: none
+disk_io: native
 default_disks:
   - { suffix: disk0, capacity_gib: 128, target: vda }
   - { suffix: disk1, capacity_gib: 1024, target: vdb }

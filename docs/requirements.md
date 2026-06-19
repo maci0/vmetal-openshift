@@ -1,6 +1,6 @@
 # System requirements
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · **Requirements** · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · **Requirements** · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 All nodes here are libvirt VMs on one KVM host, so "node sizing" is per-VM and
 the host must fit the sum. The lab defaults are generous (16 vCPU, 32 GiB,

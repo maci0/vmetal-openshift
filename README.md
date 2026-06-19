@@ -28,6 +28,22 @@ BareMetalHost power management, all from one data-driven Ansible topology.
 
 ---
 
+## TL;DR
+
+Virtual baremetal OpenShift on one KVM host: Redfish BMCs (sushy), bonded NICs +
+VLAN trunks, two VIPs, metal3, MetalLB. One Ansible topology drives it all.
+
+```bash
+make check && make bootstrap      # host check + venv/deps/installer
+make sushy-install                # start the Redfish BMC
+make install CLUSTER=cluster0     # build ISO -> provision -> boot -> wait for the cluster
+make status && make creds         # health + console/kubeadmin
+```
+
+`make` (no target) lists every command. New here? Read on; in a hurry? That's it.
+
+---
+
 **Goal: come as close as practical to a real baremetal OpenShift install** on a
 single host, without the hardware. `sushy-tools` emulates Redfish BMCs on an
 out-of-band LAN, libvirt VMs stand in for baremetal nodes (bonded NICs, jumbo-MTU
@@ -43,6 +59,7 @@ emulated.
 - 🧩 **Data-driven**: edit one `clusters` list; subnets, MACs, VIPs, bridges, UUIDs all computed
 - 🪢 **Production NIC layout**: onboard bond + 4-port active-active VLAN trunk (storage + live-migration), jumbo MTU
 - 🌐 **Two VIPs** (api / ingress) via integrated keepalived + HAProxy; libvirt split-DNS
+- 🎈 **MetalLB** (L2) for `Service type=LoadBalancer`, pool derived on the machine net (`make metallb`)
 - ⚡ **In-cluster BareMetalHost** power management (metal3 → Redfish → libvirt)
 - 📦 **Multi-cluster**: SNO, compact, or dedicated workers; schedulable masters
 - 🧪 **Tested**: offline lint + render checks + live e2e; ansible-lint production profile

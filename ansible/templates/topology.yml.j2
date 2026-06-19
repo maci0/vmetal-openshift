@@ -49,6 +49,7 @@
   control_plane_replicas: {{ cp }}
   worker_replicas: {{ workers }}
   masters_schedulable: {{ masters_sched }}
+  metallb_pool: {{ mp3 }}.100-{{ mp3 }}.119
   machine_net: {{ c.name }}-machine
   machine_cidr: {{ machine_cidr }}
   machine_gateway: {{ mp3 }}.1

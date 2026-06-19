@@ -14,6 +14,7 @@
 #   make bmc CLUSTER=c BMC_ACTION=...  Redfish BMC: status|on|off|force-off|reset|
 #                                       cycle|pxe|boot-disk|boot-iso|set-boot|media-* (NODE=node0)
 #   make adopt CLUSTER=c                in-cluster BMH adoption (platform baremetal only)
+#   make metallb CLUSTER=c              install MetalLB (LoadBalancer services, L2 pool)
 #   make workers-add CLUSTER=c          add day-2 workers (set day2_workers: N first)
 #   make workers-remove CLUSTER=c       drain + delete the day-2 workers
 #   make status CLUSTER=c     nodes + operators + BareMetalHosts
@@ -40,7 +41,7 @@ PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt workers-add workers-remove status creds lint e2e bench pdf clean help
+        serve-iso bmc adopt metallb workers-add workers-remove status creds lint e2e bench pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -105,6 +106,9 @@ workers-add:
 
 workers-remove:
 	./scripts/workers-remove.sh $(CLUSTER)
+
+metallb:
+	./scripts/metallb.sh $(CLUSTER)
 
 lint:
 	./scripts/lint.sh

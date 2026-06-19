@@ -105,6 +105,17 @@
         cluster: "{{ item }}"
       when: not item.sno and item.mode == 'agent'
 
+    - name: Render MetalLB operator + L2 config (Day-2 LoadBalancer services)
+      ansible.builtin.template:
+        src: "templates/install/{{ item.1 }}"
+        dest: "{{ out_dir }}/{{ item.0.name }}/{{ item.1 | replace('.j2', '') }}"
+        mode: "0644"
+      loop: "{{ topology | product(['metallb-operator.yaml.j2', 'metallb-config.yaml.j2']) | list }}"
+      loop_control:
+        label: "{{ item.0.name }}/{{ item.1 }}"
+      vars:
+        cluster: "{{ item.0 }}"
+
     - name: Render IPI install-config.yaml (baremetal hosts with BMC)
       ansible.builtin.template:
         src: templates/install/install-config.ipi.yaml.j2

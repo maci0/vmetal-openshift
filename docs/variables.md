@@ -73,4 +73,5 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 
 subnets and gateways, bridge names, per-NIC MACs, DHCP reservations, both VIPs,
 control-plane/worker replica counts, node roles, deterministic domain UUID,
-per-node Redfish BMC URL, provisioning IPs, MTU propagation.
+per-node Redfish BMC URL, provisioning IPs, MTU propagation, MetalLB pool
+(`.100-.119` on the machine net, applied via `make metallb`).

@@ -1,0 +1,26 @@
+{# MetalLB operator (Day-2). Baremetal clusters have no cloud load balancer, so
+   Service type=LoadBalancer needs MetalLB. Apply this, wait for the operator,
+   then apply metallb-config.yaml. #}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: metallb-operator
+  namespace: metallb-system
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: metallb-operator-sub
+  namespace: metallb-system
+spec:
+  channel: stable
+  name: metallb-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

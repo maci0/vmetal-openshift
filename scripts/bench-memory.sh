@@ -6,9 +6,16 @@
 #   zswap          zswap + per-VM cgroup squeeze (memory.high) only
 #   ksm+zswap      everything
 #
+# The zswap states are swept across compression algorithms (BENCH_COMPRESSORS,
+# default "zstd lz4 lzo", filtered to what the kernel accepts).
+#
+# Note: turning KSM off (run=0) only stops scanning, already-merged pages stay
+# merged, so for a clean baseline we run=2 (unmerge) and wait for pages_sharing to
+# drain. A full VM reboot would also reset it, but that costs a reboot per state.
+#
 #   scripts/bench-memory.sh [cluster]
 # Env: BENCH_PODS (default = node count), BENCH_VM_BYTES (1G), BENCH_SECS (60),
-#      KSM_SETTLE (90), SQUEEZE_PCT (60), STRESS_IMG.
+#      KSM_SETTLE (90), SQUEEZE_PCT (60), BENCH_COMPRESSORS, STRESS_IMG.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,10 +40,29 @@ scopes() { ls -d /sys/fs/cgroup/machine.slice/machine-qemu*-node*.scope \
                   /sys/fs/cgroup/machine.slice/machine-qemu*-day2-worker*.scope 2>/dev/null; }
 
 set_ksm() {  # $1 = on|off
-  if [[ "$1" == on ]]; then w /sys/kernel/mm/ksm/run 1; w /sys/kernel/mm/ksm/pages_to_scan 2000
-  else w /sys/kernel/mm/ksm/run 2; sleep 3; w /sys/kernel/mm/ksm/run 0; fi
+  if [[ "$1" == on ]]; then
+    w /sys/kernel/mm/ksm/run 1; w /sys/kernel/mm/ksm/pages_to_scan 2000
+  else
+    # run=0 only STOPS scanning, merged pages stay merged. run=2 unmerges them;
+    # wait until they are actually split so the baseline is truly un-deduped.
+    w /sys/kernel/mm/ksm/run 2
+    for _ in $(seq 1 90); do
+      [[ "$(cat /sys/kernel/mm/ksm/pages_sharing)" -lt 2000 ]] && break
+      sleep 2
+    done
+    w /sys/kernel/mm/ksm/run 0
+  fi
 }
-set_zswap() { [[ -f /sys/module/zswap/parameters/enabled ]] && w /sys/module/zswap/parameters/enabled "$1" || true; }
+set_zswap() {  # $1 = Y|N ; $2 = compressor (when Y)
+  [[ -f /sys/module/zswap/parameters/enabled ]] || return 0
+  if [[ "$1" == Y ]]; then
+    w /sys/module/zswap/parameters/enabled N            # change compressor while off
+    w /sys/module/zswap/parameters/compressor "$2"
+    w /sys/module/zswap/parameters/enabled Y
+  else
+    w /sys/module/zswap/parameters/enabled N
+  fi
+}
 set_squeeze() {  # $1 = on|off : memory.high on each VM scope
   for s in $(scopes); do
     [[ -f "$s/memory.high" ]] || continue
@@ -90,37 +116,55 @@ YAML
   oc -n "$NS" delete job stress >/dev/null 2>&1 || true
 }
 
-declare -A RES
-for state in baseline ksm zswap ksm+zswap; do
-  case "$state" in
-    baseline)  set_ksm off; set_zswap N; set_squeeze off ;;
-    ksm)       set_ksm on;  set_zswap N; set_squeeze off ;;
-    zswap)     set_ksm off; set_zswap Y; set_squeeze on ;;
-    ksm+zswap) set_ksm on;  set_zswap Y; set_squeeze on ;;
-  esac
-  log "[$state] settling (${KSM_SETTLE}s)"; sleep "$KSM_SETTLE"
-  log "[$state] running stress-ng on $PODS pod(s)"
+# Which zswap compressors to sweep (filter to those the kernel actually accepts).
+avail=""
+if [[ -f /sys/module/zswap/parameters/compressor ]]; then
+  orig="$(cat /sys/module/zswap/parameters/compressor)"
+  for c in ${BENCH_COMPRESSORS:-zstd lz4 lzo}; do
+    if echo "$c" | sudo tee /sys/module/zswap/parameters/compressor >/dev/null 2>&1 \
+       && [[ "$(cat /sys/module/zswap/parameters/compressor)" == "$c" ]]; then avail="$avail $c"; fi
+  done
+  echo "$orig" | sudo tee /sys/module/zswap/parameters/compressor >/dev/null 2>&1 || true
+fi
+avail="${avail# }"; [[ -n "$avail" ]] || avail="zstd"
+log "zswap compressors to test: $avail"
+
+# state spec: ksm:zswap:compressor:squeeze
+ORDER=(baseline ksm)
+declare -A SPEC RES
+SPEC[baseline]="off:N:-:off"; SPEC[ksm]="on:N:-:off"
+for c in $avail; do
+  ORDER+=("zswap-$c" "ksm+zswap-$c")
+  SPEC["zswap-$c"]="off:Y:$c:on"
+  SPEC["ksm+zswap-$c"]="on:Y:$c:on"
+done
+
+for label in "${ORDER[@]}"; do
+  IFS=: read -r k z c sq <<<"${SPEC[$label]}"
+  set_ksm "$k"; set_zswap "$z" "$c"; set_squeeze "$sq"
+  log "[$label] settling (${KSM_SETTLE}s)"; sleep "$KSM_SETTLE"
+  log "[$label] running stress-ng on $PODS pod(s)"
   perf=$(run_bench)
   read -r used ksm stored compr ratio < <(mem_row)
-  RES[$state]="$used|$ksm|$stored|$compr|$ratio|$perf"
-  log "[$state] host_used=${used}MiB ksm_saved=${ksm}MiB zswap=${stored}->${compr}MiB($ratio) perf=${perf} bogo-ops/s"
+  RES[$label]="$used|$ksm|$stored|$compr|$ratio|$perf"
+  log "[$label] host_used=${used}MiB ksm_saved=${ksm}MiB zswap=${stored}->${compr}MiB($ratio) perf=${perf} bogo-ops/s"
 done
 
 oc delete ns "$NS" >/dev/null 2>&1 || true
 echo
-printf "%-12s %12s %12s %14s %14s %8s %14s\n" state host_used_MiB ksm_saved_MiB zswap_stored_MiB zswap_compr_MiB ratio perf_ops_s
-for state in baseline ksm zswap ksm+zswap; do
-  IFS='|' read -r u k st co r p <<<"${RES[$state]}"
-  printf "%-12s %12s %12s %14s %14s %8s %14s\n" "$state" "$u" "$k" "$st" "$co" "$r" "$p"
+printf "%-16s %12s %12s %14s %14s %8s %14s\n" state host_used_MiB ksm_saved_MiB zswap_stored_MiB zswap_compr_MiB ratio perf_ops_s
+for label in "${ORDER[@]}"; do
+  IFS='|' read -r u k st co r p <<<"${RES[$label]}"
+  printf "%-16s %12s %12s %14s %14s %8s %14s\n" "$label" "$u" "$k" "$st" "$co" "$r" "$p"
 done
 
 out="$ROOT/build/bench-results.csv"
 mkdir -p "$ROOT/build"
 {
   echo "state,host_used_mib,ksm_saved_mib,zswap_stored_mib,zswap_compr_mib,perf_ops_s"
-  for state in baseline ksm zswap ksm+zswap; do
-    IFS='|' read -r u k st co r p <<<"${RES[$state]}"
-    echo "$state,$u,$k,$st,$co,$p"
+  for label in "${ORDER[@]}"; do
+    IFS='|' read -r u k st co r p <<<"${RES[$label]}"
+    echo "$label,$u,$k,$st,$co,$p"
   done
 } > "$out"
 log "wrote $out  (plot: $ROOT/.venv/bin/python scripts/plot-bench.py)"

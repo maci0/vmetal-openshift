@@ -27,7 +27,8 @@ zsw = [int(r["zswap_compr_mib"]) / 1024 for r in rows]
 perf = [int(r["perf_ops_s"]) for r in rows]
 
 x = range(len(states))
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.6))
+width = max(12, len(states) * 1.5)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(width, 5))
 fig.suptitle("vmetal-openshift: memory optimization (3 masters + 2 workers)", fontsize=13, weight="bold")
 
 w = 0.27
@@ -35,7 +36,7 @@ ax1.bar([i - w for i in x], used, w, label="host RAM used (GiB)", color="#ef4444
 ax1.bar([i for i in x], ksm, w, label="KSM saved (GiB)", color="#10b981")
 ax1.bar([i + w for i in x], zsw, w, label="zswap compressed (GiB)", color="#6366f1")
 ax1.set_xticks(list(x))
-ax1.set_xticklabels(states)
+ax1.set_xticklabels(states, rotation=30, ha="right", fontsize=8)
 ax1.set_ylabel("GiB")
 ax1.set_title("Memory")
 ax1.legend(fontsize=8)
@@ -43,12 +44,12 @@ ax1.grid(axis="y", alpha=0.3)
 
 ax2.bar(list(x), perf, 0.5, color="#f59e0b")
 ax2.set_xticks(list(x))
-ax2.set_xticklabels(states)
+ax2.set_xticklabels(states, rotation=30, ha="right", fontsize=8)
 ax2.set_ylabel("stress-ng bogo-ops/s (higher = better)")
 ax2.set_title("Guest performance")
 ax2.grid(axis="y", alpha=0.3)
 for i, v in zip(x, perf):
-    ax2.text(i, v, f"{v:,}", ha="center", va="bottom", fontsize=8)
+    ax2.text(i, v, f"{v:,}", ha="center", va="bottom", fontsize=7)
 
 fig.tight_layout(rect=(0, 0, 1, 0.95))
 os.makedirs(os.path.dirname(out), exist_ok=True)

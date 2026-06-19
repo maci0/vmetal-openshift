@@ -280,9 +280,10 @@ host kernel does it transparently per-VM.
 
 ### Validation (3 masters + 2 workers)
 
-`make bench` runs a stress-ng workload on the cluster under each setting and
+`make bench` runs a stress-ng workload on the cluster under each setting
+(baseline, KSM, and zswap swept across zstd/lz4/lzo, with and without KSM) and
 records host memory and guest throughput (`scripts/plot-bench.py` renders the
-chart).
+chart). KSM is unmerged (`run=2`) between states so the baseline is honest.
 
 ![memory optimization benchmark](docs/bench.png)
 

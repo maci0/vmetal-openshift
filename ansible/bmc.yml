@@ -42,7 +42,7 @@
       cycle: PowerForceRestart
       pxe: PowerOn
       boot-disk: PowerOn
-      boot-iso: PowerOn
+      boot-iso: PowerOn   # cold power-on after inserting media (see boot-iso flow)
     bootdev_map:
       pxe: Pxe
       boot-disk: Hdd
@@ -70,6 +70,30 @@
         that: nodes | length > 0
         fail_msg: "node '{{ node }}' not found in cluster '{{ cluster }}'"
         quiet: true
+
+    # boot-iso uses a cold sequence: power OFF, insert (sushy writes the cdrom
+    # into the domain), set one-time Cd, then cold power ON so the firmware boots
+    # the freshly attached media. sushy does not reliably attach on a live reset.
+    - name: Power off before inserting boot media
+      community.libvirt.virt:
+        name: "{{ item.fullname }}"
+        state: destroyed
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      when: bmc_action == 'boot-iso'
+
+    # media-insert on its own attaches to a running domain (live).
+    - name: Power on so virtual media can attach (media-insert)
+      community.libvirt.virt:
+        name: "{{ item.fullname }}"
+        state: running
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      when: bmc_action == 'media-insert'
 
     - name: Insert discovery ISO as virtual media
       community.general.redfish_command:
@@ -130,6 +154,24 @@
       loop_control:
         label: "{{ item.fullname }}"
       when: bmc_action in power_map
+
+    # sushy attaches the ISO to the libvirt cdrom when the node resets into the
+    # one-time Cd boot, not at insert time. Confirm it actually landed (the drive
+    # now has a source file) before we report success / hand off to wait-for, so
+    # we never silently boot an empty drive.
+    - name: Verify the discovery ISO is attached and the node is booting it
+      community.libvirt.virt:
+        command: get_xml
+        name: "{{ item.fullname }}"
+        uri: "{{ libvirt_uri }}"
+      loop: "{{ nodes }}"
+      loop_control:
+        label: "{{ item.fullname }}"
+      register: cdrom_attached
+      until: "'discovery_image' in (cdrom_attached.get_xml | default(''))"
+      retries: 20
+      delay: 3
+      when: bmc_action == 'boot-iso'
 
     - name: Query power + boot + media (status)
       ansible.builtin.uri:

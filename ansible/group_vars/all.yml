@@ -142,13 +142,20 @@ default_disks:
 # Per-cluster optional overrides: base_domain, node_count, memory_mib, vcpus,
 # disks, install_mode, boot_via, provisioning_network_mode, api/ingress_vip_offset,
 # subnet_index (pin this cluster's {c} index so its subnets stay stable).
+# Per-role sizing (masters and workers differ): master_memory_mib / worker_memory_mib
+# and master_vcpus / worker_vcpus. Fallback per node: role-specific -> memory_mib /
+# vcpus -> default_memory_mib / default_vcpus.
 # day2_workers: N defines extra worker VMs added AFTER install with
 # `make workers-add` (agent node-image join); `make workers-remove` tears them down.
 # Works for any cluster, including SNO (node_count 1) for an edge-style single
 # control plane + workers.
 clusters:
   - name: cluster0
-    node_count: 3
+    node_count: 5            # 3 masters + 2 workers
+    master_memory_mib: 20480  # 3 x 20 GiB
+    worker_memory_mib: 16384  # 2 x 16 GiB  -> 92 GiB total, fits 128 GiB host (clean baseline)
+    master_vcpus: 8
+    worker_vcpus: 6
 
 # Examples:
 #   - name: cluster0

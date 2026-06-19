@@ -108,15 +108,18 @@
 {%   for nidx in range(ncount) %}
 {%     set node_o = node_ip_offset + nidx %}
 {%     set ns = namespace(i=0) %}
+{%     set role = 'master' if nidx < cp else 'worker' %}
+{%     set node_mem = (c.master_memory_mib if role == 'master' else c.worker_memory_mib) | default(c.memory_mib | default(default_memory_mib)) %}
+{%     set node_cpu = (c.master_vcpus if role == 'master' else c.worker_vcpus) | default(c.vcpus | default(default_vcpus)) %}
     - name: node{{ nidx }}
       fullname: {{ c.name }}-node{{ nidx }}
-      role: {{ 'master' if nidx < cp else 'worker' }}
+      role: {{ role }}
       ip: {{ mp3 }}.{{ node_o }}
       mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_o) }}"
       uuid: {{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}
       bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}"
-      memory_mib: {{ c.memory_mib | default(default_memory_mib) }}
-      vcpus: {{ c.vcpus | default(default_vcpus) }}
+      memory_mib: {{ node_mem }}
+      vcpus: {{ node_cpu }}
       addresses:
 {%     for nname, n in networks.items() %}
 {%       if n.cidr is defined and n.kind in ['nat', 'vlan'] %}
@@ -154,8 +157,8 @@
       mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_o) }}"
       uuid: {{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}
       bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}"
-      memory_mib: {{ c.memory_mib | default(default_memory_mib) }}
-      vcpus: {{ c.vcpus | default(default_vcpus) }}
+      memory_mib: {{ c.worker_memory_mib | default(c.memory_mib | default(default_memory_mib)) }}
+      vcpus: {{ c.worker_vcpus | default(c.vcpus | default(default_vcpus)) }}
       addresses:
 {%     for nname, n in networks.items() %}
 {%       if n.cidr is defined and n.kind in ['nat', 'vlan'] %}

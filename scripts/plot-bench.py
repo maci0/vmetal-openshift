@@ -45,7 +45,7 @@ ax1.grid(axis="y", alpha=0.3)
 ax2.bar(list(x), perf, 0.5, color="#f59e0b")
 ax2.set_xticks(list(x))
 ax2.set_xticklabels(states, rotation=30, ha="right", fontsize=8)
-ax2.set_ylabel("stress-ng bogo-ops/s (higher = better)")
+ax2.set_ylabel("openssl sha256 throughput, k/s (higher = better)")
 ax2.set_title("Guest performance")
 ax2.grid(axis="y", alpha=0.3)
 for i, v in zip(x, perf):

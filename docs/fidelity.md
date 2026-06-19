@@ -2,9 +2,12 @@
 
 <sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · **Fidelity** · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Troubleshooting](troubleshooting.md)</sub>
 
-This is a single-host KVM lab. It reproduces the OpenShift baremetal **control
-and config surface** faithfully, but the physical layer underneath is emulated.
-Know the gaps before trusting a result.
+The goal of this lab is to come **as close as practical to a real baremetal
+OpenShift install** on a single host: Redfish BMCs, bonded NICs with VLAN trunks,
+separate API/ingress VIPs, metal3 BareMetalHosts, and the agent-based / IPI flows,
+all without the hardware. It is a single-host KVM lab, so it reproduces the
+OpenShift baremetal **control and config surface** faithfully, but the physical
+layer underneath is emulated. Know the gaps before trusting a result.
 
 ## Emulated faithfully
 

@@ -28,10 +28,13 @@ BareMetalHost power management, all from one data-driven Ansible topology.
 
 ---
 
-`sushy-tools` emulates Redfish BMCs on an out-of-band LAN, libvirt VMs stand in for
-baremetal nodes (bonded NICs, jumbo storage), and the **agent-based** or **IPI**
-installer provisions them. Networks, volumes, VMs, and the install configs are all
-rendered by Ansible from one non-hardcoded topology.
+**Goal: come as close as practical to a real baremetal OpenShift install** on a
+single host, without the hardware. `sushy-tools` emulates Redfish BMCs on an
+out-of-band LAN, libvirt VMs stand in for baremetal nodes (bonded NICs, jumbo
+storage), and the **agent-based** or **IPI** installer provisions them. Networks,
+volumes, VMs, and the install configs are all rendered by Ansible from one
+non-hardcoded topology. See [fidelity](docs/fidelity.md) for what is faithful vs
+emulated.
 
 ## Highlights
 

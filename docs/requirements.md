@@ -38,6 +38,13 @@ vCPU is oversubscribable (KVM time-slices), so total vCPU can exceed host cores;
 RAM and disk cannot. `scripts/check-prereqs.sh` reports host RAM and free space in
 the image pool.
 
+**Memory tuning (KSM):** the nodes boot the same RHCOS image, so most of their
+RAM is identical. Kernel Samepage Merging dedups it across VMs and reclaims
+several GiB per cluster (qemu marks guest RAM mergeable by default). Enable it on
+the host: `sudo systemctl enable --now ksmtuned` (or one-off `echo 1 | sudo tee
+/sys/kernel/mm/ksm/run`); `make check` warns when it is off. Measured savings:
+`echo "$(( $(cat /sys/kernel/mm/ksm/pages_sharing) * 4 / 1024 )) MiB"`.
+
 Storage: each node has a 128 GiB boot disk and a 1024 GiB data disk (for ODF /
 LSO on the storage network). Thin-provisioned, but plan real headroom in
 `/var/lib/libvirt/images` for what actually gets written.

@@ -31,6 +31,17 @@ else
        (use kvm_amd on AMD), then reload the module or reboot."
 fi
 
+# KSM (Kernel Samepage Merging) dedups identical guest pages. Nodes run the same
+# RHCOS image, so KSM reclaims several GiB across a cluster.
+ksm="$(cat /sys/kernel/mm/ksm/run 2>/dev/null || echo 0)"
+if [[ "$ksm" == "1" ]]; then
+  pass "KSM enabled (dedups identical node memory; saves GiB across same-image nodes)"
+else
+  warn "KSM off: enabling it dedups the nodes' identical RHCOS memory (several GiB saved).
+       Enable persistently: sudo systemctl enable --now ksmtuned
+       (or one-off: echo 1 | sudo tee /sys/kernel/mm/ksm/run)"
+fi
+
 echo "== libvirt =="
 if have virsh; then pass "virsh present"; else bad "virsh missing (install libvirt-client)"; fi
 if have virsh && virsh -c qemu:///system version >/dev/null 2>&1; then

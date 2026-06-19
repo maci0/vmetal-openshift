@@ -1,0 +1,9 @@
+---
+# Strictest preset; lint.sh and CI both rely on this.
+profile: production
+exclude_paths:
+  - .venv/
+  - build/
+  - clusters/
+  - certs/
+  - sushy/

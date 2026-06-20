@@ -1,6 +1,6 @@
 # IPI vs agent-based
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · **IPI vs agent** · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · **IPI vs agent** · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 Both install baremetal OpenShift with the same `platform: baremetal` networking
 (integrated keepalived + HAProxy for the API and ingress VIPs). They differ in

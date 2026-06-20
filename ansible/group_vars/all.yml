@@ -158,6 +158,17 @@ default_disks:
   - { suffix: disk0, capacity_gib: 128, target: vda }
   - { suffix: disk1, capacity_gib: 1024, target: vdb }
 
+# Workers also get dedicated empty disks for software-defined storage (ODF/LVM),
+# kept separate from the OS (vda) and general data disk (vdb). qcow2 is thin, so
+# the nominal size costs little until used.
+# One extra disk (vdc); the 6 bonded NICs + OS/data disks already fill most of the
+# guest's PCIe slots, so a single virtio data disk is the safe max. For more OSDs,
+# switch these to a virtio-scsi controller (one slot, many disks).
+worker_disks:
+  - { suffix: disk0, capacity_gib: 128, target: vda }
+  - { suffix: disk1, capacity_gib: 1024, target: vdb }
+  - { suffix: disk2, capacity_gib: 512, target: vdc }
+
 # ============================================================================
 # The only thing you normally edit: how many clusters, how many nodes each.
 # ============================================================================

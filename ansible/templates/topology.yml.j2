@@ -124,6 +124,7 @@
       bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}"
       memory_mib: {{ node_mem }}
       vcpus: {{ node_cpu }}
+{%     set node_disks = worker_disks if (role == 'worker' and worker_disks is defined) else (c.disks | default(default_disks)) %}
 {#     A bond attaches to this node if it has no role restriction, or the node's
        role is listed, or it is a schedulable control-plane node (runs workloads)
        and the bond is for workers. Non-schedulable masters skip the data-plane
@@ -161,7 +162,7 @@
 {%       endif %}
 {%     endfor %}
       disks:
-{%     for d in c.disks | default(default_disks) %}
+{%     for d in node_disks %}
         - { suffix: {{ d.suffix }}, capacity_gib: {{ d.capacity_gib }}, target: {{ d.target }} }
 {%     endfor %}
 {%   endfor %}
@@ -212,7 +213,7 @@
 {%       endif %}
 {%     endfor %}
       disks:
-{%     for d in c.disks | default(default_disks) %}
+{%     for d in (worker_disks | default(c.disks | default(default_disks))) %}
         - { suffix: {{ d.suffix }}, capacity_gib: {{ d.capacity_gib }}, target: {{ d.target }} }
 {%     endfor %}
 {%   endfor %}

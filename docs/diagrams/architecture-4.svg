@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1188.7559999999999 712" width="1188.7559999999999" height="712" style="--bg:#ffffff;--fg:#1f2328;--line:#d1d9e0;--accent:#0969da;--muted:#59636e;background:var(--bg)">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+  text { font-family: 'Inter', system-ui, sans-serif; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+  <marker id="seq-arrow" markerWidth="8" markerHeight="5" refX="8" refY="2.5" orient="auto-start-reverse">
+    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" />
+  </marker>
+  <marker id="seq-arrow-open" markerWidth="8" markerHeight="5" refX="8" refY="2.5" orient="auto-start-reverse">
+    <polyline points="0 0, 8 2.5, 0 5" fill="none" stroke="var(--_arrow)" stroke-width="1" />
+  </marker>
+</defs>
+<g class="block" data-type="alt" data-label="boot_via = redfish (default) / IPI">
+  <rect x="30" y="348" width="885.5590000000001" height="164" rx="0" ry="0" fill="none" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="30" y="348" width="193.86999999999995" height="18" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="36" y="357" font-size="11" font-weight="600" fill="var(--_text-sec)" dy="3.8499999999999996">alt [boot_via = redfish (default) / IPI]</text>
+  <line x1="30" y1="464" x2="915.5590000000001" y2="464" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+  <text x="38" y="478" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">[boot_via = iso]</text>
+</g>
+<line class="lifeline" data-actor="U" x1="80" y1="70" x2="80" y2="682" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="B" x1="236.6255" y1="70" x2="236.6255" y2="682" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="OI" x1="415.7975" y1="70" x2="415.7975" y2="682" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="A" x1="558.344" y1="70" x2="558.344" y2="682" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="S" x1="700.8905000000001" y1="70" x2="700.8905000000001" y2="682" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<line class="lifeline" data-actor="N" x1="854.498" y1="70" x2="854.498" y2="682" stroke="var(--_line)" stroke-width="0.75" stroke-dasharray="6 4" />
+<g class="message" data-from="U" data-to="B" data-label="scripts/bootstrap.sh" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="80" y1="90" x2="236.6255" y2="90" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="158.31275" y="80" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">scripts/bootstrap.sh</text>
+</g>
+<g class="message" data-from="U" data-to="A" data-label="ansible-playbook generate-configs.yml" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="80" y1="145" x2="558.344" y2="145" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="319.172" y="135" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">ansible-playbook generate-configs.yml</text>
+</g>
+<g class="message" data-from="A" data-to="U" data-label="clusters/&lt;c&gt;/{install,agent}-config.yaml
+(VIPs · roles · bond nmstate)" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="558.344" y1="185" x2="80" y2="185" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="319.172" y="175" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="319.172" dy="-3.3000000000000007">clusters/&lt;c&gt;/{install,agent}-config.yaml</tspan><tspan x="319.172" dy="14.3">(VIPs · roles · bond nmstate)</tspan></text>
+</g>
+<g class="message" data-from="U" data-to="OI" data-label="agent create image" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="80" y1="225" x2="415.7975" y2="225" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="247.89875" y="215" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">agent create image</text>
+</g>
+<g class="message" data-from="OI" data-to="U" data-label="build/discovery_image_&lt;cluster&gt;.iso" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="415.7975" y1="265" x2="80" y2="265" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="247.89875" y="255" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">build/discovery_image_&lt;cluster&gt;.iso</text>
+</g>
+<g class="message" data-from="U" data-to="A" data-label="ansible-playbook setup.yml" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="80" y1="305" x2="558.344" y2="305" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="319.172" y="295" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">ansible-playbook setup.yml</text>
+</g>
+<g class="message" data-from="U" data-to="S" data-label="make bmc BMC_ACTION=boot-iso" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="80" y1="388" x2="700.8905000000001" y2="388" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="390.44525000000004" y="378" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">make bmc BMC_ACTION=boot-iso</text>
+</g>
+<g class="message" data-from="S" data-to="N" data-label="Redfish VirtualMedia (ISO) + PowerOn" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="700.8905000000001" y1="428" x2="854.498" y2="428" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="777.69425" y="418" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">Redfish VirtualMedia (ISO) + PowerOn</text>
+</g>
+<g class="message" data-from="A" data-to="N" data-label="virsh start (boots the attached ISO, no BMC)" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="558.344" y1="492" x2="854.498" y2="492" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="706.421" y="482" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">virsh start (boots the attached ISO, no BMC)</text>
+</g>
+<g class="message" data-from="N" data-to="N" data-label="bond up · rendezvous · bootstrap ·
+form control plane" data-line-style="solid" data-arrow-head="filled" data-self="true">
+  <polyline points="854.498,532 884.498,532 884.498,552 854.498,552" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="892.498" y="542" font-size="11" text-anchor="start" font-weight="400" fill="var(--_text-muted)"><tspan x="892.498" dy="-3.3000000000000007">bond up · rendezvous · bootstrap ·</tspan><tspan x="892.498" dy="14.3">form control plane</tspan></text>
+</g>
+<g class="message" data-from="U" data-to="OI" data-label="wait-for install-complete" data-line-style="solid" data-arrow-head="filled" data-self="false">
+  <line x1="80" y1="602" x2="415.7975" y2="602" stroke="var(--_line)" stroke-width="1" marker-end="url(#seq-arrow)" />
+  <text x="247.89875" y="592" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">wait-for install-complete</text>
+</g>
+<g class="message" data-from="OI" data-to="U" data-label="kubeconfig + console URL" data-line-style="dashed" data-arrow-head="filled" data-self="false">
+  <line x1="415.7975" y1="642" x2="80" y2="642" stroke="var(--_line)" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#seq-arrow)" />
+  <text x="247.89875" y="632" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">kubeconfig + console URL</text>
+</g>
+<g class="note" data-position="over" data-actors="B">
+  <polygon points="68.1725000000001,98 399.07849999999985,98 405.07849999999985,104 405.07849999999985,121 68.1725000000001,121" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="399.07849999999985,98 405.07849999999985,104 399.07849999999985,104" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="236.6255" y="109.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="236.6255" dy="-3.3000000000000007">venv + ansible-core + collection</tspan><tspan x="236.6255" dy="14.3">self-contained installer + TLS cert</tspan></text>
+</g>
+<g class="note" data-position="over" data-actors="A">
+  <polygon points="403.2560000000001,313 707.432,313 713.432,319 713.432,336 403.2560000000001,336" fill="var(--bg)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <polygon points="707.432,313 713.432,319 707.432,319" fill="var(--_inner-stroke)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="558.344" y="324.5" font-size="11" text-anchor="middle" font-weight="400" fill="var(--_text-muted)"><tspan x="558.344" dy="-3.3000000000000007">derive topology →</tspan><tspan x="558.344" dy="14.3">networks · volumes · VMs w/ bonded NICs</tspan></text>
+</g>
+<g class="actor" data-id="U" data-label="You" data-type="actor">
+  <g transform="translate(62,32) scale(1.5)">
+    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" fill="none" stroke="var(--_line)" stroke-width="0.6666666666666666" />
+    <path d="M15 10C15 11.6569 13.6569 13 12 13C10.3431 13 9 11.6569 9 10C9 8.34315 10.3431 7 12 7C13.6569 7 15 8.34315 15 10Z" fill="none" stroke="var(--_line)" stroke-width="0.6666666666666666" />
+    <path d="M5.62842 18.3563C7.08963 17.0398 9.39997 16 12 16C14.6 16 16.9104 17.0398 18.3716 18.3563" fill="none" stroke="var(--_line)" stroke-width="0.6666666666666666" />
+  </g>
+  <text x="80" y="84" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">You</text>
+</g>
+<g class="actor" data-id="B" data-label="scripts/bootstrap.sh" data-type="participant">
+  <rect x="160" y="30" width="153.251" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="236.6255" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">scripts/bootstrap.sh</text>
+</g>
+<g class="actor" data-id="OI" data-label="openshift-install" data-type="participant">
+  <rect x="353.251" y="30" width="125.09300000000002" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="415.7975" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">openshift-install</text>
+</g>
+<g class="actor" data-id="A" data-label="Ansible" data-type="participant">
+  <rect x="518.344" y="30" width="80" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="558.344" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">Ansible</text>
+</g>
+<g class="actor" data-id="S" data-label="sushy-emulator" data-type="participant">
+  <rect x="638.344" y="30" width="125.093" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="700.8905000000001" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">sushy-emulator</text>
+</g>
+<g class="actor" data-id="N" data-label="KVM nodes" data-type="participant">
+  <rect x="803.437" y="30" width="102.122" height="40" rx="4" ry="4" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="854.498" y="50" font-size="13" text-anchor="middle" font-weight="500" fill="var(--_text)" dy="4.55">KVM nodes</text>
+</g>
+</svg>

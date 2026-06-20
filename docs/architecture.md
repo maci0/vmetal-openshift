@@ -210,6 +210,10 @@ carries the machine net (+ provisioning VLAN); `bond1` carries the data VLANs
 (storage + migration) and is present **only on nodes that run workloads**, so a
 node with no link to the data bus has no storage/migration NIC.
 
+Shape key (rendered with [beautiful-mermaid](https://agents.craft.do/mermaid)):
+hexagon = management/BMC, stacked box (subroutine) = a node tier / replica set,
+cylinders = network buses (`bond0` machine, `bond1` data) and persistent storage.
+
 ### SNO (`node_count: 1`)
 
 Single node, control plane + workloads collapsed onto one box; both VIPs land on
@@ -218,18 +222,20 @@ the node IP. Schedulable, so it sits on both buses.
 ```mermaid
 flowchart TB
   subgraph mgmt["Management / OOB"]
-    sushy["sushy Redfish BMC"]
+    sushy{{"sushy Redfish BMC"}}
   end
   subgraph cluster["OpenShift SNO"]
-    n0["node0 · control plane + worker"]
+    n0[["node0<br/>control plane + worker (schedulable)"]]
   end
   subgraph fabric["Network fabric (libvirt bridges)"]
-    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
-    data[("data bus · bond1<br/>storage 30 · migration 40")]
+    mach[("machine bus · bond0<br/>API + ingress VIP · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage VLAN 30 · migration VLAN 40")]
   end
+  store[("persistent storage<br/>ODF / PVs")]
   sushy -. boot .-> n0
   n0 -- bond0 --- mach
   n0 -- bond1 --- data
+  n0 --- store
 ```
 
 ### SNO + day-2 workers (`node_count: 1`, `day2_workers: N`)
@@ -241,25 +247,24 @@ one while compute scales out. Every node runs workloads, so all sit on both buse
 ```mermaid
 flowchart TB
   subgraph mgmt["Management / OOB"]
-    sushy["sushy Redfish BMC"]
+    sushy{{"sushy Redfish BMC"}}
   end
   subgraph cluster["OpenShift edge"]
-    n0["node0 · control plane + worker"]
-    w0["day2-worker0"]
-    w1["day2-worker1"]
+    cp[["node0<br/>control plane + worker"]]
+    co[["compute<br/>N × day-2 worker"]]
   end
   subgraph fabric["Network fabric (libvirt bridges)"]
-    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
-    data[("data bus · bond1<br/>storage 30 · migration 40")]
+    mach[("machine bus · bond0<br/>API + ingress VIP · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage VLAN 30 · migration VLAN 40")]
   end
-  sushy -. "make workers-add" .-> w0
-  sushy -. boot .-> w1
-  n0 -- bond0 --- mach
-  w0 -- bond0 --- mach
-  w1 -- bond0 --- mach
-  n0 -- bond1 --- data
-  w0 -- bond1 --- data
-  w1 -- bond1 --- data
+  store[("persistent storage<br/>ODF / PVs")]
+  sushy -. boot .-> cp
+  sushy -. "make workers-add" .-> co
+  cp -- bond0 --- mach
+  co -- bond0 --- mach
+  cp -- bond1 --- data
+  co -- bond1 --- data
+  co --- store
 ```
 
 ### 3-node compact (`node_count: 3`)
@@ -270,24 +275,20 @@ also runs workloads and every node sits on both buses.
 ```mermaid
 flowchart TB
   subgraph mgmt["Management / OOB"]
-    sushy["sushy Redfish BMC"]
+    sushy{{"sushy Redfish BMC"}}
   end
-  subgraph cluster["OpenShift compact · schedulable masters"]
-    c0["node0 · cp + worker"]
-    c1["node1 · cp + worker"]
-    c2["node2 · cp + worker"]
+  subgraph cluster["OpenShift compact"]
+    cp[["control plane<br/>3 × master (schedulable) + worker"]]
   end
   subgraph fabric["Network fabric (libvirt bridges)"]
-    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
-    data[("data bus · bond1<br/>storage 30 · migration 40")]
+    mach[("machine bus · bond0<br/>API + ingress VIP · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage VLAN 30 · migration VLAN 40")]
   end
-  sushy -. boot .-> c0
-  c0 -- bond0 --- mach
-  c1 -- bond0 --- mach
-  c2 -- bond0 --- mach
-  c0 -- bond1 --- data
-  c1 -- bond1 --- data
-  c2 -- bond1 --- data
+  store[("persistent storage<br/>ODF / PVs")]
+  sushy -. boot .-> cp
+  cp -- bond0 --- mach
+  cp -- bond1 --- data
+  cp --- store
 ```
 
 ### 3 + N workers (`node_count: 3+N`)
@@ -300,32 +301,26 @@ override.
 ```mermaid
 flowchart TB
   subgraph mgmt["Management / OOB"]
-    sushy["sushy Redfish BMC"]
+    sushy{{"sushy Redfish BMC"}}
   end
   subgraph cluster["OpenShift 3 + N"]
-    subgraph cpl["Control plane · not schedulable"]
-      m0["node0 master"]
-      m1["node1 master"]
-      m2["node2 master"]
-    end
-    subgraph cmp["Compute"]
-      w0["node3 worker"]
-      w1["node4 worker"]
-    end
+    cp[["control plane<br/>3 × master · not schedulable"]]
+    co[["compute<br/>N × worker"]]
   end
   subgraph fabric["Network fabric (libvirt bridges)"]
-    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
-    data[("data bus · bond1<br/>storage 30 · migration 40")]
+    mach[("machine bus · bond0<br/>API + ingress VIP · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage VLAN 30 · migration VLAN 40")]
   end
-  sushy -. boot .-> m0
-  m0 -- bond0 --- mach
-  m1 -- bond0 --- mach
-  m2 -- bond0 --- mach
-  w0 -- bond0 --- mach
-  w1 -- bond0 --- mach
-  w0 -- bond1 --- data
-  w1 -- bond1 --- data
+  store[("persistent storage<br/>ODF / PVs")]
+  sushy -. boot .-> cp
+  cp -- bond0 --- mach
+  co -- bond0 --- mach
+  co -- bond1 --- data
+  co --- store
 ```
+
+The control plane in **3 + N** links to the machine bus only, never the data bus
+or storage, matching the rendered NICs (masters = 2, workers = 6).
 
 The control-plane tier in **3 + N** connects only to the machine bus, never to the
 data bus, exactly as rendered (masters = 2 NICs, workers = 6).

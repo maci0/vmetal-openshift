@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 717.7867499999999 722.6" width="717.7867499999999" height="722.6" style="--bg:#ffffff;--fg:#1f2328;--line:#d1d9e0;--accent:#0969da;--muted:#59636e;background:var(--bg)">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+  text { font-family: 'Inter', system-ui, sans-serif; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+  <marker id="arrowhead" markerWidth="8" markerHeight="5" refX="7" refY="2.5" orient="auto">
+    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+  <marker id="arrowhead-start" markerWidth="8" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse">
+    <polygon points="8 0, 0 2.5, 8 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+</defs>
+<g class="subgraph" data-id="mgmt" data-label="Management / OOB">
+  <rect x="454.5287499999999" y="40" width="208.805" height="96.9" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="454.5287499999999" y="40" width="208.805" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="466.5287499999999" y="54" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">Management / OOB</text>
+</g>
+<g class="subgraph" data-id="cluster" data-label="OpenShift 3 + N">
+  <rect x="306.3997499999999" y="265.20000000000005" width="371.38699999999994" height="113.80000000000001" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="306.3997499999999" y="265.20000000000005" width="371.38699999999994" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="318.3997499999999" y="279.20000000000005" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">OpenShift 3 + N</text>
+</g>
+<g class="subgraph" data-id="fabric" data-label="Network fabric (libvirt bridges)">
+  <rect x="40" y="554.8" width="552.1909999999999" height="127.80000000000001" rx="0" ry="0" fill="var(--_group-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="40" y="554.8" width="552.1909999999999" height="28" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="52" y="568.8" font-size="12" font-weight="600" fill="var(--_text-sec)" dy="4.199999999999999">Network fabric (libvirt bridges)</text>
+</g>
+<polyline class="edge" data-from="sushy" data-to="cp" data-style="dotted" data-arrow-start="false" data-arrow-end="true" data-label="boot" points="558.9312499999999,120.9 558.9312499999999,309.20000000000005" fill="none" stroke="var(--_line)" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="cp" data-to="mach" data-style="solid" data-arrow-start="false" data-arrow-end="false" data-label="bond0" points="558.9312499999999,363.00000000000006 558.9312499999999,468.5000000000001 601.1405,468.5000000000001 601.1405,536.8000000000002 499.7166666666666,536.8000000000002 499.7166666666666,598.8" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="edge" data-from="co" data-to="mach" data-style="solid" data-arrow-start="false" data-arrow-end="false" data-label="bond0" points="375.2377499999999,363.00000000000006 375.2377499999999,468.5000000000001 339.10699999999997,468.5000000000001 339.10699999999997,536.8000000000002 423.24233333333325,536.8000000000002 423.24233333333325,598.8" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="edge" data-from="co" data-to="data" data-style="solid" data-arrow-start="false" data-arrow-end="false" data-label="bond1" points="348.8187499999999,363.00000000000006 348.8187499999999,456.5000000000001 196.2848333333333,456.5000000000001 196.2848333333333,536.8000000000002 187.38399999999996,536.8000000000002 187.38399999999996,598.8" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="edge" data-from="co" data-to="store" data-style="solid" data-arrow-start="false" data-arrow-end="false" points="401.6567499999999,363.00000000000006 401.65674999999993,421.0000000000001 461.1544999999999,421.0000000000001 461.1544999999999,433.0000000000001" fill="none" stroke="var(--_line)" stroke-width="1" />
+<g class="edge-label" data-from="sushy" data-to="cp" data-label="boot">
+  <rect x="539.9312499999999" y="185.9" width="37.846000000000004" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="558.8542499999999" y="201.05" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">boot</text>
+</g>
+<g class="edge-label" data-from="cp" data-to="mach" data-label="bond0">
+  <rect x="577.1405" y="475.5" width="47.35" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="600.8154999999999" y="490.65" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">bond0</text>
+</g>
+<g class="edge-label" data-from="co" data-to="mach" data-label="bond0">
+  <rect x="315.10699999999997" y="475.5" width="47.35" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="338.782" y="490.65" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">bond0</text>
+</g>
+<g class="edge-label" data-from="co" data-to="data" data-label="bond1">
+  <rect x="174.28483333333327" y="475.5" width="43.786" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="196.17783333333327" y="490.65" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">bond1</text>
+</g>
+<g class="node" data-id="store" data-label="persistent storage
+ODF / PVs" data-shape="cylinder">
+  <rect x="386.45699999999994" y="440" width="149.395" height="53.80000000000001" fill="var(--_node-fill)" stroke="none" />
+  <line x1="386.45699999999994" y1="440" x2="386.45699999999994" y2="493.8" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <line x1="535.852" y1="440" x2="535.852" y2="493.8" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <ellipse cx="461.1544999999999" cy="493.8" rx="74.6975" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <ellipse cx="461.1544999999999" cy="440" rx="74.6975" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="461.1544999999999" y="466.9" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="461.1544999999999" dy="-3.9000000000000012">persistent storage</tspan><tspan x="461.1544999999999" dy="16.900000000000002">ODF / PVs</tspan></text>
+</g>
+<g class="node" data-id="sushy" data-label="sushy Redfish BMC" data-shape="hexagon">
+  <polygon points="479.7537499999999,84 638.1087499999999,84 647.3337499999999,102.45 638.1087499999999,120.9 479.7537499999999,120.9 470.5287499999999,102.45" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="558.9312499999999" y="102.45" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">sushy Redfish BMC</text>
+</g>
+<g class="node" data-id="cp" data-label="control plane
+3 × master · not schedulable" data-shape="subroutine">
+  <rect x="456.0757499999999" y="309.20000000000005" width="205.71099999999998" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <line x1="464.0757499999999" y1="309.20000000000005" x2="464.0757499999999" y2="363.00000000000006" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <line x1="653.7867499999999" y1="309.20000000000005" x2="653.7867499999999" y2="363.00000000000006" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="558.9312499999999" y="336.1" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="558.9312499999999" dy="-3.9000000000000012">control plane</tspan><tspan x="558.9312499999999" dy="16.900000000000002">3 × master · not schedulable</tspan></text>
+</g>
+<g class="node" data-id="co" data-label="compute
+N × worker" data-shape="subroutine">
+  <rect x="322.3997499999999" y="309.20000000000005" width="105.67599999999999" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <line x1="330.3997499999999" y1="309.20000000000005" x2="330.3997499999999" y2="363.00000000000006" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <line x1="420.0757499999999" y1="309.20000000000005" x2="420.0757499999999" y2="363.00000000000006" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="375.2377499999999" y="336.1" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="375.2377499999999" dy="-3.9000000000000012">compute</tspan><tspan x="375.2377499999999" dy="16.900000000000002">N × worker</tspan></text>
+</g>
+<g class="node" data-id="mach" data-label="machine bus · bond0
+API + ingress VIP · DHCP · DNS" data-shape="cylinder">
+  <rect x="346.7679999999999" y="605.8" width="229.42299999999997" height="53.80000000000001" fill="var(--_node-fill)" stroke="none" />
+  <line x1="346.7679999999999" y1="605.8" x2="346.7679999999999" y2="659.5999999999999" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <line x1="576.1909999999999" y1="605.8" x2="576.1909999999999" y2="659.5999999999999" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <ellipse cx="461.4794999999999" cy="659.5999999999999" rx="114.71149999999999" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <ellipse cx="461.4794999999999" cy="605.8" rx="114.71149999999999" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="461.4794999999999" y="632.6999999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="461.4794999999999" dy="-3.9000000000000012">machine bus · bond0</tspan><tspan x="461.4794999999999" dy="16.900000000000002">API + ingress VIP · DHCP · DNS</tspan></text>
+</g>
+<g class="node" data-id="data" data-label="data bus · bond1
+storage VLAN 30 · migration VLAN 40" data-shape="cylinder">
+  <rect x="56" y="605.8" width="262.7679999999999" height="53.80000000000001" fill="var(--_node-fill)" stroke="none" />
+  <line x1="56" y1="605.8" x2="56" y2="659.5999999999999" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <line x1="318.7679999999999" y1="605.8" x2="318.7679999999999" y2="659.5999999999999" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <ellipse cx="187.38399999999996" cy="659.5999999999999" rx="131.38399999999996" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <ellipse cx="187.38399999999996" cy="605.8" rx="131.38399999999996" ry="7" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="187.38399999999996" y="632.6999999999999" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="187.38399999999996" dy="-3.9000000000000012">data bus · bond1</tspan><tspan x="187.38399999999996" dy="16.900000000000002">storage VLAN 30 · migration VLAN 40</tspan></text>
+</g>
+</svg>

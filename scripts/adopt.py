@@ -58,9 +58,12 @@ def main():
             "clusters (node_count >= 3). Single-node is platform: none (no metal3); "
             "IPI creates BMHs during install.")
 
-    platform = subprocess.run(
+    probe = subprocess.run(
         [KUBECTL, "get", "infrastructure", "cluster", "-o",
-         "jsonpath={.status.platform}"], capture_output=True, text=True).stdout.strip()
+         "jsonpath={.status.platform}"], capture_output=True, text=True)
+    if probe.returncode != 0:
+        die(f"cannot reach the cluster ({KUBECTL} failed): {probe.stderr.strip()}")
+    platform = probe.stdout.strip()
     if platform != "BareMetal":
         die(f"cluster platform is '{platform}', not BareMetal: metal3 will not deploy.")
 

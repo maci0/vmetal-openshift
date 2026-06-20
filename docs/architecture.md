@@ -371,9 +371,6 @@ flowchart TB
 The control plane in **3 + N** links to the machine bus only, never the data bus
 or storage, matching the rendered NICs (masters = 2, workers = 6).
 
-The control-plane tier in **3 + N** connects only to the machine bus, never to the
-data bus, exactly as rendered (masters = 2 NICs, workers = 6).
-
 ## BMC power management (metal3 → Redfish → libvirt)
 
 Setting `online` on a `BareMetalHost` (or `make bmc`) drives the whole emulated

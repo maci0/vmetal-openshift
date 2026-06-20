@@ -43,7 +43,15 @@ def check(label, clusters):
     nt = env.get_template("libvirt/network.xml.j2")
     dt = env.get_template("libvirt/domain.xml.j2")
     subs, brs, macs = set(), set(), set()
-    nic_total = sum(b["nics"] for b in base["nic_layout"])
+
+    def attaches(b, role, sched):  # role-aware NIC layout (matches topology/nmstate)
+        roles = b.get("roles")
+        return (roles is None or role in roles
+                or (role == "master" and sched and "worker" in roles))
+
+    def expected_nics(role, sched):
+        return sum(b["nics"] for b in base["nic_layout"] if attaches(b, role, sched))
+
     for c in topo:
         for net in c["networks"]:
             if net.get("gateway"):
@@ -55,11 +63,13 @@ def check(label, clusters):
                 failures.append(f"dup bridge {net['bridge']}")
             brs.add(net["bridge"])
             xmllint(nt.render(net=net, **v), f"net {net['name']}")
-        for node in c["nodes"]:
+        sched = c["masters_schedulable"]
+        for node in c["nodes"] + (c.get("day2_workers") or []):
             ifaces = node["interfaces"]
-            if len(ifaces) != nic_total:
+            exp = expected_nics(node["role"], sched)
+            if len(ifaces) != exp:
                 failures.append(
-                    f"{node['fullname']}: {len(ifaces)} NICs, expected {nic_total}")
+                    f"{node['fullname']} ({node['role']}): {len(ifaces)} NICs, expected {exp}")
             for nic in ifaces:
                 if nic["mac"] in macs:
                     failures.append(f"dup mac {nic['mac']}")
@@ -67,7 +77,7 @@ def check(label, clusters):
                 if nic["attach"].endswith("-oob"):
                     failures.append(f"{node['fullname']}: NIC attached to OOB LAN")
             xmllint(dt.render(cluster=c, node=node, **v), f"dom {node['fullname']}")
-    print(f"  {label}: {len(topo)} cluster(s), {nic_total} NICs/node, "
+    print(f"  {label}: {len(topo)} cluster(s), "
           f"{len(subs)} subnets, {len(macs)} MACs checked")
 
 

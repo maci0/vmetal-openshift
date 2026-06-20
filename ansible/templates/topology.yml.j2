@@ -162,7 +162,7 @@
         - { suffix: {{ d.suffix }}, capacity_gib: {{ d.capacity_gib }}, target: {{ d.target }} }
 {%     endfor %}
 {%   endfor %}
-  day2_workers:
+  day2_workers:{{ ' []' if day2_count == 0 else '' }}
 {%   for widx in range(day2_count) %}
 {%     set node_o = node_ip_offset + ncount + widx %}
 {%     set ns = namespace(i=0) %}

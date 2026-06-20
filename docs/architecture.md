@@ -107,6 +107,19 @@ flowchart TB
 L2 needs no router (ARP, single owner). BGP uses an off-link pool so reachability
 *requires* the BGP route, and gets ECMP load-spreading + fast failover.
 
+`make metallb-bgp` starts the FRR peer (podman or docker) and applies the BGP CRs;
+`make metallb-bgp-down` stops it. Verify the path:
+
+```bash
+docker exec vmetal-frr-<cluster> vtysh -c 'show bgp summary'        # speakers as dynamic neighbours, Established
+docker exec vmetal-frr-<cluster> vtysh -c 'show bgp ipv4 unicast'   # the LB /32, multipath
+ip route show 198.51.100.0                                          # zebra-installed, N ECMP next-hops
+curl http://<assigned-LB-IP>:8080                                   # reachable only via the BGP route
+```
+
+Tested on a 3 + 2 cluster: five eBGP sessions, the LB `/32` advertised by every
+node with five ECMP next-hops in the host kernel, and the off-link IP reachable.
+
 ## Sushy Redfish emulation
 
 `openshift-install` thinks it is driving real baremetal BMCs over the **OOB LAN**.

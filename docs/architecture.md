@@ -88,6 +88,40 @@ and there is no LB. An external HAProxy is only needed for `platform: none`.
 > media over the OOB/Redfish LAN**. The provisioning net is kept for realism and
 > can be set to `nics: 0` to drop it.
 
+### LoadBalancer services (MetalLB)
+
+The VIPs cover the API and ingress. For app `Service type=LoadBalancer` (no cloud
+LB on baremetal) the lab runs **MetalLB**, in either mode:
+
+```mermaid
+flowchart TB
+  svc["Service type=LoadBalancer"] --> ctl["MetalLB controller<br/>assigns a pool IP"]
+  ctl --> l2box
+  ctl --> bgpbox
+  subgraph l2box["L2 mode (make metallb)"]
+    direction TB
+    l2["speaker ARP-owns the IP<br/>pool on machine net (.100-.119)"]
+    l2 --> l2n["one elected node answers ARP<br/>(fails over on node loss)"]
+  end
+  subgraph bgpbox["BGP mode (make metallb-bgp)"]
+    direction TB
+    bgp["speakers BGP-peer the router<br/>off-link pool 198.51.x.0/24"]
+    bgp --> frr["FRR on host (ASN 64513)<br/>zebra installs /32 routes"]
+    frr --> ecmp["ECMP multipath across all speakers"]
+  end
+
+  classDef a fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
+  classDef b fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
+  classDef c fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
+  classDef d fill:#f59e0b,stroke:#92400e,color:#1f2937,stroke-width:2px;
+  class svc,ctl a;
+  class l2,l2n b;
+  class bgp,frr,ecmp c;
+```
+
+L2 needs no router (ARP, single owner). BGP uses an off-link pool so reachability
+*requires* the BGP route, and gets ECMP load-spreading + fast failover.
+
 ## Sushy Redfish emulation
 
 `openshift-install` thinks it is driving real baremetal BMCs over the **OOB LAN**.
@@ -183,30 +217,76 @@ sequenceDiagram
 
 ## Cluster topologies
 
-```mermaid
-flowchart LR
-  subgraph sno["node_count: 1 (SNO)"]
-    direction TB
-    s0["master+worker<br/>schedulable"]
-  end
-  subgraph compact["node_count: 3 (compact)"]
-    direction TB
-    c0["master"]; c1["master"]; c2["master"]
-    cn["masters schedulable (auto)"]
-  end
-  subgraph workers["node_count: 5"]
-    direction TB
-    w0["master"]; w1["master"]; w2["master"]
-    w3["worker"]; w4["worker"]
-    wn["masters NOT schedulable<br/>(set masters_schedulable: true to override)"]
-  end
+Four supported shapes. A node that runs workloads (worker, or schedulable master)
+gets the full NIC layout (`bond0` + `bond1`); a non-schedulable master gets only
+`bond0` (no storage/migration). Blue = control plane, cyan = worker.
 
+### SNO (`node_count: 1`)
+
+Single node, control plane + workloads on one box. Both VIPs collapse onto the
+node IP; schedulable, so it has the full NIC layout.
+
+```mermaid
+flowchart TB
+  s0["node0<br/>master + worker (schedulable)<br/>bond0 + bond1"]
+  classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
+  class s0 m;
+```
+
+### SNO + day-2 workers (`node_count: 1`, `day2_workers: N`)
+
+Edge shape: one control-plane node, workers joined after install with
+`make workers-add` (`oc adm node-image`). Single etcd, so the control plane stays
+at one; workers scale out.
+
+```mermaid
+flowchart TB
+  e0["node0<br/>master + worker (schedulable)<br/>bond0 + bond1"]
+  ew0["day2-worker0<br/>bond0 + bond1"]
+  ew1["day2-worker1<br/>bond0 + bond1"]
+  e0 -. "make workers-add" .-> ew0
+  e0 -. "make workers-add" .-> ew1
   classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
   classDef w fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
-  classDef note fill:#fef3c7,stroke:#f59e0b,color:#92400e;
-  class s0,c0,c1,c2,w0,w1,w2 m;
-  class w3,w4 w;
-  class cn,wn note;
+  class e0 m;
+  class ew0,ew1 w;
+```
+
+### 3-node compact (`node_count: 3`)
+
+Three masters, **schedulable** (auto, no separate workers), so workloads run on
+the control plane. All three carry the full NIC layout.
+
+```mermaid
+flowchart TB
+  c0["node0<br/>master + worker<br/>bond0 + bond1"]
+  c1["node1<br/>master + worker<br/>bond0 + bond1"]
+  c2["node2<br/>master + worker<br/>bond0 + bond1"]
+  classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
+  class c0,c1,c2 m;
+```
+
+### 3 + N workers (`node_count: 3+N`)
+
+Three dedicated masters, **not schedulable** (so `bond0` only, no storage/migration
+card), plus N workers that run the workloads with the full NIC layout. Set
+`masters_schedulable: true` to override.
+
+```mermaid
+flowchart TB
+  subgraph cp["control plane (not schedulable, bond0 only)"]
+    direction LR
+    m0["node0<br/>master"]; m1["node1<br/>master"]; m2["node2<br/>master"]
+  end
+  subgraph wk["workers (bond0 + bond1)"]
+    direction LR
+    w0["node3<br/>worker"]; w1["node4<br/>worker"]; wd["...node N"]
+  end
+  cp --- wk
+  classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
+  classDef w fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
+  class m0,m1,m2 m;
+  class w0,w1,wd w;
 ```
 
 ## BMC power management (metal3 → Redfish → libvirt)

@@ -25,6 +25,11 @@ The default `nic_layout` mirrors an OpenShift Virtualization reference design: a
 (`bond1`, active-active) carrying storage + live-migration VLANs. Cluster 0 →
 `10.0.0.0/24`, cluster 1 → `10.1.0.0/24`, etc.
 
+The data-plane card (`bond1`, `roles: [worker]`) is attached only to nodes that
+run workloads: workers, and schedulable control-plane nodes (compact / SNO).
+**Non-schedulable control-plane nodes get only `bond0`** (machine + provisioning),
+no storage/live-migration NICs, matching a real split design.
+
 ### Node NIC layout (default `nic_layout`)
 
 ```mermaid

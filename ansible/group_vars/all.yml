@@ -72,6 +72,10 @@ nic_layout:
                         # Unlike balance-alb/802.3ad it does NOT put the bond IP on
                         # multiple MACs, so it passes the agent IP-collision check.
     trunk: trunk
+    # The data-plane card. Only nodes that run workloads need it: workers, and
+    # schedulable control-plane nodes (compact/SNO). Non-schedulable control-plane
+    # nodes skip it (no storage/live-migration NICs), like a real split design.
+    roles: [worker]
     vlans:
       - { network: storage, id: 30 }
       - { network: migration, id: 40 }

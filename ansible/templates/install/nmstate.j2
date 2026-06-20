@@ -7,6 +7,10 @@
 {% set gns = namespace(i=0, primary='') %}
 interfaces:
 {% for b in nic_layout %}
+{# attach a bond only to nodes that need it: no role restriction, the node's role
+   is listed, or a schedulable control-plane node (runs workloads) for a worker bond. #}
+{% set has = (b.roles is not defined) or (node.role in (b.roles | default([]))) or (node.role == 'master' and cluster.masters_schedulable and 'worker' in (b.roles | default([]))) %}
+{% if has %}
 {% set ports = [] %}
 {% for k in range(b.nics) %}{% set _ = ports.append('eth' ~ gns.i) %}{% set gns.i = gns.i + 1 %}{% endfor %}
 {% set mode = b.mode | default(default_bond_mode) %}
@@ -71,6 +75,7 @@ interfaces:
     - ip: {{ node.addresses[v.network] }}
       prefix-length: 24
 {% endfor %}
+{% endif %}
 {% endfor %}
 dns-resolver:
   config:

@@ -121,17 +121,31 @@
       bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}"
       memory_mib: {{ node_mem }}
       vcpus: {{ node_cpu }}
+{#     A bond attaches to this node if it has no role restriction, or the node's
+       role is listed, or it is a schedulable control-plane node (runs workloads)
+       and the bond is for workers. Non-schedulable masters skip the data-plane
+       (storage/migration) card. #}
       addresses:
-{%     for nname, n in networks.items() %}
-{%       if n.cidr is defined and n.kind in ['nat', 'vlan'] %}
-        {{ nname }}: {{ (n.cidr | replace('{c}', ci | string)).split('/')[0].rsplit('.', 1)[0] }}.{{ node_o }}
+{%     for b in nic_layout %}
+{%       set has = (b.roles is not defined) or (role in (b.roles | default([]))) or (role == 'master' and masters_sched and 'worker' in (b.roles | default([]))) %}
+{%       if has %}
+{%         if b.network is defined and networks[b.network].cidr is defined %}
+        {{ b.network }}: {{ (networks[b.network].cidr | replace('{c}', ci | string)).split('/')[0].rsplit('.', 1)[0] }}.{{ node_o }}
+{%         endif %}
+{%         for v in b.vlans | default([]) %}
+{%           if networks[v.network].cidr is defined %}
+        {{ v.network }}: {{ (networks[v.network].cidr | replace('{c}', ci | string)).split('/')[0].rsplit('.', 1)[0] }}.{{ node_o }}
+{%           endif %}
+{%         endfor %}
 {%       endif %}
 {%     endfor %}
       interfaces:
 {%     for b in nic_layout %}
 {%       set bidx = loop.index0 %}
-{%       set attach = b.network | default(b.trunk) %}
-{%       for k in range(b.nics) %}
+{%       set has = (b.roles is not defined) or (role in (b.roles | default([]))) or (role == 'master' and masters_sched and 'worker' in (b.roles | default([]))) %}
+{%       if has %}
+{%         set attach = b.network | default(b.trunk) %}
+{%         for k in range(b.nics) %}
         - devname: eth{{ ns.i }}
           bond: {{ b.bond }}
           attach: {{ c.name }}-{{ attach }}
@@ -140,7 +154,8 @@
           mtu: {{ networks[attach].mtu }}
 {%         endif %}
 {%         set ns.i = ns.i + 1 %}
-{%       endfor %}
+{%         endfor %}
+{%       endif %}
 {%     endfor %}
       disks:
 {%     for d in c.disks | default(default_disks) %}

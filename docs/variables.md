@@ -25,7 +25,7 @@ All knobs live in `ansible/group_vars/all.yml`. Most installs only touch the
 | `dhcp_pool_start` / `dhcp_pool_end` | `128` / `254` | dynamic DHCP range |
 | `mac_oui` | `52:54:00` | OUI for derived MACs |
 | `networks` | machine/oob/provisioning/trunk/storage/migration | map of name -> {cidr, kind, dns, mtu}; `kind` is nat/isolated/l2/vlan |
-| `nic_layout` | bond0 (machine + provisioning VLAN) + bond1 (trunk: storage + migration VLANs) | bonds: `nics`, `mode`, an untagged `network` and/or `trunk`, plus tagged `vlans` |
+| `nic_layout` | bond0 (machine + provisioning VLAN) + bond1 (trunk: storage + migration VLANs) | bonds: `nics`, `mode`, an untagged `network` and/or `trunk`, tagged `vlans`, optional `roles:` (which node roles attach it; bond1 is `[worker]` so non-schedulable masters skip the data plane) |
 
 For single-node clusters both VIPs collapse onto the node IP (no LB).
 

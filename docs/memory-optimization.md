@@ -36,7 +36,10 @@ flowchart LR
   squeeze["3. squeeze<br/>reclaim coldest pages early"]
   zram["4. zram (zstd)<br/>compress cold pages in RAM"]
   ram --> ksm --> wall --> squeeze --> zram
-
+  classDef src fill:#3e8635,stroke:#1f5419,color:#fff;
+  classDef step fill:#6366f1,stroke:#3730a3,color:#fff;
+  classDef out fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  class ram,ksm src; class wall,squeeze step; class zram out;
 ```
 
 ## zram vs zswap

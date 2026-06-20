@@ -22,7 +22,6 @@
 #   make status CLUSTER=c     nodes + operators + BareMetalHosts
 #   make creds CLUSTER=c      console URL + kubeadmin + kubeconfig
 #   make lint / make e2e      offline checks / live test
-#   make diagrams                 render docs diagrams to themed SVGs (docs/diagrams/)
 #   make pdf                  export docs/architecture.pdf
 #
 # Pass extra ansible flags via ANSIBLE_ARGS, e.g.:
@@ -44,7 +43,7 @@ PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove status creds lint e2e bench diagrams pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove status creds lint e2e bench pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -127,9 +126,6 @@ e2e:
 
 bench:
 	./scripts/bench-memory.sh $(CLUSTER)
-
-diagrams: ## render docs mermaid to themed SVGs (beautiful-mermaid)
-	node scripts/render-diagrams.mjs
 
 pdf:
 	./scripts/export-pdf.sh

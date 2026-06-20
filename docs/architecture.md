@@ -55,7 +55,11 @@ flowchart LR
   b0 --> p
   b1 --> s
   b1 --> mig
-
+  classDef nic fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef bond fill:#6366f1,stroke:#3730a3,color:#fff;
+  classDef untag fill:#3e8635,stroke:#1f5419,color:#fff;
+  classDef vlan fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  class e0,e1,e2,e3,e4,e5 nic; class b0,b1 bond; class m untag; class p,s,mig vlan;
 ```
 
 This is the full layout (6 vNICs), used by workers and schedulable control-plane
@@ -101,7 +105,12 @@ flowchart TB
     bgp --> frr["FRR on host (ASN 64513)<br/>zebra installs /32 routes"]
     frr --> ecmp["ECMP multipath across all speakers"]
   end
-
+  classDef ctl fill:#6366f1,stroke:#3730a3,color:#fff;
+  classDef l2c fill:#3e8635,stroke:#1f5419,color:#fff;
+  classDef bgpc fill:#0066cc,stroke:#004080,color:#fff;
+  class svc,ctl ctl; class l2,l2n l2c; class bgp,frr,ecmp bgpc;
+  style l2box fill:#f0fdf4,stroke:#d2d2d2;
+  style bgpbox fill:#eff6ff,stroke:#d2d2d2;
 ```
 
 L2 needs no router (ARP, single owner). BGP uses an off-link pool so reachability
@@ -160,8 +169,13 @@ flowchart LR
   b0 --- mnet
   b1 --- tnet
   installer -. "resolve api / api-int / *.apps" .-> mnet
-
-
+  classDef inst fill:#6366f1,stroke:#3730a3,color:#fff;
+  classDef bmc fill:#06b6d4,stroke:#0e7490,color:#fff;
+  classDef virt fill:#3e8635,stroke:#1f5419,color:#fff;
+  classDef net fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  classDef oobc fill:#8476d1,stroke:#5d4fa3,color:#fff;
+  classDef vm fill:#ee0000,stroke:#a30000,color:#fff;
+  class installer inst; class sushy bmc; class libvirt virt; class mnet,tnet net; class oobnote oobc; class b0,b1 vm;
 ```
 
 ## Install flow
@@ -210,9 +224,10 @@ carries the machine net (+ provisioning VLAN); `bond1` carries the data VLANs
 (storage + migration) and is present **only on nodes that run workloads**, so a
 node with no link to the data bus has no storage/migration NIC.
 
-Shape key (rendered with [beautiful-mermaid](https://agents.craft.do/mermaid)):
-hexagon = management/BMC, stacked box (subroutine) = a node tier / replica set,
-cylinders = network buses (`bond0` machine, `bond1` data) and persistent storage.
+Shape + colour key: hexagon = management/BMC (purple), stacked box (subroutine) =
+a node tier / replica set (red = control plane, blue = compute), cylinders =
+network buses (amber: `bond0` machine, `bond1` data) and persistent storage
+(green). Zones are tinted subgraphs.
 
 ### SNO (`node_count: 1`)
 
@@ -236,6 +251,14 @@ flowchart TB
   n0 -- bond0 --- mach
   n0 -- bond1 --- data
   n0 --- store
+  classDef cp fill:#ee0000,stroke:#a30000,color:#fff;
+  classDef bmc fill:#8476d1,stroke:#5d4fa3,color:#fff;
+  classDef net fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  classDef stor fill:#3e8635,stroke:#1f5419,color:#fff;
+  class n0 cp; class sushy bmc; class mach,data net; class store stor;
+  style mgmt fill:#faf0f0,stroke:#d2d2d2;
+  style cluster fill:#f5faff,stroke:#d2d2d2;
+  style fabric fill:#fffaf0,stroke:#d2d2d2;
 ```
 
 ### SNO + day-2 workers (`node_count: 1`, `day2_workers: N`)
@@ -265,6 +288,15 @@ flowchart TB
   cp -- bond1 --- data
   co -- bond1 --- data
   co --- store
+  classDef cp fill:#ee0000,stroke:#a30000,color:#fff;
+  classDef wk fill:#0066cc,stroke:#004080,color:#fff;
+  classDef bmc fill:#8476d1,stroke:#5d4fa3,color:#fff;
+  classDef net fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  classDef stor fill:#3e8635,stroke:#1f5419,color:#fff;
+  class cp cp; class co wk; class sushy bmc; class mach,data net; class store stor;
+  style mgmt fill:#faf0f0,stroke:#d2d2d2;
+  style cluster fill:#f5faff,stroke:#d2d2d2;
+  style fabric fill:#fffaf0,stroke:#d2d2d2;
 ```
 
 ### 3-node compact (`node_count: 3`)
@@ -289,6 +321,14 @@ flowchart TB
   cp -- bond0 --- mach
   cp -- bond1 --- data
   cp --- store
+  classDef cp fill:#ee0000,stroke:#a30000,color:#fff;
+  classDef bmc fill:#8476d1,stroke:#5d4fa3,color:#fff;
+  classDef net fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  classDef stor fill:#3e8635,stroke:#1f5419,color:#fff;
+  class cp cp; class sushy bmc; class mach,data net; class store stor;
+  style mgmt fill:#faf0f0,stroke:#d2d2d2;
+  style cluster fill:#f5faff,stroke:#d2d2d2;
+  style fabric fill:#fffaf0,stroke:#d2d2d2;
 ```
 
 ### 3 + N workers (`node_count: 3+N`)
@@ -317,6 +357,15 @@ flowchart TB
   co -- bond0 --- mach
   co -- bond1 --- data
   co --- store
+  classDef cp fill:#ee0000,stroke:#a30000,color:#fff;
+  classDef wk fill:#0066cc,stroke:#004080,color:#fff;
+  classDef bmc fill:#8476d1,stroke:#5d4fa3,color:#fff;
+  classDef net fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  classDef stor fill:#3e8635,stroke:#1f5419,color:#fff;
+  class cp cp; class co wk; class sushy bmc; class mach,data net; class store stor;
+  style mgmt fill:#faf0f0,stroke:#d2d2d2;
+  style cluster fill:#f5faff,stroke:#d2d2d2;
+  style fabric fill:#fffaf0,stroke:#d2d2d2;
 ```
 
 The control plane in **3 + N** links to the machine bus only, never the data bus

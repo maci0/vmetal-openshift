@@ -37,13 +37,6 @@ flowchart LR
   zram["4. zram (zstd)<br/>compress cold pages in RAM"]
   ram --> ksm --> wall --> squeeze --> zram
 
-  classDef a fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
-  classDef b fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef c fill:#f59e0b,stroke:#92400e,color:#1f2937,stroke-width:2px;
-  class ram a;
-  class ksm a;
-  class wall,squeeze b;
-  class zram c;
 ```
 
 ## zram vs zswap

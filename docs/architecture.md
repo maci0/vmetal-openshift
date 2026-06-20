@@ -56,14 +56,6 @@ flowchart LR
   b1 --> s
   b1 --> mig
 
-  classDef nic fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
-  classDef bond fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef untag fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
-  classDef vlan fill:#f59e0b,stroke:#92400e,color:#1f2937,stroke-width:2px;
-  class e0,e1,e2,e3,e4,e5 nic;
-  class b0,b1 bond;
-  class m untag;
-  class p,s,mig vlan;
 ```
 
 This is the full layout (6 vNICs), used by workers and schedulable control-plane
@@ -110,13 +102,6 @@ flowchart TB
     frr --> ecmp["ECMP multipath across all speakers"]
   end
 
-  classDef a fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef b fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
-  classDef c fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
-  classDef d fill:#f59e0b,stroke:#92400e,color:#1f2937,stroke-width:2px;
-  class svc,ctl a;
-  class l2,l2n b;
-  class bgp,frr,ecmp c;
 ```
 
 L2 needs no router (ARP, single owner). BGP uses an off-link pool so reachability
@@ -163,19 +148,7 @@ flowchart LR
   b1 --- tnet
   installer -. "resolve api / api-int / *.apps" .-> mnet
 
-  classDef inst fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef bmc fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
-  classDef virt fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
-  classDef net fill:#f59e0b,stroke:#92400e,color:#1f2937,stroke-width:2px;
-  classDef oobc fill:#a855f7,stroke:#6b21a8,color:#fff,stroke-width:2px;
-  classDef vm fill:#ef4444,stroke:#7f1d1d,color:#fff,stroke-width:2px;
 
-  class installer inst;
-  class sushy bmc;
-  class libvirt virt;
-  class mnet,tnet net;
-  class oobnote oobc;
-  class b0,b1 vm;
 ```
 
 ## Install flow
@@ -217,77 +190,132 @@ sequenceDiagram
 
 ## Cluster topologies
 
-Four supported shapes. A node that runs workloads (worker, or schedulable master)
-gets the full NIC layout (`bond0` + `bond1`); a non-schedulable master gets only
-`bond0` (no storage/migration). Blue = control plane, cyan = worker.
+Four supported shapes, drawn as layered reference architectures: a **management /
+OOB zone** (sushy Redfish, the BMC LAN), the **OpenShift cluster** (control-plane
+and compute tiers), and the **network fabric** as two bridge buses. `bond0`
+carries the machine net (+ provisioning VLAN); `bond1` carries the data VLANs
+(storage + migration) and is present **only on nodes that run workloads**, so a
+node with no link to the data bus has no storage/migration NIC.
 
 ### SNO (`node_count: 1`)
 
-Single node, control plane + workloads on one box. Both VIPs collapse onto the
-node IP; schedulable, so it has the full NIC layout.
+Single node, control plane + workloads collapsed onto one box; both VIPs land on
+the node IP. Schedulable, so it sits on both buses.
 
 ```mermaid
 flowchart TB
-  s0["node0<br/>master + worker (schedulable)<br/>bond0 + bond1"]
-  classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  class s0 m;
+  subgraph mgmt["Management / OOB"]
+    sushy["sushy Redfish BMC"]
+  end
+  subgraph cluster["OpenShift SNO"]
+    n0["node0 · control plane + worker"]
+  end
+  subgraph fabric["Network fabric (libvirt bridges)"]
+    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage 30 · migration 40")]
+  end
+  sushy -. boot .-> n0
+  n0 -- bond0 --- mach
+  n0 -- bond1 --- data
 ```
 
 ### SNO + day-2 workers (`node_count: 1`, `day2_workers: N`)
 
-Edge shape: one control-plane node, workers joined after install with
-`make workers-add` (`oc adm node-image`). Single etcd, so the control plane stays
-at one; workers scale out.
+Edge shape: one control-plane node plus workers joined after install with
+`make workers-add` (`oc adm node-image`). One etcd, so the control plane stays at
+one while compute scales out. Every node runs workloads, so all sit on both buses.
 
 ```mermaid
 flowchart TB
-  e0["node0<br/>master + worker (schedulable)<br/>bond0 + bond1"]
-  ew0["day2-worker0<br/>bond0 + bond1"]
-  ew1["day2-worker1<br/>bond0 + bond1"]
-  e0 -. "make workers-add" .-> ew0
-  e0 -. "make workers-add" .-> ew1
-  classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef w fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
-  class e0 m;
-  class ew0,ew1 w;
+  subgraph mgmt["Management / OOB"]
+    sushy["sushy Redfish BMC"]
+  end
+  subgraph cluster["OpenShift edge"]
+    n0["node0 · control plane + worker"]
+    w0["day2-worker0"]
+    w1["day2-worker1"]
+  end
+  subgraph fabric["Network fabric (libvirt bridges)"]
+    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage 30 · migration 40")]
+  end
+  sushy -. "make workers-add" .-> w0
+  sushy -. boot .-> w1
+  n0 -- bond0 --- mach
+  w0 -- bond0 --- mach
+  w1 -- bond0 --- mach
+  n0 -- bond1 --- data
+  w0 -- bond1 --- data
+  w1 -- bond1 --- data
 ```
 
 ### 3-node compact (`node_count: 3`)
 
-Three masters, **schedulable** (auto, no separate workers), so workloads run on
-the control plane. All three carry the full NIC layout.
+Three masters, **schedulable** (auto, no separate workers), so the control plane
+also runs workloads and every node sits on both buses.
 
 ```mermaid
 flowchart TB
-  c0["node0<br/>master + worker<br/>bond0 + bond1"]
-  c1["node1<br/>master + worker<br/>bond0 + bond1"]
-  c2["node2<br/>master + worker<br/>bond0 + bond1"]
-  classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  class c0,c1,c2 m;
+  subgraph mgmt["Management / OOB"]
+    sushy["sushy Redfish BMC"]
+  end
+  subgraph cluster["OpenShift compact · schedulable masters"]
+    c0["node0 · cp + worker"]
+    c1["node1 · cp + worker"]
+    c2["node2 · cp + worker"]
+  end
+  subgraph fabric["Network fabric (libvirt bridges)"]
+    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage 30 · migration 40")]
+  end
+  sushy -. boot .-> c0
+  c0 -- bond0 --- mach
+  c1 -- bond0 --- mach
+  c2 -- bond0 --- mach
+  c0 -- bond1 --- data
+  c1 -- bond1 --- data
+  c2 -- bond1 --- data
 ```
 
 ### 3 + N workers (`node_count: 3+N`)
 
-Three dedicated masters, **not schedulable** (so `bond0` only, no storage/migration
-card), plus N workers that run the workloads with the full NIC layout. Set
-`masters_schedulable: true` to override.
+Dedicated control plane, **not schedulable**, so it sits on the machine bus only
+(`bond0`); the data bus carries **workers only**. The control-plane tier having no
+link to the data bus is the role-aware split. Set `masters_schedulable: true` to
+override.
 
 ```mermaid
 flowchart TB
-  subgraph cp["control plane (not schedulable, bond0 only)"]
-    direction LR
-    m0["node0<br/>master"]; m1["node1<br/>master"]; m2["node2<br/>master"]
+  subgraph mgmt["Management / OOB"]
+    sushy["sushy Redfish BMC"]
   end
-  subgraph wk["workers (bond0 + bond1)"]
-    direction LR
-    w0["node3<br/>worker"]; w1["node4<br/>worker"]; wd["...node N"]
+  subgraph cluster["OpenShift 3 + N"]
+    subgraph cpl["Control plane · not schedulable"]
+      m0["node0 master"]
+      m1["node1 master"]
+      m2["node2 master"]
+    end
+    subgraph cmp["Compute"]
+      w0["node3 worker"]
+      w1["node4 worker"]
+    end
   end
-  cp --- wk
-  classDef m fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef w fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
-  class m0,m1,m2 m;
-  class w0,w1,wd w;
+  subgraph fabric["Network fabric (libvirt bridges)"]
+    mach[("machine bus · bond0<br/>VIPs · DHCP · DNS")]
+    data[("data bus · bond1<br/>storage 30 · migration 40")]
+  end
+  sushy -. boot .-> m0
+  m0 -- bond0 --- mach
+  m1 -- bond0 --- mach
+  m2 -- bond0 --- mach
+  w0 -- bond0 --- mach
+  w1 -- bond0 --- mach
+  w0 -- bond1 --- data
+  w1 -- bond1 --- data
 ```
+
+The control-plane tier in **3 + N** connects only to the machine bus, never to the
+data bus, exactly as rendered (masters = 2 NICs, workers = 6).
 
 ## BMC power management (metal3 → Redfish → libvirt)
 
@@ -329,8 +357,4 @@ flowchart TD
   lint --- offline
   e2e --- live
 
-  classDef a fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
-  classDef b fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  class lint,sc,rc a;
-  class e2e,dump,asserts b;
 ```

@@ -66,6 +66,10 @@ flowchart LR
   class p,s,mig vlan;
 ```
 
+This is the full layout (6 vNICs), used by workers and schedulable control-plane
+nodes. Non-schedulable control-plane nodes get only `bond0` (eth0/eth1), no `bond1`
+storage/migration card.
+
 ### VIPs & load balancing
 
 Two VIPs on the machine net, baremetal-style:

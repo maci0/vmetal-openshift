@@ -62,7 +62,7 @@ else
 fi
 
 echo "== render install/agent configs =="
-TMP="$(mktemp -d)"
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT   # clean up even on early (set -e) exit
 ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" >/dev/null )
 ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
     -e '{"clusters":[{"name":"ipichk","node_count":3,"install_mode":"ipi"}]}' >/dev/null )

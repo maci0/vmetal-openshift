@@ -19,7 +19,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build", "bench-results.csv")
 out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "docs", "bench.png")
 
-rows = list(csv.DictReader(open(src)))
+with open(src) as fh:
+    rows = list(csv.DictReader(fh))
 states = [r["state"] for r in rows]
 used = [int(r["host_used_mib"]) / 1024 for r in rows]
 ksm = [int(r["ksm_saved_mib"]) / 1024 for r in rows]

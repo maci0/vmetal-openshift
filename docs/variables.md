@@ -65,7 +65,10 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | `boot_via` | no | override global `boot_via` |
 | `base_domain` | no | override global `base_domain` |
 | `api_vip_offset` / `ingress_vip_offset` | no | override VIP octets |
-| `memory_mib` / `vcpus` / `disks` | no | override node sizing |
+| `memory_mib` / `vcpus` / `disks` | no | override node sizing (all roles) |
+| `master_memory_mib` / `worker_memory_mib` | no | per-role RAM (falls back to `memory_mib` -> `default_memory_mib`) |
+| `master_vcpus` / `worker_vcpus` | no | per-role vCPUs (falls back to `vcpus` -> `default_vcpus`) |
+| `day2_workers` | no | extra workers added after install with `make workers-add` (use worker sizing); `make workers-remove` tears them down. With `node_count: 1` this gives an edge-style single control plane + workers |
 | `provisioning_network_mode` | no | per-cluster IPI provisioning mode |
 | `subnet_index` | no | pin the `{c}` index for this cluster's subnets/MACs (stable if the list reorders) |
 

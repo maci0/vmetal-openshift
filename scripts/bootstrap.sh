@@ -51,7 +51,7 @@ if [[ -x "$INSTALL_DIR/openshift-install" && -z "${FORCE:-}" ]]; then
 else
   if [[ ! -f "$TARBALL" || -n "${FORCE:-}" ]]; then
     log "Downloading openshift-install ($RELEASE_PATH, $ARCH)"
-    curl -fL --retry 3 -o "$TARBALL" "${MIRROR}/${RELEASE_PATH}/${TARBALL}"
+    curl -fL --retry 3 -o "$TARBALL" "${MIRROR}/${RELEASE_PATH}/openshift-install-linux.tar.gz"
   else
     log "$TARBALL present, skipping download"
   fi

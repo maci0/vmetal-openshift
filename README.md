@@ -275,7 +275,7 @@ nominal RAM far exceed what it actually consumes, without touching the host OS.
 `make optimize-undo` reverts it.
 
 ```bash
-make optimize        # KSM + zswap + per-VM cgroup hook
+make optimize        # KSM + zram + per-VM cgroup hook
 make optimize-undo   # revert
 ```
 
@@ -336,7 +336,7 @@ Takeaways:
 ```bash
 make lint            # offline, CI-safe: syntax-check, ansible-lint, yamllint, shellcheck, render, config parse
 make e2e             # live: provision, assert nets/domains/NIC bonding/DNS/Redfish, teardown
-make bench           # memory/perf matrix: baseline / KSM / zswap / KSM+zswap
+make bench           # memory/perf matrix: baseline / KSM / zram / KSM+zram
 KEEP=1 scripts/e2e.sh
 ```
 

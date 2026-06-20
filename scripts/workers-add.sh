@@ -55,15 +55,17 @@ log "Serving ISO + booting workers over redfish"
 "$PY" -m http.server "$HTTP_PORT" --directory "$ROOT/build" >/tmp/vmetal-iso-http.log 2>&1 &
 http_pid=$!
 trap 'kill "$http_pid" 2>/dev/null || true' EXIT
-sleep 2
+for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/node_$CLUSTER.iso" && break; sleep 1; done
+curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/node_$CLUSTER.iso" \
+  || die "ISO HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
 ap bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e node_set=day2_workers \
   -e iso_name="node_$CLUSTER.iso" -e iso_base_url="http://127.0.0.1:${HTTP_PORT}"
 
 log "Approving CSRs until workers join (Ctrl-C to stop watching)"
 deadline=$(( SECONDS + 2400 ))
 while (( SECONDS < deadline )); do
-  oc get csr -o jsonpath='{range .items[?(@.status.conditions[0].type!="Approved")]}{.metadata.name}{"\n"}{end}' 2>/dev/null \
-    | grep -v '^$' | xargs -r oc adm certificate approve >/dev/null 2>&1 || true
+  oc get csr --no-headers 2>/dev/null | awk '/Pending/{print $1}' \
+    | xargs -r oc adm certificate approve >/dev/null 2>&1 || true
   ready=0
   for w in "${WORKERS[@]}"; do
     [[ "$(oc get node "$w" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" == "True" ]] && ready=$((ready + 1))

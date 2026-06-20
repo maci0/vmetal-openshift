@@ -1,6 +1,6 @@
 # vmetal-openshift convenience targets.
 #   make check                verify host prerequisites
-#   make optimize             host memory tuning: KSM + zswap + per-VM cgroup hook
+#   make optimize             host memory tuning: KSM + zram + per-VM cgroup hook
 #   make optimize-undo        revert the memory tuning
 #   make bootstrap [OCP_VERSION=4.22.0]   host prep (venv, deps, installer, cert)
 #   make sushy-install        render + start the sushy Redfish BMC (systemd --user)

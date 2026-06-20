@@ -45,7 +45,9 @@ else
   "$PY" -m http.server "$HTTP_PORT" --directory "$ROOT/build" >/tmp/vmetal-iso-http.log 2>&1 &
   http_pid=$!
   trap 'kill "$http_pid" 2>/dev/null || true' EXIT
-  sleep 2
+  for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/discovery_image_${CLUSTER}.iso" && break; sleep 1; done
+  curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/discovery_image_${CLUSTER}.iso" \
+    || die "ISO HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
   ap bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e iso_base_url="http://127.0.0.1:${HTTP_PORT}"
 fi
 

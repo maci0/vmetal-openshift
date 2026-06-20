@@ -13,9 +13,10 @@ how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
   `agent-config.yaml`. Nodes boot it and self-orchestrate around a rendezvous
   node; no central provisioner is required during install.
 * Boot is by `boot_via`:
-  * `iso` (default): the ISO is attached to the VM; `virsh start` boots it. No BMC needed.
-  * `redfish`: sushy mounts the ISO as virtual media and powers the node on. This
-    is the automated, enterprise path and exercises the BMC.
+  * `redfish` (default): sushy mounts the ISO as virtual media and powers the node
+    on. The automated, enterprise path; exercises the BMC.
+  * `iso`: the ISO is attached to the VM; `virsh start` boots it. No BMC or HTTP
+    server needed, simplest for a quick local run.
 * Day-2 BMC power control:
   * Out-of-band (host/admin to BMC) always works: run sushy and use
     `make bmc CLUSTER=<c> BMC_ACTION=on|off|reset|status`.

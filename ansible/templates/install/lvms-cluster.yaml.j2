@@ -1,0 +1,27 @@
+{# LVMCluster: build a thin-provisioned volume group on each worker's dedicated
+   storage disk (vdc) and expose it as the default RWO StorageClass (lvms-vg1).
+   Local storage, so volumes are node-bound (no live migration). #}
+---
+apiVersion: lvm.topolvm.io/v1alpha1
+kind: LVMCluster
+metadata:
+  name: lvmcluster
+  namespace: openshift-storage
+spec:
+  storage:
+    deviceClasses:
+      - name: vg1
+        default: true
+        fstype: xfs
+        deviceSelector:
+          paths:
+            - {{ lvms_device | default('/dev/vdc') }}
+        thinPoolConfig:
+          name: thin-pool-1
+          sizePercent: 90
+          overprovisionRatio: 10
+        nodeSelector:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: node-role.kubernetes.io/worker
+                  operator: Exists

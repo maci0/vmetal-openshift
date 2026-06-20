@@ -116,10 +116,32 @@
       vars:
         cluster: "{{ item.0 }}"
 
+    - name: Render LVM Storage + optional NFS-Ganesha (Day-2 storage)
+      ansible.builtin.template:
+        src: "templates/install/{{ item.1 }}"
+        dest: "{{ out_dir }}/{{ item.0.name }}/{{ item.1 | replace('.j2', '') }}"
+        mode: "0644"
+      loop: "{{ topology | product(['lvms-operator.yaml.j2', 'lvms-cluster.yaml.j2', 'nfs-ganesha.yaml.j2']) | list }}"
+      loop_control:
+        label: "{{ item.0.name }}/{{ item.1 }}"
+      vars:
+        cluster: "{{ item.0 }}"
+
     - name: Render FRR config for the MetalLB BGP peer
       ansible.builtin.template:
         src: templates/frr/frr.conf.j2
         dest: "{{ out_dir }}/{{ item.name }}/frr.conf"
+        mode: "0644"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+
+    - name: Render NFS-Ganesha export config for the host storage appliance
+      ansible.builtin.template:
+        src: templates/nfs/ganesha.conf.j2
+        dest: "{{ out_dir }}/{{ item.name }}/ganesha.conf"
         mode: "0644"
       loop: "{{ topology }}"
       loop_control:

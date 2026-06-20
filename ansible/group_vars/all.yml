@@ -114,6 +114,12 @@ provisioning_network_mode: Disabled
 metallb_bgp_node_asn: 64512
 metallb_bgp_router_asn: 64513
 
+# LVM Storage operator (make lvms): local RWO StorageClass from the workers' vdc.
+# An optional NFS-Ganesha layer (make nfs) re-exports an LVMS volume as RWX.
+lvms_channel: stable-4.21
+lvms_device: /dev/vdc
+nfs_size_gib: 200
+
 # Default bond mode for any nic_layout bond that doesn't set its own `mode`.
 #   active-backup  one active NIC, single MAC. Simplest, always works.
 #   balance-tlb    active-active TX, stable single MAC, no switch needed. Passes

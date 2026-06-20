@@ -1,6 +1,6 @@
 # Architecture & Flow
 
-<sub>[Home](../README.md) · **Architecture** · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · **Architecture** · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Virtualization](virtualization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 How the pieces fit: per-cluster networks, the node NIC/bond/VLAN layout, the
 sushy Redfish emulation, the install flow, cluster topologies, BMC power

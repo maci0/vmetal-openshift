@@ -117,6 +117,9 @@ metallb_bgp_router_asn: 64513
 # LVM Storage operator (make lvms): local RWO StorageClass from the workers' vdc.
 # An optional NFS-Ganesha layer (make nfs) re-exports an LVMS volume as RWX.
 lvms_channel: stable-4.21
+# CNV live migration on its own VLAN (bond1.40) via a macvlan NAD. false = default net.
+cnv_migration_network: false
+cnv_channel: stable
 lvms_device: /dev/vdc
 
 # Default bond mode for any nic_layout bond that doesn't set its own `mode`.

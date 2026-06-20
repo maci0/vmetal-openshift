@@ -1,6 +1,6 @@
 # Fidelity: what this lab does and does not emulate
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · **Fidelity** · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · **Fidelity** · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Virtualization](virtualization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 The goal of this lab is to come **as close as practical to a real baremetal
 OpenShift install** on a single host: Redfish BMCs, bonded NICs with VLAN trunks,

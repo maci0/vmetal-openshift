@@ -98,6 +98,7 @@ up:
 	cd ansible && $(AP) setup.yml $(ANSIBLE_ARGS)
 
 down:
+	-./scripts/appliances-down.sh
 	cd ansible && $(AP) cleanup.yml $(ANSIBLE_ARGS)
 
 bmc:

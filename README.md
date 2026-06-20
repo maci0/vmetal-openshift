@@ -22,6 +22,7 @@ BareMetalHost power management, all from one data-driven Ansible topology.
 [Variables](docs/variables.md) ·
 [Examples](docs/examples.md) ·
 [Memory](docs/memory-optimization.md) ·
+[Virtualization](docs/virtualization.md) ·
 [Resilience](docs/resilience.md) ·
 [Troubleshooting](docs/troubleshooting.md)
 
@@ -60,9 +61,12 @@ emulated.
 - 🧩 **Data-driven**: edit one `clusters` list; subnets, MACs, VIPs, bridges, UUIDs all computed
 - 🪢 **Production NIC layout**: onboard bond + 4-port active-active VLAN trunk (storage + live-migration), jumbo MTU
 - 🌐 **Two VIPs** (api / ingress) via integrated keepalived + HAProxy; libvirt split-DNS
-- 🎈 **MetalLB** (L2) for `Service type=LoadBalancer`, pool derived on the machine net (`make metallb`)
+- 🎈 **MetalLB** L2 (`make metallb`) **and BGP** (`make metallb-bgp`, FRR peer on the host + ECMP)
+- 💾 **Storage**: LVM Storage RWO (`make lvms`) + a host **NFS-Ganesha appliance** for RWX (`make nfs`)
+- 🖧 **OpenShift Virtualization** (`make virt`): live migration on a dedicated VLAN ([docs](docs/virtualization.md))
 - ⚡ **In-cluster BareMetalHost** power management (metal3 → Redfish → libvirt)
-- 📦 **Multi-cluster**: SNO, compact, or dedicated workers; schedulable masters
+- 📦 **Multi-cluster**: SNO, compact, dedicated workers, or SNO + day-2 workers (edge)
+- 🛡️ **Resilience-tested**: bond, etcd-quorum, VIP, and node-drain failure drills ([docs](docs/resilience.md))
 - 🧪 **Tested**: offline lint + render checks + live e2e; ansible-lint production profile
 
 ```mermaid
@@ -365,7 +369,6 @@ docs/                     architecture, requirements, ipi-vs-agent, fidelity, di
 
 * macOS host support
 * first-class disconnected switch (see [docs/disconnected.md](docs/disconnected.md))
-* live-migration network wiring into the HyperConverged CR (CNV)
 
 ## License
 

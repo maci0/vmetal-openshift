@@ -38,6 +38,13 @@
 {%   endfor %}
 {%   set prov_cidr = (networks.provisioning.cidr | replace('{c}', ci | string)) if networks.provisioning is defined else '' %}
 {%   set prov_p3 = prov_cidr.split('/')[0].rsplit('.', 1)[0] if prov_cidr else '' %}
+{#   migration interface (vlan/bond carrying the live-migration net) for CNV #}
+{%   set mg = namespace(dev='') %}
+{%   for b in nic_layout %}
+{%     for v in b.vlans | default([]) %}{% if v.network == 'migration' %}{% set mg.dev = b.bond ~ '.' ~ v.id %}{% endif %}{% endfor %}
+{%   endfor %}
+{%   set mig_cidr = (networks.migration.cidr | replace('{c}', ci | string)) if networks.migration is defined else '' %}
+{%   set mig_p3 = mig_cidr.split('/')[0].rsplit('.', 1)[0] if mig_cidr else '' %}
 - name: {{ c.name }}
   fqdn: {{ domain }}
   base_domain: {{ c.base_domain | default(base_domain) }}
@@ -53,6 +60,13 @@
   metallb_bgp_pool: 198.51.{{ 100 + ci }}.0/24
   metallb_bgp_node_asn: {{ metallb_bgp_node_asn }}
   metallb_bgp_router_asn: {{ metallb_bgp_router_asn }}
+{%   if mig_cidr %}
+  migration_iface: {{ mg.dev }}
+  migration_cidr: {{ mig_cidr }}
+  migration_mtu: {{ networks.migration.mtu | default(1500) }}
+  migration_range_start: {{ mig_p3 }}.100
+  migration_range_end: {{ mig_p3 }}.200
+{%   endif %}
   machine_net: {{ c.name }}-machine
   machine_cidr: {{ machine_cidr }}
   machine_gateway: {{ mp3 }}.1

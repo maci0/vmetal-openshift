@@ -15,6 +15,13 @@
     pull_secret_file: "{{ playbook_dir }}/../pull-secret.json"
     ssh_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519.pub"
     out_dir: "{{ playbook_dir }}/../clusters"
+    day2_storage_manifests:
+      - lvms-operator.yaml.j2
+      - lvms-cluster.yaml.j2
+      - nfs-ganesha.yaml.j2
+      - cnv-operator.yaml.j2
+      - cnv-migration-network.yaml.j2
+      - cnv-hyperconverged.yaml.j2
 
   tasks:
     - name: Validate cluster definitions
@@ -116,12 +123,12 @@
       vars:
         cluster: "{{ item.0 }}"
 
-    - name: Render LVM Storage + optional NFS-Ganesha (Day-2 storage)
+    - name: Render LVM Storage + NFS-Ganesha + CNV (Day-2 storage + virtualization)
       ansible.builtin.template:
         src: "templates/install/{{ item.1 }}"
         dest: "{{ out_dir }}/{{ item.0.name }}/{{ item.1 | replace('.j2', '') }}"
         mode: "0644"
-      loop: "{{ topology | product(['lvms-operator.yaml.j2', 'lvms-cluster.yaml.j2', 'nfs-ganesha.yaml.j2', 'cnv-operator.yaml.j2', 'cnv-hyperconverged.yaml.j2']) | list }}"
+      loop: "{{ topology | product(day2_storage_manifests) | list }}"
       loop_control:
         label: "{{ item.0.name }}/{{ item.1 }}"
       vars:

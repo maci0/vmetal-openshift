@@ -1,6 +1,6 @@
 # Variables reference
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · **Variables** · [Examples](examples.md) · [Memory](memory-optimization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · **Variables** · [Examples](examples.md) · [Memory](memory-optimization.md) · [Virtualization](virtualization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 All knobs live in `ansible/group_vars/all.yml`. Most installs only touch the
 `clusters` list. Everything else has a sensible default and is derived.

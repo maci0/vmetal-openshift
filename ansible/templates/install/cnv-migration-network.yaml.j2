@@ -1,0 +1,26 @@
+{# Dedicated live-migration network for CNV: a macvlan NAD over the migration VLAN
+   (bond1.40, the isolated migration net) so virt-launcher migration pods get an IP
+   on that VLAN and live-migration traffic flows over it instead of the machine net.
+   Red Hat recommends isolating migration traffic; this lab built the VLAN for it. #}
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: migration
+  namespace: openshift-cnv
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "migration",
+      "type": "ipvlan",
+      "master": "{{ cluster.migration_iface }}",
+      "mode": "l2",
+      "mtu": {{ cluster.migration_mtu | default(1500) }},
+      "ipam": {
+        "type": "whereabouts",
+        "range": "{{ cluster.migration_cidr }}",
+        "range_start": "{{ cluster.migration_range_start }}",
+        "range_end": "{{ cluster.migration_range_end }}"
+      }
+    }

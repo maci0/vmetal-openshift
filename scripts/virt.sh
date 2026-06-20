@@ -21,6 +21,13 @@ oc apply -f "$DIR/cnv-operator.yaml" >/dev/null
 for _ in $(seq 1 60); do oc get crd hyperconvergeds.hco.kubevirt.io >/dev/null 2>&1 && break; sleep 10; done
 oc get crd hyperconvergeds.hco.kubevirt.io >/dev/null 2>&1 || die "CNV operator/CRDs not ready"
 
+# Dedicated live-migration network (macvlan over the migration VLAN). Apply before
+# the HyperConverged so its liveMigrationConfig.network can reference it.
+if [[ -f "$DIR/cnv-migration-network.yaml" ]]; then
+  log "Applying the dedicated live-migration network (migration VLAN)"
+  for _ in $(seq 1 30); do oc apply -f "$DIR/cnv-migration-network.yaml" >/dev/null 2>&1 && break; sleep 5; done
+fi
+
 log "Creating the HyperConverged CR (deploys KubeVirt + CDI)"
 for _ in $(seq 1 30); do oc apply -f "$DIR/cnv-hyperconverged.yaml" >/dev/null 2>&1 && break; sleep 5; done
 

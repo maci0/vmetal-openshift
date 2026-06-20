@@ -18,6 +18,7 @@
 #   make metallb-bgp CLUSTER=c          MetalLB BGP mode + FRR peer on the host (ECMP)
 #   make metallb-bgp-down CLUSTER=c     stop the FRR peer + remove BGP config
 #   make lvms CLUSTER=c                 LVM Storage operator -> RWO StorageClass (workers' vdc)
+#   make virt CLUSTER=c                 OpenShift Virtualization (CNV) operator + HyperConverged
 #   make nfs CLUSTER=c                  host NFS-Ganesha appliance -> RWX StorageClass
 #   make nfs-down CLUSTER=c             stop the NFS appliance + provisioner
 #   make workers-add CLUSTER=c          add day-2 workers (set day2_workers: N first)
@@ -46,7 +47,7 @@ PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down status creds lint e2e bench pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -123,6 +124,9 @@ metallb-bgp-down:
 
 lvms:
 	./scripts/lvms.sh $(CLUSTER)
+
+virt:
+	./scripts/virt.sh $(CLUSTER)
 
 nfs:
 	./scripts/nfs.sh $(CLUSTER) up

@@ -1,0 +1,13 @@
+{# HyperConverged deploys KubeVirt + CDI + the storage/network components. Default
+   spec is fine for the lab; live migration uses the cluster's default network here
+   (the storage/migration VLANs exist on the workers for a dedicated network later). #}
+---
+apiVersion: hco.kubevirt.io/v1beta1
+kind: HyperConverged
+metadata:
+  name: kubevirt-hyperconverged
+  namespace: openshift-cnv
+spec:
+  liveMigrationConfig:
+    parallelMigrationsPerCluster: 5
+    parallelOutboundMigrationsPerNode: 2

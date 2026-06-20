@@ -121,7 +121,7 @@
         src: "templates/install/{{ item.1 }}"
         dest: "{{ out_dir }}/{{ item.0.name }}/{{ item.1 | replace('.j2', '') }}"
         mode: "0644"
-      loop: "{{ topology | product(['lvms-operator.yaml.j2', 'lvms-cluster.yaml.j2', 'nfs-ganesha.yaml.j2']) | list }}"
+      loop: "{{ topology | product(['lvms-operator.yaml.j2', 'lvms-cluster.yaml.j2', 'nfs-ganesha.yaml.j2', 'cnv-operator.yaml.j2', 'cnv-hyperconverged.yaml.j2']) | list }}"
       loop_control:
         label: "{{ item.0.name }}/{{ item.1 }}"
       vars:

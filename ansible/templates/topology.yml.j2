@@ -50,6 +50,9 @@
   worker_replicas: {{ workers }}
   masters_schedulable: {{ masters_sched }}
   metallb_pool: {{ mp3 }}.100-{{ mp3 }}.119
+  metallb_bgp_pool: 198.51.{{ 100 + ci }}.0/24
+  metallb_bgp_node_asn: {{ metallb_bgp_node_asn }}
+  metallb_bgp_router_asn: {{ metallb_bgp_router_asn }}
   machine_net: {{ c.name }}-machine
   machine_cidr: {{ machine_cidr }}
   machine_gateway: {{ mp3 }}.1

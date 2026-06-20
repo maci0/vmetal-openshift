@@ -15,6 +15,8 @@
 #                                       cycle|pxe|boot-disk|boot-iso|set-boot|media-* (NODE=node0)
 #   make adopt CLUSTER=c                in-cluster BMH adoption (platform baremetal only)
 #   make metallb CLUSTER=c              install MetalLB (LoadBalancer services, L2 pool)
+#   make metallb-bgp CLUSTER=c          MetalLB BGP mode + FRR peer on the host (ECMP)
+#   make metallb-bgp-down CLUSTER=c     stop the FRR peer + remove BGP config
 #   make workers-add CLUSTER=c          add day-2 workers (set day2_workers: N first)
 #   make workers-remove CLUSTER=c       drain + delete the day-2 workers
 #   make status CLUSTER=c     nodes + operators + BareMetalHosts
@@ -41,7 +43,7 @@ PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb workers-add workers-remove status creds lint e2e bench pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove status creds lint e2e bench pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -109,6 +111,12 @@ workers-remove:
 
 metallb:
 	./scripts/metallb.sh $(CLUSTER)
+
+metallb-bgp:
+	./scripts/metallb-bgp.sh $(CLUSTER) up
+
+metallb-bgp-down:
+	./scripts/metallb-bgp.sh $(CLUSTER) down
 
 lint:
 	./scripts/lint.sh

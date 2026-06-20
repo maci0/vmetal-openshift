@@ -1,0 +1,34 @@
+{# MetalLB BGP mode: peer the speakers with the FRR router on the host
+   (machine gateway) and advertise an off-link pool over BGP. Apply after the
+   operator + a MetalLB instance exist. The pool is autoAssign:false so it does
+   not shadow the L2 pool; request it with the annotation
+   metallb.io/address-pool: <cluster>-bgp-pool on a LoadBalancer service. #}
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: {{ cluster.name }}-bgp-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - {{ cluster.metallb_bgp_pool }}
+  autoAssign: false
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPPeer
+metadata:
+  name: {{ cluster.name }}-frr
+  namespace: metallb-system
+spec:
+  myASN: {{ cluster.metallb_bgp_node_asn }}
+  peerASN: {{ cluster.metallb_bgp_router_asn }}
+  peerAddress: {{ cluster.machine_gateway }}
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  name: {{ cluster.name }}-bgp
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - {{ cluster.name }}-bgp-pool

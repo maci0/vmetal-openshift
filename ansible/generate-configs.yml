@@ -105,16 +105,36 @@
         cluster: "{{ item }}"
       when: not item.sno and item.mode == 'agent'
 
-    - name: Render MetalLB operator + L2 config (Day-2 LoadBalancer services)
+    - name: Render MetalLB operator + L2 + BGP config (Day-2 LoadBalancer services)
       ansible.builtin.template:
         src: "templates/install/{{ item.1 }}"
         dest: "{{ out_dir }}/{{ item.0.name }}/{{ item.1 | replace('.j2', '') }}"
         mode: "0644"
-      loop: "{{ topology | product(['metallb-operator.yaml.j2', 'metallb-config.yaml.j2']) | list }}"
+      loop: "{{ topology | product(['metallb-operator.yaml.j2', 'metallb-config.yaml.j2', 'metallb-bgp.yaml.j2']) | list }}"
       loop_control:
         label: "{{ item.0.name }}/{{ item.1 }}"
       vars:
         cluster: "{{ item.0 }}"
+
+    - name: Render FRR config for the MetalLB BGP peer
+      ansible.builtin.template:
+        src: templates/frr/frr.conf.j2
+        dest: "{{ out_dir }}/{{ item.name }}/frr.conf"
+        mode: "0644"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+
+    - name: Copy FRR daemons file for the BGP peer
+      ansible.builtin.copy:
+        src: templates/frr/daemons
+        dest: "{{ out_dir }}/{{ item.name }}/frr-daemons"
+        mode: "0644"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
 
     - name: Render IPI install-config.yaml (baremetal hosts with BMC)
       ansible.builtin.template:

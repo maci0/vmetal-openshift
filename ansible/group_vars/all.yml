@@ -107,6 +107,13 @@ bmc_password: password
 # IPI provisioning network: Disabled (virtual-media, simplest) or Managed (PXE).
 provisioning_network_mode: Disabled
 
+# MetalLB BGP mode (make metallb-bgp): the speakers peer with an FRR router that
+# runs on the host (machine gateway). The BGP pool is off-link (TEST-NET-2) so a
+# LoadBalancer IP is only reachable via the BGP-learned route, which proves BGP.
+# L2 mode (make metallb) needs none of this.
+metallb_bgp_node_asn: 64512
+metallb_bgp_router_asn: 64513
+
 # Default bond mode for any nic_layout bond that doesn't set its own `mode`.
 #   active-backup  one active NIC, single MAC. Simplest, always works.
 #   balance-tlb    active-active TX, stable single MAC, no switch needed. Passes

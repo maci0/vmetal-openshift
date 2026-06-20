@@ -15,31 +15,36 @@
       ansible.builtin.set_fact:
         topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
 
+    # Install nodes AND day-2 workers, so `make down` removes everything.
+    - name: Collect all domains (nodes + day-2 workers)
+      ansible.builtin.set_fact:
+        all_nodes: "{{ (topology | map(attribute='nodes') | flatten) + (topology | map(attribute='day2_workers') | flatten) }}"
+
     - name: Check which domains exist
-      ansible.builtin.command: "virsh -c {{ libvirt_uri }} domstate {{ item.1.fullname }}"
-      loop: "{{ topology | subelements('nodes') }}"
+      ansible.builtin.command: "virsh -c {{ libvirt_uri }} domstate {{ item.fullname }}"
+      loop: "{{ all_nodes }}"
       loop_control:
-        label: "{{ item.1.fullname }}"
+        label: "{{ item.fullname }}"
       register: domstate
       changed_when: false
       failed_when: false
 
     - name: Destroy running domains
-      ansible.builtin.command: "virsh -c {{ libvirt_uri }} destroy {{ item.item.1.fullname }}"
+      ansible.builtin.command: "virsh -c {{ libvirt_uri }} destroy {{ item.item.fullname }}"
       loop: "{{ domstate.results }}"
       loop_control:
-        label: "{{ item.item.1.fullname }}"
+        label: "{{ item.item.fullname }}"
       when: item.rc == 0 and 'running' in item.stdout
       changed_when: true
       failed_when: false
 
     - name: Undefine domains (with nvram + storage)
       ansible.builtin.command: >-
-        virsh -c {{ libvirt_uri }} undefine {{ item.item.1.fullname }}
+        virsh -c {{ libvirt_uri }} undefine {{ item.item.fullname }}
         --nvram --remove-all-storage
       loop: "{{ domstate.results }}"
       loop_control:
-        label: "{{ item.item.1.fullname }}"
+        label: "{{ item.item.fullname }}"
       when: item.rc == 0
       changed_when: true
       failed_when: false
@@ -48,7 +53,7 @@
       ansible.builtin.command: >-
         virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }}
         {{ item.0.fullname }}-{{ item.1.suffix }}.qcow2
-      loop: "{{ topology | map(attribute='nodes') | flatten | subelements('disks') }}"
+      loop: "{{ all_nodes | subelements('disks') }}"
       loop_control:
         label: "{{ item.0.fullname }}-{{ item.1.suffix }}"
       register: voldel_info

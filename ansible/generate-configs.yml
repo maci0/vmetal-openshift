@@ -138,17 +138,6 @@
       vars:
         cluster: "{{ item }}"
 
-    - name: Render NFS-Ganesha export config for the host storage appliance
-      ansible.builtin.template:
-        src: templates/nfs/ganesha.conf.j2
-        dest: "{{ out_dir }}/{{ item.name }}/ganesha.conf"
-        mode: "0644"
-      loop: "{{ topology }}"
-      loop_control:
-        label: "{{ item.name }}"
-      vars:
-        cluster: "{{ item }}"
-
     - name: Copy FRR daemons file for the BGP peer
       ansible.builtin.copy:
         src: templates/frr/daemons

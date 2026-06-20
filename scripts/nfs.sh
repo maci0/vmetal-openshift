@@ -34,17 +34,19 @@ if [[ "$ACTION" == down ]]; then
 fi
 
 [[ -f "$KUBECONFIG" ]] || die "no kubeconfig for '$CLUSTER'"
-[[ -f "$DIR/ganesha.conf" && -f "$DIR/nfs-ganesha.yaml" ]] || die "run 'make configs' first"
+[[ -f "$DIR/nfs-ganesha.yaml" ]] || die "run 'make configs' first"
 
 log "Starting the NFS-Ganesha appliance on the host ($GANESHA_IMG, export $EXPORT_DIR)"
 mkdir -p "$EXPORT_DIR"
 chmod 0777 "$EXPORT_DIR"
 $RT rm -f "$NAME" >/dev/null 2>&1 || true
+# the image generates its own ganesha.conf and serves the bind-mounted /data/nfs;
+# NFS_EXPORT_0 is the appliance's export definition (NFSv4 pseudo root).
 $RT run -d --name "$NAME" --network host --privileged --restart unless-stopped \
-  -v "$EXPORT_DIR:/export" \
-  -v "$DIR/ganesha.conf:/etc/ganesha/ganesha.conf:ro" \
+  -v "$EXPORT_DIR:/data/nfs" \
+  -e NFS_EXPORT_0="/data/nfs *(rw,sync,no_subtree_check,no_root_squash)" \
   "$GANESHA_IMG" >/dev/null
-sleep 5
+sleep 8
 ss -ltn 2>/dev/null | grep -q ':2049' || log "warning: nothing listening on :2049 yet (check: $RT logs $NAME)"
 
 log "Applying the in-cluster NFS RWX provisioner + StorageClass"

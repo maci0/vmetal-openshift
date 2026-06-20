@@ -11,7 +11,7 @@ CLUSTER="${1:-${CLUSTER:-cluster0}}"
 ACTION="${2:-up}"
 DIR="$ROOT/clusters/$CLUSTER"
 FRR_NAME="vmetal-frr-$CLUSTER"
-FRR_IMG="${FRR_IMG:-quay.io/frrouting/frr:latest}"
+FRR_IMG="${FRR_IMG:-quay.io/frrouting/frr:10.4.4}"
 
 die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
 log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }

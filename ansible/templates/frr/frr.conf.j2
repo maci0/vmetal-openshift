@@ -8,9 +8,9 @@ hostname vmetal-frr
 router bgp {{ cluster.metallb_bgp_router_asn }}
   bgp router-id {{ cluster.machine_gateway }}
   no bgp ebgp-requires-policy
-  bgp listen range {{ cluster.machine_cidr }} peer-group ocp
   neighbor ocp peer-group
   neighbor ocp remote-as {{ cluster.metallb_bgp_node_asn }}
+  bgp listen range {{ cluster.machine_cidr }} peer-group ocp
   address-family ipv4 unicast
     neighbor ocp activate
     maximum-paths 8

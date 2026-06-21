@@ -64,7 +64,7 @@ hosts:
 - hostname: prod-node0
   role: master
   rootDeviceHints:
-    deviceName: /dev/vda
+    deviceName: /dev/sda
   interfaces:
   - name: eth0
     macAddress: 52:54:00:00:00:0a
@@ -216,7 +216,7 @@ platform:
         password: REDACTED
         disableCertificateVerification: true
       rootDeviceHints:
-        deviceName: /dev/vda
+        deviceName: /dev/sda
       networkConfig:
         # ... bond0 + bond1 trunk + VLANs, same nmstate as the agent-config above ...
 ```
@@ -264,7 +264,7 @@ spec:
     credentialsName: prod-node0-bmc-secret
     disableCertificateVerification: true
   rootDeviceHints:
-    deviceName: /dev/vda
+    deviceName: /dev/sda
 ```
 
 ## libvirt networks (rendered XML)

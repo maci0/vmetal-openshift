@@ -7,7 +7,7 @@ hosts:
 - hostname: {{ node.fullname }}
   role: worker
   rootDeviceHints:
-    deviceName: /dev/vda
+    deviceName: /dev/sda
   interfaces:
 {%   for nic in node.interfaces %}
   - name: {{ nic.devname }}

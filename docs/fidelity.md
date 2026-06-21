@@ -33,7 +33,7 @@ layer underneath is emulated. Know the gaps before trusting a result.
 | VLAN gateway/DHCP | trunk VLANs ride a no-IP L2 bridge | VLANs are guest-to-guest only (real isolation by tag), no per-VLAN libvirt gateway/DHCP; the machine net stays untagged so it keeps NAT/DHCP/DNS/VIP |
 | NIC bonding failover timing | virtio links do not flap like real ports | failover tests are not representative |
 | Out-of-band isolation | sushy runs on the host, BMCs are virtual | OOB LAN is logical, not a separate management plane |
-| Firmware/RAID/disk hints | qcow2 virtio disks | `rootDeviceHints` is nominal (`/dev/vda`) |
+| Firmware/RAID/disk hints | qcow2 virtio disks | `rootDeviceHints` is nominal (`/dev/sda`) |
 | Hardware inspection (IPI) | Ironic inspects a VM | no real DMI/NIC/firmware data |
 | Performance | shared host CPU/RAM/disk | not a sizing or perf benchmark |
 | Internet | machine net NAT to the host uplink | "connected" by default; see [disconnected.md](disconnected.md) |

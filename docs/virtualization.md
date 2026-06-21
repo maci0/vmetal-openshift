@@ -12,13 +12,13 @@ Two backends, both day-2 and independent:
 
 | | `make lvms` | `make nfs` |
 |---|---|---|
-| Backend | LVM Storage operator on each worker's `vdc` | host NFS-Ganesha appliance + in-cluster nfs-subdir provisioner |
+| Backend | LVM Storage operator on each worker's `sdc` | host NFS-Ganesha appliance + in-cluster nfs-subdir provisioner |
 | StorageClass | `lvms-vg1` (default) | `nfs-rwx` |
 | Access | **RWO** (node-local) | **RWX** (shared) |
 | Live migration | no (disk is node-bound) | **yes** (shared) |
-| Backing | the worker's dedicated 512G `vdc` | a disk-backed dir on the host (`build/nfs-export/`) |
+| Backing | the worker's dedicated 512G `sdc` | a disk-backed dir on the host (`build/nfs-export/`) |
 
-Workers carry a dedicated empty disk (`vdc`, `worker_disks` in group_vars) so
+Workers carry a dedicated empty disk (`sdc`, `worker_disks` in group_vars) so
 storage stays off the OS/data disks. The NFS path treats the **KVM host as a
 storage appliance** (like the FRR BGP peer): a Ganesha container exports a dir on
 the machine net, and `nfs-subdir-external-provisioner` turns it into the `nfs-rwx`
@@ -29,6 +29,28 @@ make lvms CLUSTER=cluster0    # RWO  -> lvms-vg1 (default)
 make nfs  CLUSTER=cluster0    # RWX  -> nfs-rwx (host appliance)
 make nfs-down CLUSTER=cluster0
 ```
+
+### Disk bus + SSD presentation
+
+Node disks attach on a **virtio-scsi** controller (`disk_bus: scsi`, the default)
+and advertise as **SSD** via `disk_rotation_rate: 1` (group_vars). So the guest
+sees `/dev/sda`, `sdb`, `sdc` with `queue/rotational = 0`, at virtio speed
+(virtio-scsi is paravirtual, ~virtio-blk). Two reasons it matters:
+
+* **Ceph/ODF** reads `rotational` to set the OSD device class, so `sdc` shows up as
+  an **ssd** OSD instead of hdd; SSD-gated tuning paths kick in.
+* one virtio-scsi controller carries many disks on a **single PCIe slot**, so the
+  6 bonded NICs no longer crowd out extra data disks (virtio-blk is one slot each).
+
+| group_var | default | effect |
+|-----------|---------|--------|
+| `disk_bus` | `scsi` | `scsi` = virtio-scsi (one controller, SSD-capable); `virtio` = virtio-blk (`vdX`, no rotation_rate) |
+| `disk_rotation_rate` | `1` | `1` = SSD (non-rotational); `1025`-`65535` = HDD rpm. scsi/sata only |
+
+`rotation_rate` is a SCSI/SATA attribute, so SSD presentation requires
+`disk_bus: scsi` (virtio-blk cannot set it). NVMe presentation is not offered:
+it needs QEMU's emulated NVMe (slower than virtio) or PCI passthrough (real
+hardware), neither worth the tradeoff in a perf-dense lab.
 
 ## OpenShift Virtualization (CNV)
 

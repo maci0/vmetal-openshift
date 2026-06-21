@@ -52,6 +52,8 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | `default_disks` | 128 + 1024 GiB | boot + storage qcow2 disks |
 | `disk_cache` | `none` | qcow2 cache mode (`none` keeps host RAM free for VMs/zram; `writeback`/`unsafe` faster, more RAM, see [memory](memory-optimization.md)) |
 | `disk_io` | `native` | qcow2 I/O mode (`native` with cache=none, `threads` with writeback) |
+| `disk_bus` | `scsi` | `scsi` = virtio-scsi (one controller, SSD-capable); `virtio` = virtio-blk (`vdX`) |
+| `disk_rotation_rate` | `1` | `1` = present disks as SSD (non-rotational); `1025`-`65535` = HDD rpm (scsi/sata only) |
 
 ## Per-cluster keys (`clusters[]`)
 

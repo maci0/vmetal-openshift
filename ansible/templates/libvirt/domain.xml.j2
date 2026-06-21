@@ -20,6 +20,12 @@
    empty disk (first boot) the firmware falls through to the ISO; once the image
    is written, reboots boot the disk. This avoids a fragile one-time-boot and the
    "booted the installation image again" stall after install. #}
+{% set dbus = disk_bus | default('scsi') %}
+{% if dbus == 'scsi' %}
+    {# one virtio-scsi controller carries all disks (so many fit one PCIe slot) and
+       lets each disk advertise rotation_rate (SSD). #}
+    <controller type="scsi" index="0" model="virtio-scsi"/>
+{% endif %}
 {% for d in node.disks %}
     <disk type="file" device="disk">
       {# cache=none + io=native: direct I/O, no host page cache (host cache would
@@ -27,7 +33,11 @@
          the thin qcow2 small. #}
       <driver name="qemu" type="qcow2" cache="{{ disk_cache | default('none') }}" io="{{ disk_io | default('native') }}" discard="unmap" detect_zeroes="unmap"/>
       <source file="{{ images_dir }}/{{ node.fullname }}-{{ d.suffix }}.qcow2"/>
-      <target dev="{{ d.target }}" bus="virtio"/>
+{% if dbus in ['scsi', 'sata'] %}
+      <target dev="{{ d.target }}" bus="{{ dbus }}" rotation_rate="{{ disk_rotation_rate | default(1) }}"/>
+{% else %}
+      <target dev="{{ d.target }}" bus="{{ dbus }}"/>
+{% endif %}
 {% if loop.first %}
       <boot order="1"/>
 {% endif %}
@@ -40,7 +50,7 @@
     <disk type="file" device="cdrom">
       <driver name="qemu" type="raw"/>
       <source file="{{ cluster.discovery_iso }}"/>
-      <target dev="sda" bus="sata"/>
+      <target dev="sdz" bus="sata"/>
       <readonly/>
       <boot order="2"/>
     </disk>
@@ -48,7 +58,7 @@
     <!-- empty drive; sushy/metal3 inserts the image via Redfish virtual media -->
     <disk type="file" device="cdrom">
       <driver name="qemu" type="raw"/>
-      <target dev="sda" bus="sata"/>
+      <target dev="sdz" bus="sata"/>
       <readonly/>
       <boot order="2"/>
     </disk>

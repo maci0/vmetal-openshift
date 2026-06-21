@@ -1,5 +1,5 @@
 {# LVMCluster: build a thin-provisioned volume group on each worker's dedicated
-   storage disk (vdc) and expose it as the default RWO StorageClass (lvms-vg1).
+   storage disk (sdc) and expose it as the default RWO StorageClass (lvms-vg1).
    Local storage, so volumes are node-bound (no live migration). #}
 ---
 apiVersion: lvm.topolvm.io/v1alpha1
@@ -15,7 +15,7 @@ spec:
         fstype: xfs
         deviceSelector:
           paths:
-            - {{ lvms_device | default('/dev/vdc') }}
+            - {{ lvms_device | default('/dev/sdc') }}
         thinPoolConfig:
           name: thin-pool-1
           sizePercent: 90

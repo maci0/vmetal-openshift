@@ -12,13 +12,13 @@ Two backends, both day-2 and independent:
 
 | | `make lvms` | `make nfs` |
 |---|---|---|
-| Backend | LVM Storage operator on each worker's `sdc` | host NFS-Ganesha appliance + in-cluster nfs-subdir provisioner |
+| Backend | LVM Storage operator on the workers' unused disks | host NFS-Ganesha appliance + in-cluster nfs-subdir provisioner |
 | StorageClass | `lvms-vg1` (default) | `nfs-rwx` |
 | Access | **RWO** (node-local) | **RWX** (shared) |
 | Live migration | no (disk is node-bound) | **yes** (shared) |
-| Backing | the worker's dedicated 512G `sdc` | a disk-backed dir on the host (`build/nfs-export/`) |
+| Backing | the workers' spare disks (e.g. 512G `sdc`) | a disk-backed dir on the host (`build/nfs-export/`) |
 
-Workers carry a dedicated empty disk (`sdc`, `worker_disks` in group_vars) so
+Workers carry spare empty disks (`worker_disks` in group_vars, e.g. `sdc`) so
 storage stays off the OS/data disks. The NFS path treats the **KVM host as a
 storage appliance** (like the FRR BGP peer): a Ganesha container exports a dir on
 the machine net, and `nfs-subdir-external-provisioner` turns it into the `nfs-rwx`

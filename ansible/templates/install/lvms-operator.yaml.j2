@@ -25,7 +25,9 @@ metadata:
   name: lvms
   namespace: openshift-storage
 spec:
+{% if lvms_channel | default('') %}
   channel: {{ lvms_channel }}
+{% endif %}
   name: lvms-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace

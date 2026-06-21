@@ -25,5 +25,7 @@ spec:
   source: redhat-operators
   sourceNamespace: openshift-marketplace
   name: kubevirt-hyperconverged
-  channel: {{ cnv_channel | default('stable') }}
+{% if cnv_channel | default('') %}
+  channel: {{ cnv_channel }}
+{% endif %}
   installPlanApproval: Automatic

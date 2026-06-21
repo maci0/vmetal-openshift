@@ -1,6 +1,6 @@
 # Memory optimization (KSM + zram)
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · **Memory** · [Virtualization](virtualization.md) · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · **Memory** · [Virtualization](virtualization.md) · [Resilience](resilience.md) · [Cloud](cloud.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 Every node boots the same RHCOS image, so most guest RAM is identical or cold.
 Two host features let a cluster's nominal RAM far exceed what it actually

@@ -24,6 +24,7 @@ BareMetalHost power management, all from one data-driven Ansible topology.
 [Memory](docs/memory-optimization.md) ·
 [Virtualization](docs/virtualization.md) ·
 [Resilience](docs/resilience.md) ·
+[Cloud](docs/cloud.md) ·
 [Troubleshooting](docs/troubleshooting.md)
 
 </div>

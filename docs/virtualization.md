@@ -1,6 +1,6 @@
 # Storage & OpenShift Virtualization
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · **Virtualization** · [Resilience](resilience.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · **Virtualization** · [Resilience](resilience.md) · [Cloud](cloud.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 The lab exists to run **OpenShift Virtualization (CNV)** close to a baremetal
 deployment: nested virt, bonded data networks, dedicated storage + live-migration

@@ -198,7 +198,8 @@ worker_disks:
 # control plane + workers.
 clusters:
   - name: cluster0
-    node_count: 5            # 3 control plane + 2 workers (masters not schedulable)
+    node_count: 1            # SNO control plane
+    day2_workers: 2          # + 2 workers joined day-2 (edge: single master, multi worker)
     master_memory_mib: 20480
     worker_memory_mib: 16384
     master_vcpus: 8

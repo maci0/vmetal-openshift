@@ -129,6 +129,11 @@ if [[ -d /var/lib/libvirt/images ]]; then
   else warn "image pool free ${free_g:-?}GiB: disks are thin-provisioned (128+1024GiB each) but plan headroom"; fi
 fi
 
+echo "== container runtime (optional) =="
+if have podman; then pass "podman ($(podman --version 2>/dev/null))"
+elif have docker; then pass "docker ($(docker --version 2>/dev/null))"
+else warn "no podman/docker (only needed for the host appliances: make metallb-bgp, make nfs)"; fi
+
 echo "== docs tooling (optional) =="
 for t in pandoc mmdc chromium; do
   if have "$t"; then pass "$t"; else warn "$t missing (only needed for scripts/export-pdf.sh)"; fi

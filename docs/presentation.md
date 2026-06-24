@@ -41,7 +41,7 @@ A single-host lab that deploys **virtual baremetal OpenShift** on libvirt/KVM.
 
 - **No hardware investment.** Nodes are KVM VMs, not physical servers.
 - **Reproducible.** Everything derived from one topology, version-controlled.
-- **Realistic.** Bonded NICs, VLAN trunks, jumbo MTU, Redfish BMC, VIPs.
+- **Realistic.** Bonded NICs, VLAN trunks, jumbo MTU, Redfish BMC, VIPs, real BGP.
 - **Portable.** Runs on a workstation or cloud nested virt (AWS/GCP/Azure).
 - **Complete.** Day-2 storage, load balancing, and virtualization included.
 
@@ -57,6 +57,18 @@ A single-host lab that deploys **virtual baremetal OpenShift** on libvirt/KVM.
   - `bond1`: 4-port active-active trunk (storage + live-migration, MTU 9000)
 - **Two VIPs** (api/ingress): keepalived + HAProxy
 - **libvirt split-DNS** for cluster domain resolution
+
+---
+
+## Real BGP peering
+
+Not a mock. `make metallb-bgp` runs an **FRR router on the host** that peers with the MetalLB speaker on every node.
+
+- **eBGP session**: speakers AS **64512** ↔ host FRR AS **64513**
+- **Off-link pool proves the route**: LoadBalancer pool is TEST-NET-2 (`198.51.x.0/24`), reachable *only* via the BGP-learned path, so a working `curl` proves the advertisement
+- **ECMP multipath**: `zebra` installs the learned `/32`s into the host kernel with equal-cost next-hops across all speakers; drain a node, only its next-hop withdraws
+
+Plain L2/ARP (`make metallb`) too, but BGP is the one that exercises real routing.
 
 ---
 

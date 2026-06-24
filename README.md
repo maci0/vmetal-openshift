@@ -62,7 +62,7 @@ emulated.
 - 🧩 **Data-driven**: edit one `clusters` list; subnets, MACs, VIPs, bridges, UUIDs all computed
 - 🪢 **Production NIC layout**: onboard bond + 4-port active-active VLAN trunk (storage + live-migration), jumbo MTU
 - 🌐 **Two VIPs** (api / ingress) via integrated keepalived + HAProxy; libvirt split-DNS
-- 🎈 **MetalLB** L2 (`make metallb`) **and BGP** (`make metallb-bgp`, FRR peer on the host + ECMP)
+- 🔀 **Real BGP peering** ([details](#-bgp-peering)): MetalLB speakers peer with an FRR router on the host over eBGP, off-link pool, ECMP multipath (`make metallb-bgp`). Plain L2/ARP too (`make metallb`)
 - 💾 **Storage**: LVM Storage RWO (`make lvms`) + a host **NFS-Ganesha appliance** for RWX (`make nfs`)
 - 🖧 **OpenShift Virtualization** (`make virt`): live migration on a dedicated VLAN ([docs](docs/virtualization.md))
 - ⚡ **In-cluster BareMetalHost** power management (metal3 → Redfish → libvirt)
@@ -107,6 +107,7 @@ flowchart LR
 [How it fits together](#-how-it-fits-together) ·
 [Topologies](#-cluster-topologies) ·
 [Networks](#-networks) ·
+[BGP peering](#-bgp-peering) ·
 [DNS](#-dns) ·
 [Install modes](#-install-modes) ·
 [BMC control](#-bmc-control) ·
@@ -244,6 +245,30 @@ Configure it in `ansible/group_vars/all.yml` (see [variables](docs/variables.md)
 the [NIC diagram](docs/architecture.md#node-nic-layout-default-nic_layout) and
 VLAN/L2 caveats are in the [architecture](docs/architecture.md) and
 [fidelity](docs/fidelity.md) docs.
+
+## 🔀 BGP peering
+
+**Real BGP, not a mock.** `make metallb-bgp CLUSTER=<c>` stands up an **FRR router
+on the host** (host-network container, `quay.io/frrouting/frr`) that **peers with
+the MetalLB speaker on every node** and learns the LoadBalancer routes live.
+
+- **eBGP session**: speakers in AS **64512** peer with the host FRR router in
+  AS **64513**.
+- **Off-link pool proves the route**: the LoadBalancer pool is TEST-NET-2
+  (`198.51.{100+c}.0/24`), unreachable except via the BGP-learned path, so a
+  successful `curl` to a service IP proves the session *and* the advertisement.
+- **ECMP multipath**: FRR's `zebra` installs the learned `/32`s into the host
+  kernel with equal-cost next-hops across all speakers, so traffic load-balances
+  over the nodes and draining one withdraws only its next-hop.
+
+```bash
+make metallb-bgp CLUSTER=cluster0          # FRR router + BGP advertisement (ECMP)
+make metallb-bgp CLUSTER=cluster0 down     # tear it down
+```
+
+ASNs and pools live in `ansible/group_vars/all.yml` (`metallb_bgp_*`). Plain L2
+mode (`make metallb`, ARP) is also available, but BGP mode is the one that
+exercises real routing and multipath, the way an upstream ToR would.
 
 ## 🔌 DNS
 

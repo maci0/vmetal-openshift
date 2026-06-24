@@ -21,7 +21,7 @@ how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
   * Out-of-band (host/admin to BMC) always works: run sushy and use
     `make bmc CLUSTER=<c> BMC_ACTION=on|off|reset|status`.
   * In-cluster (the cluster manages its own nodes via metal3 `BareMetalHost`):
-    needs `platform: baremetal` (node_count >= 3). On such a cluster the agent
+    needs `platform: baremetal` (`control_plane: 3`). On such a cluster the agent
     install **already creates a `BareMetalHost` per control-plane node**, but in
     `unmanaged` state (no BMC creds). To enable power management you add the BMC
     address + a credentials secret to those existing BMHs (`make adopt` deploys

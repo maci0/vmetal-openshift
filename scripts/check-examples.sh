@@ -23,9 +23,9 @@ trap 'rm -rf "$TMP"' EXIT
 echo "ssh-ed25519 AAAAdummy check-examples" > "$TMP/id.pub"
 gen() { ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP/$1" \
           -e ssh_key_file="$TMP/id.pub" -e "$2" >/dev/null ); }
-gen sno  '{"clusters":[{"name":"sno","node_count":1}]}'
-gen prod '{"clusters":[{"name":"prod","node_count":3}]}'
-gen ipi  '{"clusters":[{"name":"ipi0","node_count":3,"install_mode":"ipi","provisioning_network_mode":"Managed"}]}'
+gen sno  '{"clusters":[{"name":"sno","control_plane":1,"workers":0}]}'
+gen prod '{"clusters":[{"name":"prod","control_plane":3,"workers":0}]}'
+gen ipi  '{"clusters":[{"name":"ipi0","control_plane":3,"workers":0,"install_mode":"ipi","provisioning_network_mode":"Managed"}]}'
 
 # Same redactions the doc uses, concatenated into one corpus.
 corpus="$TMP/corpus.txt"

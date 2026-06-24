@@ -142,12 +142,12 @@ cnv_migration_network: false
 default_bond_mode: active-backup
 
 # Control plane size + master scheduling.
-#   control_plane_count: 1 (single-node) or 3. workers = node_count - this.
-#     e.g. node_count 5 -> 3 masters + 2 workers; node_count 3 -> 3 masters (compact).
+#   Declare the topology explicitly per cluster with control_plane and workers
+#     (e.g. control_plane: 3, workers: 2). control_plane 1 + workers 0 is SNO.
 #   masters_schedulable: auto | true | false. `auto` = schedulable only when there
 #     are no workers (compact/SNO, matching the installer default). Set `true` to
 #     also run workloads on the control plane when workers are present.
-control_plane_count_default: 3   # used when node_count > 1
+control_plane_count_default: 3   # control plane size when a cluster omits control_plane
 masters_schedulable: auto
 
 # NTP sources written to install-config (baremetal nodes need time sync).
@@ -194,7 +194,8 @@ worker_disks:
 # ============================================================================
 # The only thing you normally edit: how many clusters, how many nodes each.
 # ============================================================================
-# Per-cluster optional overrides: base_domain, node_count, memory_mib, vcpus,
+# Each cluster declares its topology with control_plane (1 or 3) and workers (N).
+# Per-cluster optional overrides: base_domain, memory_mib, vcpus,
 # disks, install_mode, boot_via, provisioning_network_mode, api/ingress_vip_offset,
 # subnet_index (pin this cluster's {c} index so its subnets stay stable).
 # Per-role sizing (masters and workers differ): master_memory_mib / worker_memory_mib
@@ -202,11 +203,12 @@ worker_disks:
 # vcpus -> default_memory_mib / default_vcpus.
 # day2_workers: N defines extra worker VMs added AFTER install with
 # `make workers-add` (agent node-image join); `make workers-remove` tears them down.
-# Works for any cluster, including SNO (node_count 1) for an edge-style single
-# control plane + workers.
+# Works for any cluster, including single-node (control_plane 1, workers 0) for an
+# edge-style single control plane + workers.
 clusters:
   - name: cluster0
-    node_count: 1            # SNO control plane
+    control_plane: 1         # single control plane (SNO)
+    workers: 0
     day2_workers: 2          # + 2 workers joined day-2 (edge: single master, multi worker)
     master_memory_mib: 20480
     worker_memory_mib: 16384
@@ -215,10 +217,16 @@ clusters:
 
 # Examples:
 #   - name: cluster0
-#     node_count: 5            # 3 masters + 2 workers
+#     control_plane: 3         # 3 masters + 2 workers (explicit)
+#     workers: 2
 #   - name: edge
-#     node_count: 3            # compact (masters auto-schedulable)
+#     control_plane: 3         # compact (masters auto-schedulable)
+#     workers: 0
 #     masters_schedulable: true
+#   - name: sno
+#     control_plane: 1         # single node
+#     workers: 0
 #   - name: cluster1
-#     node_count: 3
+#     control_plane: 3         # compact
+#     workers: 0
 #     memory_mib: 24576

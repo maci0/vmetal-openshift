@@ -121,9 +121,23 @@ set_squeeze() {  # on|off : memory.high on each VM scope
   done
 }
 
-mem_row() {  # host_used_MiB ksm_saved_MiB zram_data_MiB zram_compr_MiB ratio swap_used_MiB
+vm_rss_mib() {  # sum of resident memory across the VM cgroup scopes, in MiB
+  # This is the qemu VMs' actual RAM, read straight from cgroup v2 accounting.
+  # We deliberately do NOT use `free` "used": that is a whole-host figure that
+  # moves with host page cache and tmpfs (/tmp and /dev/shm are tmpfs here), so
+  # it does not isolate the cluster's footprint. memory.current does.
+  local total=0 cur s
+  for s in $(scopes); do
+    [[ -f "$s/memory.current" ]] || continue
+    cur=$(cat "$s/memory.current"); total=$(( total + cur ))
+  done
+  [[ "$total" -gt 0 ]] || die "no VM cgroup scopes found (are the nodes running?)"
+  echo $(( total / 1024 / 1024 ))
+}
+
+mem_row() {  # vm_rss_MiB ksm_saved_MiB zram_data_MiB zram_compr_MiB ratio swap_used_MiB
   local used ksm orig compr rest zdata zcompr swu ratio
-  used=$(free -m | awk '/Mem/{print $3}')
+  used=$(vm_rss_mib)
   ksm=$(( $(cat /sys/kernel/mm/ksm/pages_sharing 2>/dev/null||echo 0) * 4 / 1024 ))
   read -r orig compr rest < "$ZSYS/mm_stat"
   zdata=$(( orig / 1024 / 1024 )); zcompr=$(( compr / 1024 / 1024 ))
@@ -172,7 +186,7 @@ done
 OUT="$ROOT/build/bench-results.csv"; mkdir -p "$ROOT/build"
 write_csv() {  # write all states recorded so far (survives a late failure)
   {
-    echo "state,host_used_mib,ksm_saved_mib,zram_data_mib,zram_compr_mib,swap_used_mib,perf_ops_s"
+    echo "state,vm_rss_mib,ksm_saved_mib,zram_data_mib,zram_compr_mib,swap_used_mib,perf_ops_s"
     for l in "${ORDER[@]}"; do
       [[ -n "${RES[$l]:-}" ]] || continue
       IFS='|' read -r u k zd zc r sw p <<<"${RES[$l]}"
@@ -209,7 +223,7 @@ set_squeeze off; set_zram_algo zstd >/dev/null 2>&1 || true   # restore host def
 oc delete ns "$NS" >/dev/null 2>&1 || true
 
 echo
-printf "%-16s %10s %10s %10s %10s %7s %9s %12s\n" state used_MiB ksm_MiB zram_data zram_compr ratio swap_MiB perf_ops_s
+printf "%-16s %10s %10s %10s %10s %7s %9s %12s\n" state vm_rss_MiB ksm_MiB zram_data zram_compr ratio swap_MiB perf_ops_s
 for label in "${ORDER[@]}"; do
   [[ -n "${RES[$label]:-}" ]] || continue
   IFS='|' read -r u k zd zc r sw p <<<"${RES[$label]}"

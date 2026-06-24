@@ -26,12 +26,12 @@ the host OS, libvirt, and sushy.
 
 | Mode | VMs at peak | RAM (lab default) | RAM (minimums) |
 |------|-------------|-------------------|----------------|
-| SNO (`node_count: 1`) | 1 node | ~34 GiB | ~18 GiB |
+| SNO (`control_plane: 1`, `workers: 0`) | 1 node | ~34 GiB | ~18 GiB |
 | Agent 3-node | 3 nodes (bootstrap runs on the rendezvous node, no extra VM) | ~98 GiB | ~52 GiB |
 | IPI 3-node | 3 nodes + 1 bootstrap VM on the host | ~114 GiB | ~68 GiB |
-| Workers (e.g. `node_count: 5`) | 3 masters + N workers | + ~32 GiB/worker | + ~10 GiB/worker |
+| Workers (e.g. `control_plane: 3`, `workers: 2`) | 3 masters + N workers | + ~32 GiB/worker | + ~10 GiB/worker |
 
-Nodes beyond `control_plane_count` (1 or 3) become workers. With workers present,
+Total nodes = `control_plane` (1 or 3) + `workers`. With workers present,
 masters are not schedulable unless `masters_schedulable: true`.
 
 vCPU is oversubscribable (KVM time-slices), so total vCPU can exceed host cores;

@@ -144,7 +144,7 @@ RAM does not):
 
 | Mode | VMs | RAM (lab default) | RAM (OpenShift minimums) |
 |------|-----|-------------------|--------------------------|
-| SNO (`node_count: 1`) | 1 | ~34 GiB | ~18 GiB |
+| SNO (`control_plane: 1`, `workers: 0`) | 1 | ~34 GiB | ~18 GiB |
 | Agent 3-node | 3 | ~98 GiB | ~52 GiB |
 | IPI 3-node | 3 + bootstrap VM | ~114 GiB | ~68 GiB |
 | each extra worker | +1 | +~32 GiB | +~10 GiB |
@@ -164,8 +164,9 @@ make status                      # nodes + operators + BareMetalHosts
 make creds                       # console URL + kubeadmin password
 make down                        # tear everything down
 ```
-`make` (no target) lists everything. A cluster must be single-node (`node_count: 1`)
-or `>= 3`; a 2-node cluster has no valid control-plane topology and is rejected up
+`make` (no target) lists everything. A cluster declares `control_plane: 1`
+(single-node/SNO) or `control_plane: 3` (HA), plus `workers: N`; `control_plane: 2`
+(or any value other than 1 or 3) has no valid topology and is rejected up
 front. Prefer step-by-step? `make iso` -> `make up` -> (redfish) `make bmc
 BMC_ACTION=boot-iso` -> wait; `make install` just chains those.
 
@@ -179,9 +180,11 @@ BMC_ACTION=boot-iso` -> wait; `make install` just chains those.
    ```yaml
    clusters:
      - name: cluster0
-       node_count: 1
+       control_plane: 1
+       workers: 0
      - name: prod
-       node_count: 3
+       control_plane: 3
+       workers: 0
        install_mode: ipi
    ```
    Subnets, bridges, MACs, DHCP reservations, VIPs, node roles, replica counts,
@@ -195,15 +198,20 @@ BMC_ACTION=boot-iso` -> wait; `make install` just chains those.
 
 ## 🗂 Cluster topologies
 
-`node_count` plus `control_plane_count` (1 or 3) decide the shape; the rest are
-workers. `masters_schedulable` (`auto`/`true`/`false`) controls whether workloads
+Each cluster declares its topology explicitly: `control_plane` (1 or 3) plus
+`workers: N` (total nodes = `control_plane` + `workers`).
+`masters_schedulable` (`auto`/`true`/`false`) controls whether workloads
 run on the control plane.
 
-| `node_count` | Masters | Workers | Masters schedulable | Notes |
-|--------------|---------|---------|---------------------|-------|
-| 1 | 1 | 0 | yes (inherent) | single-node (SNO), `platform: none` |
-| 3 | 3 | 0 | yes (`auto`) | compact, `platform: baremetal` |
-| 5 | 3 | 2 | no (`auto`); `true` to override | dedicated workers |
+| `control_plane` | `workers` | Masters | Workers | Masters schedulable | Notes |
+|-----------------|-----------|---------|---------|---------------------|-------|
+| 1 | 0 | 1 | 0 | yes (inherent) | single-node (SNO), `platform: none` |
+| 3 | 0 | 3 | 0 | yes (`auto`) | compact, `platform: baremetal` |
+| 3 | 2 | 3 | 2 | no (`auto`); `true` to override | dedicated workers |
+
+`control_plane: 1` requires `workers: 0` (a single control plane cannot take
+install-time workers); use `day2_workers: N` for an edge single control plane +
+workers.
 
 With workers present, `masters_schedulable: true` renders a day-1 `Scheduler`
 manifest (`openshift/cluster-scheduler-02-config.yml`). Day-2 equivalent:
@@ -309,33 +317,43 @@ disk swap wants pure-RAM compression; zswap only helps with a disk-swap backstop
 ### Validation (3 masters + 2 workers)
 
 `make bench` runs a CPU workload (`openssl speed`) on the cluster under each
-setting and records host memory + guest throughput; `scripts/plot-bench.py`
-renders the chart. For an honest baseline it forces `vm.swappiness=0` and
-`swapoff`s zram (no proactive swapping), unmerges KSM (`run=2`), and lets each
-optimization reach steady state before measuring (KSM scans to convergence then
-dials down; zram fills until eviction settles).
+setting and records the VMs' memory + guest throughput; `scripts/plot-bench.py`
+renders the chart. Memory is the VMs' actual resident set, summed from each qemu
+scope's cgroup `memory.current` (not host `free`, which is polluted by page cache
+and tmpfs). For an honest baseline it forces `vm.swappiness=0` and `swapoff`s zram
+(no proactive swapping), unmerges KSM (`run=2`), and lets each optimization reach
+steady state before measuring (KSM scans to convergence then dials down; zram fills
+until eviction settles).
 
 ![memory optimization benchmark](docs/bench.png)
 
-Measured on a 3 control-plane + 2 worker cluster (92 GiB allocated, 128 GiB host):
+Measured on a 3 control-plane + 2 worker cluster (92 GiB allocated, 128 GiB host).
+Footprint is the VMs' resident memory plus the cold pages held compressed in zram:
 
-| setting | host RAM | **saved vs baseline** | KSM merged | zram data → compr | ratio | swap | CPU (M k/s) |
-|---------|---------:|----------------------:|-----------:|------------------:|:-----:|-----:|------------:|
-| baseline | 117.8 GiB | n/a | 0 | n/a | n/a | **0** | 24.5 |
-| KSM | 92.6 GiB | **25.2 GiB** | 27.0 GiB | n/a | n/a | 0 | 24.5 |
-| zram (zstd) | 94.6 GiB | **23.2 GiB** | 0 | 35.6 → 12.9 GiB | **2.8×** | 37 GiB | 24.3 |
-| KSM + zram (zstd) | 90.9 GiB | **26.9 GiB** | 11.9 GiB | 25.6 → 9.3 GiB | 2.7× | 26 GiB | 24.5 |
-| zram (lz4) | 100.3 GiB | **17.5 GiB** | 0 | 33.4 → 16.3 GiB | 2.0× | 35 GiB | 24.5 |
-| KSM + zram (lz4) | 96.7 GiB | **21.1 GiB** | 8.3 GiB | 29.0 → 14.5 GiB | 2.0× | 30 GiB | 24.4 |
+| setting | VM RSS | zram compr | **footprint** | **saved vs baseline** | KSM merged | ratio | CPU (M k/s) |
+|---------|-------:|-----------:|--------------:|----------------------:|-----------:|:-----:|------------:|
+| baseline | 83.6 GiB | 2.3 GiB | 85.9 GiB | n/a | 0 | n/a | 24.2 |
+| KSM | 45.8 GiB | 0.3 GiB | **46.2 GiB** | **39.7 GiB** | 41.2 GiB | n/a | 24.4 |
+| zram (zstd) | 29.0 GiB | 24.5 GiB | 53.5 GiB | **32.4 GiB** | 0 | **2.3×** | 24.6 |
+| KSM + zram (zstd) | 28.2 GiB | 21.0 GiB | 49.2 GiB | **36.8 GiB** | 10.2 GiB | 2.3× | 24.4 |
+| zram (lz4) | 27.6 GiB | 31.9 GiB | 59.5 GiB | **26.4 GiB** | 0 | 1.8× | 24.4 |
+| KSM + zram (lz4) | 26.6 GiB | 29.1 GiB | 55.7 GiB | **30.2 GiB** | 9.2 GiB | 1.8× | 24.3 |
 
 Takeaways:
-* **KSM** reclaims ~27 GiB by deduping the identical RHCOS pages across nodes (its
-  effect shrinks under load, where pages diverge).
-* **zram** compresses cold pages **2.8× with zstd** vs 2.0× with lz4 (lz4 is faster
-  but less dense); zstd is the better default here.
-* **Performance is flat (~24.5M)** across all settings: at steady state KSM and
-  zram cost ~0 throughput. (An *aggressive* KSM scan during the run cut perf ~4×,
-  which is why the harness converges then dials KSM back before measuring.)
+* **KSM is the big win**: deduping the identical RHCOS pages drops the footprint from
+  85.9 to **46.2 GiB (~46% less RAM)** at no measurable throughput cost. For identical
+  nodes it is the single most effective setting.
+* **zram on top of KSM does not help here** (KSM + zram-zstd 49.2 GiB vs KSM alone
+  46.2 GiB): the squeeze pushes already-deduped pages into compressed swap, where they
+  still cost RAM. zram earns its keep with non-identical nodes or when overcommitting
+  past RAM. zstd compresses **~2.3×** vs lz4 **~1.8×**; zstd is the better default.
+* **Performance is flat (~24.2-24.6M, <1.5% spread)** across all settings: at steady
+  state KSM and zram cost ~0 throughput. (An *aggressive* KSM scan during the run cut
+  perf ~4×, which is why the harness converges then dials KSM back before measuring.)
+
+For the opposite case, where pages are compressible but *not* identical so zram wins
+and KSM gets nothing, run `make bench-zram` (host-side, no cluster). See
+[docs/memory-optimization.md](docs/memory-optimization.md#when-zram-beats-ksm).
 
 ## 🧪 Tests
 

@@ -22,10 +22,13 @@ out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "docs", "bench.pn
 with open(src) as fh:
     rows = list(csv.DictReader(fh))
 states = [r["state"] for r in rows]
-used = [int(r["host_used_mib"]) / 1024 for r in rows]
+rss = [int(r["vm_rss_mib"]) / 1024 for r in rows]
 ksm = [int(r["ksm_saved_mib"]) / 1024 for r in rows]
 zsw = [int(r["zram_compr_mib"]) / 1024 for r in rows]
 perf = [int(r["perf_ops_s"]) for r in rows]
+# True memory cost: resident VM pages plus the cold pages held compressed in zram.
+# vm_rss alone undercounts zram states (squeezed pages left RSS but still cost RAM).
+used = [r + z for r, z in zip(rss, zsw)]
 
 x = range(len(states))
 width = max(12, len(states) * 1.5)
@@ -34,7 +37,7 @@ fig.suptitle("vmetal-openshift: memory optimization (3 masters + 2 workers)", fo
 
 saved = [used[0] - u for u in used]   # RAM saved vs the baseline (first row)
 w = 0.2
-ax1.bar([i - 1.5 * w for i in x], used, w, label="host RAM used (GiB)", color="#ef4444")
+ax1.bar([i - 1.5 * w for i in x], used, w, label="memory footprint, RSS + zram (GiB)", color="#ef4444")
 ax1.bar([i - 0.5 * w for i in x], saved, w, label="RAM saved vs baseline (GiB)", color="#f59e0b")
 ax1.bar([i + 0.5 * w for i in x], ksm, w, label="KSM merged (GiB)", color="#10b981")
 ax1.bar([i + 1.5 * w for i in x], zsw, w, label="zram compressed (GiB)", color="#6366f1")

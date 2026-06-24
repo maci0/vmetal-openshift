@@ -52,7 +52,7 @@ Run `make check` first; it catches most environment problems up front.
 * **Rendezvous never completes (agent)**: the rendezvous node IP (`.10`) must be
   reachable on the machine net and match `rendezvousIP`. Check the node got its
   static bond0 address and DHCP reservations match the bond's primary MAC.
-* **`node_count: 2` rejected**: intentional. Use 1 (SNO) or >= 3.
+* **`control_plane: 2` rejected**: intentional. `control_plane` must be `1` (single-node/SNO) or `3` (HA etcd quorum); nothing else is valid. Add `workers: N` for compute. A single control plane cannot take install-time workers, so `control_plane: 1` requires `workers: 0` (use `day2_workers: N` for an edge single control plane + workers).
 
 ## Networking / DNS
 

@@ -20,7 +20,7 @@ playbooks (run from this dir, e.g. ansible-playbook setup.yml):
   dump-topology.yml    render the derived topology to JSON (test oracle)
 
 tasks/
-  validate.yml         assert node_count / control_plane_count are valid
+  validate.yml         assert control_plane (1 or 3) and workers are valid
   detect_ovmf.yml      locate OVMF firmware across distros
 
 templates/

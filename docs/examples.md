@@ -8,7 +8,7 @@ written by hand. Pull secrets and passwords are redacted here. Regenerate with
 2-NIC onboard bond (machine + provisioning VLAN) plus a 4-port active-active card
 carrying the storage + live-migration networks as VLANs.
 
-## SNO, agent (`node_count: 1`)
+## SNO, agent (`control_plane: 1`, `workers: 0`)
 
 `platform: none` (no VIPs, no load balancer); `api` and `*.apps` resolve to the
 node IP.

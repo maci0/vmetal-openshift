@@ -38,7 +38,7 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | `sushy_port` | `8000` | Redfish endpoint port |
 | `bmc_username` / `bmc_password` | `admin` / `password` | BMC creds in configs (sushy ignores) |
 | `provisioning_network_mode` | `Disabled` | IPI provisioning: `Disabled` or `Managed` |
-| `control_plane_count_default` | `3` | masters when `node_count > 1` (workers = node_count - this) |
+| `control_plane_count_default` | `3` | control plane size when a cluster omits `control_plane` |
 | `masters_schedulable` | `auto` | `auto` (schedulable only when no workers) / `true` / `false` |
 | `default_bond_mode` | `active-backup` | fallback bond mode when a `nic_layout` bond omits `mode`. Use `active-backup` or `balance-tlb` (active-active TX, stable MAC); `balance-alb` / `802.3ad` / `balance-xor` break the agent install (IP collision, see [fidelity](fidelity.md)) |
 | `ntp_servers` | `0/1.pool.ntp.org` | `additionalNTPSources`; empty to omit |
@@ -60,8 +60,8 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | Key | Required | Meaning |
 |-----|----------|---------|
 | `name` | yes | cluster name (prefix for nets/domains) |
-| `node_count` | yes | 1 (SNO) or >= 3; nodes beyond the control plane become workers |
-| `control_plane_count` | no | 1 or 3 (default 3 for multi-node); workers = node_count - this |
+| `control_plane` | no | `1` (single-node/SNO) or `3` (HA etcd quorum); nothing else is allowed. Defaults to `control_plane_count_default` |
+| `workers` | no | number of worker nodes (default `0`). Total nodes = `control_plane` + `workers`. `control_plane: 1` requires `workers: 0` (use `day2_workers` for a single control plane + workers) |
 | `masters_schedulable` | no | override global; run workloads on masters when workers exist |
 | `install_mode` | no | override global `install_mode` |
 | `boot_via` | no | override global `boot_via` |
@@ -70,7 +70,7 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | `memory_mib` / `vcpus` / `disks` | no | override node sizing (all roles) |
 | `master_memory_mib` / `worker_memory_mib` | no | per-role RAM (falls back to `memory_mib` -> `default_memory_mib`) |
 | `master_vcpus` / `worker_vcpus` | no | per-role vCPUs (falls back to `vcpus` -> `default_vcpus`) |
-| `day2_workers` | no | extra workers added after install with `make workers-add` (use worker sizing); `make workers-remove` tears them down. With `node_count: 1` this gives an edge-style single control plane + workers |
+| `day2_workers` | no | extra workers added after install with `make workers-add` (use worker sizing); `make workers-remove` tears them down. With `control_plane: 1`, `workers: 0` this gives an edge-style single control plane + workers |
 | `provisioning_network_mode` | no | per-cluster IPI provisioning mode |
 | `subnet_index` | no | pin the `{c}` index for this cluster's subnets/MACs (stable if the list reorders) |
 

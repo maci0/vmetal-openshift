@@ -13,9 +13,11 @@
 {% for c in clusters %}
 {%   set ci = c.subnet_index | default(loop.index0) %}
 {%   set domain = c.name ~ '.' ~ (c.base_domain | default(base_domain)) %}
-{%   set ncount = c.node_count | default(1) | int %}
-{%   set cp = (1 if ncount == 1 else (c.control_plane_count | default(control_plane_count_default))) | int %}
-{%   set workers = ncount - cp %}
+{#   Topology is explicit: control_plane and workers per cluster. control_plane
+     defaults to control_plane_count_default; workers defaults to 0. #}
+{%   set cp = (c.control_plane | default(control_plane_count_default)) | int %}
+{%   set workers = (c.workers | default(0)) | int %}
+{%   set ncount = cp + workers %}
 {%   set day2_count = c.day2_workers | default(0) | int %}
 {%   set sched = c.masters_schedulable | default(masters_schedulable) | string %}
 {%   set masters_sched = true if sched == 'True' or sched == 'true' else (false if sched == 'False' or sched == 'false' else (workers == 0)) %}

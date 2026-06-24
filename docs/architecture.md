@@ -229,7 +229,7 @@ a node tier / replica set (red = control plane, blue = compute), cylinders =
 network buses (amber: `bond0` machine, `bond1` data) and persistent storage
 (green). Zones are tinted subgraphs.
 
-### SNO (`node_count: 1`)
+### SNO (`control_plane: 1`, `workers: 0`)
 
 Single node, control plane + workloads collapsed onto one box; both VIPs land on
 the node IP. Schedulable, so it sits on both buses.
@@ -261,7 +261,7 @@ flowchart TB
   style fabric fill:#fffaf0,stroke:#d2d2d2;
 ```
 
-### SNO + day-2 workers (`node_count: 1`, `day2_workers: N`)
+### SNO + day-2 workers (`control_plane: 1`, `workers: 0`, `day2_workers: N`)
 
 Edge shape: one control-plane node plus workers joined after install with
 `make workers-add` (`oc adm node-image`). One etcd, so the control plane stays at
@@ -299,7 +299,7 @@ flowchart TB
   style fabric fill:#fffaf0,stroke:#d2d2d2;
 ```
 
-### 3-node compact (`node_count: 3`)
+### 3-node compact (`control_plane: 3`, `workers: 0`)
 
 Three masters, **schedulable** (auto, no separate workers), so the control plane
 also runs workloads and every node sits on both buses.
@@ -331,7 +331,7 @@ flowchart TB
   style fabric fill:#fffaf0,stroke:#d2d2d2;
 ```
 
-### 3 + N workers (`node_count: 3+N`)
+### 3 + N workers (`control_plane: 3`, `workers: N`)
 
 Dedicated control plane, **not schedulable**, so it sits on the machine bus only
 (`bond0`); the data bus carries **workers only**. The control-plane tier having no

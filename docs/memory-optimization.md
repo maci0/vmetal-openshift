@@ -96,10 +96,15 @@ Reboot the VMs (`make down` / `make up`) so the hook squeezes them.
 
 `make bench` (`scripts/bench-memory.sh`) runs an identical CPU workload
 (`openssl speed` from a UBI image) on the cluster under each setting and records
-host memory + guest throughput; `scripts/plot-bench.py` renders the chart.
+the VMs' memory + guest throughput; `scripts/plot-bench.py` renders the chart.
 
 To make the comparison honest the harness:
 
+* measures **the VMs' actual resident memory** by summing each qemu scope's cgroup
+  `memory.current`, not host `free`. `free` "used" is a whole-host figure that moves
+  with page cache and tmpfs (`/tmp`, `/dev/shm`), so it does not isolate the cluster.
+  The reported footprint is `vm_rss + zram_compr` (resident pages plus the cold pages
+  held compressed in zram), which is the real RAM the cluster costs;
 * forces `vm.swappiness=0` and `swapoff`s zram for the **baseline / KSM** states,
   so they are provably swap-free (the cluster must fit in RAM, so size it to fit);
 * **unmerges** KSM (`run=2`, not just `run=0`, which leaves pages merged) and waits
@@ -112,32 +117,60 @@ To make the comparison honest the harness:
 
 ### Results
 
-Measured on a 3 control-plane + 2 worker cluster (92 GiB allocated, 128 GiB host):
+Measured on a 3 control-plane + 2 worker cluster (92 GiB allocated, 128 GiB host).
+Footprint is the VMs' resident memory plus the cold pages held compressed in zram:
 
 ![memory optimization benchmark](bench.png)
 
-| setting | host RAM | **saved vs baseline** | KSM merged | zram data → compr | ratio | swap | CPU (M k/s) |
-|---------|---------:|----------------------:|-----------:|------------------:|:-----:|-----:|------------:|
-| baseline | 117.8 GiB | n/a | 0 | n/a | n/a | **0** | 24.5 |
-| KSM | 92.6 GiB | **25.2 GiB** | 27.0 GiB | n/a | n/a | 0 | 24.5 |
-| zram (zstd) | 94.6 GiB | **23.2 GiB** | 0 | 35.6 → 12.9 GiB | **2.8×** | 37 GiB | 24.3 |
-| KSM + zram (zstd) | 90.9 GiB | **26.9 GiB** | 11.9 GiB | 25.6 → 9.3 GiB | 2.7× | 26 GiB | 24.5 |
-| zram (lz4) | 100.3 GiB | **17.5 GiB** | 0 | 33.4 → 16.3 GiB | 2.0× | 35 GiB | 24.5 |
-| KSM + zram (lz4) | 96.7 GiB | **21.1 GiB** | 8.3 GiB | 29.0 → 14.5 GiB | 2.0× | 30 GiB | 24.4 |
+| setting | VM RSS | zram compr | **footprint** | **saved vs baseline** | KSM merged | ratio | CPU (M k/s) |
+|---------|-------:|-----------:|--------------:|----------------------:|-----------:|:-----:|------------:|
+| baseline | 83.6 GiB | 2.3 GiB | 85.9 GiB | n/a | 0 | n/a | 24.2 |
+| KSM | 45.8 GiB | 0.3 GiB | **46.2 GiB** | **39.7 GiB** | 41.2 GiB | n/a | 24.4 |
+| zram (zstd) | 29.0 GiB | 24.5 GiB | 53.5 GiB | **32.4 GiB** | 0 | **2.3×** | 24.6 |
+| KSM + zram (zstd) | 28.2 GiB | 21.0 GiB | 49.2 GiB | **36.8 GiB** | 10.2 GiB | 2.3× | 24.4 |
+| zram (lz4) | 27.6 GiB | 31.9 GiB | 59.5 GiB | **26.4 GiB** | 0 | 1.8× | 24.4 |
+| KSM + zram (lz4) | 26.6 GiB | 29.1 GiB | 55.7 GiB | **30.2 GiB** | 9.2 GiB | 1.8× | 24.3 |
 
 Takeaways:
 
-* **KSM** reclaims ~27 GiB by deduping the identical RHCOS pages across nodes. Its
-  effect shrinks under active load, where pages diverge and copy-on-write breaks
-  the merges (KSM-saved drops in the `ksm+zram` rows because the squeeze also pushes
-  pages to zram, leaving fewer resident pages to dedup).
-* **zram** compresses cold pages **2.8x with zstd** vs **2.0x with lz4**; lz4 is
-  faster but less dense, zstd is the better default here.
-* **Performance is flat (~24.5M)** across all settings: at steady state KSM and
-  zram cost effectively no throughput.
-* **Total saved vs baseline**: KSM + zram (zstd) reclaims **~27 GiB** of the
-  117.8 GiB baseline (KSM alone 25 GiB, zram-zstd alone 23 GiB). Combining helps
-  a little; zstd over lz4 helps more on the zram side.
+* **KSM is the big win.** Deduping the identical RHCOS pages across the five nodes
+  merges ~41 GiB and drops the footprint from 85.9 to **46.2 GiB (~46% less RAM)**,
+  at no measurable throughput cost. For identical nodes this is the single most
+  effective setting.
+* **Adding zram on top of KSM does not help here** (KSM + zram-zstd is 49.2 GiB vs
+  KSM alone 46.2 GiB). The cgroup squeeze evicts pages that KSM already deduped into
+  compressed swap, where they still cost RAM, so the total is slightly worse than
+  leaving them resident and merged.
+* **zram earns its keep when nodes are not identical** (less KSM headroom) or when
+  you must overcommit past RAM. zstd compresses cold pages **~2.3x** vs lz4 **~1.8x**;
+  zstd is the better default. zram alone (zstd) reclaims 32.4 GiB, less than KSM's
+  39.7 GiB.
+
+### When zram beats KSM
+
+The cluster bench above is KSM's best case: every node runs the same RHCOS image,
+so the pages are byte-identical and dedup collapses them. The opposite case is
+memory that is *similar in shape but not identical* (logs, sparse heaps,
+partially-zeroed buffers): dedup finds no matching pages, but the content still
+compresses. `make bench-zram` (`scripts/bench-zram-demo.sh`) shows this directly,
+host-side and with no cluster. `scripts/memfill.py` allocates pages that are unique
+(a per-page header, so KSM cannot merge them) but low-entropy (so zram compresses
+them), marks them `MADV_MERGEABLE` so KSM does try, then a cgroup `memory.high`
+squeeze pushes the cold pages into zram.
+
+Measured (8 GiB workload, squeezed to 30%):
+
+| mechanism | reclaimed |
+|-----------|----------:|
+| KSM (dedup) | **0 MiB** (every page differs) |
+| zram (zstd) | **~3.8 GiB** (evicted 5.8 GiB, compressed to 2.0 GiB, ~2.9x) |
+
+So the two mechanisms are complementary, not competing: KSM reclaims *identical*
+pages, zram reclaims *compressible* ones. Identical RHCOS nodes lean on KSM;
+diverse or overcommitted guests lean on zram. Running both costs little and covers
+both shapes.
+* **Performance is flat (~24.2-24.6M, <1.5% spread)** across all settings: at steady
+  state KSM and zram cost effectively no throughput.
 
 ## Disk
 

@@ -47,7 +47,7 @@ PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -143,6 +143,9 @@ e2e:
 
 bench:
 	./scripts/bench-memory.sh $(CLUSTER)
+
+bench-zram:
+	./scripts/bench-zram-demo.sh
 
 pdf:
 	./scripts/export-pdf.sh

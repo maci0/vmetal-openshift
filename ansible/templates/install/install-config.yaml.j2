@@ -24,7 +24,8 @@ networking:
   machineNetwork:
   - cidr: {{ cluster.machine_cidr }}
 platform:
-{% if cluster.sno %}
+{% if cluster.sno or cluster.mode == 'upi' %}
+{#   upi is always platform: none (user-provided LB/DNS); so is single-node agent #}
   none: {}
 {% else %}
   baremetal:
@@ -33,9 +34,10 @@ platform:
     ingressVIPs:
     - {{ cluster.ingress_vip }}
 {% endif %}
-{% if cluster.mode == 'upi' %}
+{% if cluster.mode == 'upi' and cluster.sno %}
 {#   Single-node UPI is bootstrap-in-place: the live ISO installs RHCOS to this
-     disk (sda = first disk, boot order 1). Override with upi_install_disk. #}
+     disk (sda = first disk, boot order 1). Override with upi_install_disk.
+     Multi-node UPI uses a real bootstrap node, so no bootstrapInPlace. #}
 bootstrapInPlace:
   installationDisk: {{ cluster.upi_install_disk | default('/dev/sda') }}
 {% endif %}

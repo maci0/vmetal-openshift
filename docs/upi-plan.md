@@ -2,11 +2,13 @@
 
 <sub>[Home](../README.md) · [IPI vs agent](ipi-vs-agent.md) · [Architecture](architecture.md) · [Variables](variables.md)</sub>
 
-> Status: **single-node UPI implemented and validated end to end** (`make
-> install-upi`, Tier 0 below; a live SNO install completed in ~38 min, all
-> operators available). Multi-node UPI (Tier 1: host HAProxy + bootstrap node +
-> CSR approval) is still a proposal; `validate.yml` rejects multi-node `upi`
-> until it lands.
+> Status: **single-node and multi-node UPI both implemented and validated end to
+> end** (`make install-upi`). Single-node: ISO (Redfish) or PXE, bootstrap-in-place.
+> Multi-node: PXE only, with a transient bootstrap node, a host HAProxy
+> (`make haproxy`), and CSR approval. A live 3+2 PXE install came up with all
+> operators available, and the PXE-installed nodes were then adopted by metal3 for
+> power management (BareMetalHost `externally provisioned`) on this `platform: none`
+> cluster. The live-found requirements are noted inline below.
 
 Plan for a User Provisioned Infrastructure (UPI) install mode alongside the
 existing `agent` and `ipi` modes, reusing as much of the current lab as possible.
@@ -229,11 +231,40 @@ rendering is covered offline, with no live cluster.
   for multi-node. The HAProxy-on-the-gateway choice is what keeps multi-node down
   to three additions instead of a keepalived/VIP subsystem.
 
-## Open items to confirm during implementation
+## Implementation notes (live-found)
 
-- `coreos-installer iso customize` flags for the installed RHCOS version (pin the
-  version in `bootstrap.sh`).
-- Whether to keep the bootstrap node in the topology permanently (marked
-  transient) or synthesize it only inside `install-upi.sh`.
-- HAProxy health-check tuning so a not-yet-joined master does not blackhole api
-  traffic during bootstrap.
+Things that only surfaced running it, now baked into the code:
+
+- **Multi-node PXE must install to disk.** `master.ign` / `worker.ign` are pointer
+  configs for an already-installed node, so the live env has to install RHCOS and
+  reboot: kargs are `coreos.inst.install_dev=/dev/sda coreos.inst.ignition_url=...`,
+  not the single-node `ignition.firstboot` path. `boot.ipxe` picks the role
+  ignition by the machine-net MAC (`iseq ${net0/mac} ...`), default worker.
+- **CSR approval must persist.** Workers join via CSRs nothing auto-approves on
+  `platform: none`; `approve-csrs.sh` runs `nohup`+`disown` so it outlives the
+  `wait-for` even if that errors while the control plane settles.
+- **HAProxy** runs as container root with `NET_BIND_SERVICE` (ports 80/443), and a
+  frontend/backend may not share a name on HAProxy 3.3+. The bootstrap stays in the
+  api/mcs backends with tcp health checks, so destroying its VM drops it with no
+  config reload.
+- **install-config is `platform: none`** for all upi (single and multi); only
+  single-node adds `bootstrapInPlace`.
+
+## Adoption of UPI hosts (verified)
+
+`platform: none` does run `cluster-baremetal-operator` and ships the
+`baremetalhosts.metal3.io` CRD, so the existing `make adopt` machinery works for
+upi too, with three upi-specific adjustments (all rendered automatically):
+
+- **Provisioning CR needs `provisioningMacAddresses`.** upi has no Machine
+  objects, so metal3 cannot infer the control-plane NIC and its pod stays in
+  `Init`; the control-plane MACs are passed explicitly.
+- **BMC address must be reachable from in-cluster ironic.** Cluster nodes have no
+  route to the host-only oob LAN, so upi points the BMC at the machine gateway
+  (sushy binds `0.0.0.0`), not the oob gateway.
+- **BareMetalHosts are `externallyProvisioned: true`.** The nodes are already
+  installed; this adopts them for power management only and never
+  inspects/reprovisions a running node. The transient bootstrap is excluded.
+
+Verified live: all five BMHs reached `externally provisioned` / `OK` /
+`poweredOn` within ~30s, and every node stayed `Ready` (no reboot).

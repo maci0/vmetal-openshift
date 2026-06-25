@@ -1,0 +1,56 @@
+{#  External load balancer for a platform:none (upi) cluster. Runs on the host
+    (machine gateway), since upi has no in-cluster keepalived/HAProxy. api and
+    machine-config (22623) balance across the control plane plus the bootstrap
+    node; ingress (80/443) across the ingress nodes. tcp health checks drop the
+    bootstrap automatically once its VM is destroyed, so no reload is needed.    #}
+{% set masters = cluster.nodes | selectattr('role', 'equalto', 'master') | list %}
+{% set workers = cluster.nodes | selectattr('role', 'equalto', 'worker') | list %}
+{% set boots   = cluster.nodes | selectattr('role', 'equalto', 'bootstrap') | list %}
+{# ingress runs on workers when present, else on the (schedulable) control plane #}
+{% set ingress = workers if workers | length > 0 else masters %}
+global
+  log stdout format raw local0
+  maxconn 4000
+defaults
+  mode tcp
+  log global
+  option tcplog
+  timeout connect 10s
+  timeout client 5m
+  timeout server 5m
+
+frontend api
+  bind *:6443
+  default_backend api-be
+backend api-be
+  option tcp-check
+{% for n in boots + masters %}
+  server {{ n.fullname }} {{ n.ip }}:6443 check inter 5s fall 2 rise 3
+{% endfor %}
+
+frontend machine-config
+  bind *:22623
+  default_backend machine-config-be
+backend machine-config-be
+  option tcp-check
+{% for n in boots + masters %}
+  server {{ n.fullname }} {{ n.ip }}:22623 check inter 5s fall 2 rise 3
+{% endfor %}
+
+frontend ingress-http
+  bind *:80
+  default_backend ingress-http-be
+backend ingress-http-be
+  option tcp-check
+{% for n in ingress %}
+  server {{ n.fullname }} {{ n.ip }}:80 check inter 5s fall 2 rise 3
+{% endfor %}
+
+frontend ingress-https
+  bind *:443
+  default_backend ingress-https-be
+backend ingress-https-be
+  option tcp-check
+{% for n in ingress %}
+  server {{ n.fullname }} {{ n.ip }}:443 check inter 5s fall 2 rise 3
+{% endfor %}

@@ -294,13 +294,14 @@ Verify with `scripts/test-dns.sh`.
 * **ipi**: `openshift-install create cluster` drives metal3 over Redfish; the
   install-config carries `platform.baremetal.hosts[]` with BMC + bond nmstate.
   `make iso` refuses IPI clusters and points you at `create cluster`.
-* **upi** (single-node): `platform: none`, bootstrap-in-place. `make install-upi`
-  generates ignition (`create single-node-ignition-config`) and boots the node two
-  ways via `boot_via`: `redfish`/`iso` embeds the ignition in the RHCOS live ISO
-  (`coreos-installer`) and mounts it over Redfish, or `pxe` netboots (UEFI ->
-  `ipxe.efi` over TFTP -> iPXE -> RHCOS + ignition over HTTP, no media). api and
-  ingress collapse onto the node IP, so no external LB. Multi-node UPI (external
-  HAProxy + bootstrap node) is still planned, see [docs/upi-plan.md](docs/upi-plan.md).
+* **upi**: `platform: none`, `make install-upi`. Single-node is bootstrap-in-place,
+  booted via `boot_via`: `redfish`/`iso` embeds the ignition in the RHCOS live ISO
+  (`coreos-installer`), or `pxe` netboots (UEFI -> `ipxe.efi` over TFTP -> iPXE ->
+  RHCOS + ignition over HTTP, no media); api/ingress collapse onto the node IP, no
+  LB. Multi-node (PXE only) adds a transient bootstrap node, a **host HAProxy**
+  (`make haproxy`) for api/ingress, and CSR approval. PXE-installed nodes can be
+  **adopted** by metal3 for power management (`make adopt`, `externallyProvisioned`
+  BareMetalHosts). See [docs/upi-plan.md](docs/upi-plan.md).
 
 See [docs/ipi-vs-agent.md](docs/ipi-vs-agent.md).
 

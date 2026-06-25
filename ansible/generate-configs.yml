@@ -98,11 +98,11 @@
         label: "{{ item.name }}"
       vars:
         cluster: "{{ item }}"
-      when: item.mode == 'agent'
+      when: item.mode in ['agent', 'upi']
 
     # IPI creates metal3 + BareMetalHosts during install, so the Provisioning CR
-    # is only a Day-2 artifact for AGENT baremetal clusters (>= 3 nodes).
-    - name: Render metal3 Provisioning CR (agent baremetal Day-2 adoption)
+    # is a Day-2 artifact for agent and upi baremetal clusters (>= 3 nodes).
+    - name: Render metal3 Provisioning CR (agent/upi Day-2 adoption)
       ansible.builtin.template:
         src: templates/install/provisioning.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/provisioning.yaml"
@@ -112,7 +112,7 @@
         label: "{{ item.name }}"
       vars:
         cluster: "{{ item }}"
-      when: not item.sno and item.mode == 'agent'
+      when: not item.sno and item.mode in ['agent', 'upi']
 
     - name: Render MetalLB operator + L2 + BGP config (Day-2 LoadBalancer services)
       ansible.builtin.template:
@@ -155,6 +155,18 @@
       loop: "{{ topology }}"
       loop_control:
         label: "{{ item.name }}"
+
+    - name: Render HAProxy config (multi-node upi external load balancer)
+      ansible.builtin.template:
+        src: templates/install/haproxy.cfg.j2
+        dest: "{{ out_dir }}/{{ item.name }}/haproxy.cfg"
+        mode: "0644"
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        cluster: "{{ item }}"
+      when: item.mode == 'upi' and not item.sno
 
     - name: Render IPI install-config.yaml (baremetal hosts with BMC)
       ansible.builtin.template:

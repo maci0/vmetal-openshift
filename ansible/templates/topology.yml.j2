@@ -25,16 +25,22 @@
 {%   set mp3 = machine_cidr.split('/')[0].rsplit('.', 1)[0] %}
 {%   set api_o = c.api_vip_offset | default(api_vip_offset) | int %}
 {%   set ing_o = c.ingress_vip_offset | default(ingress_vip_offset) | int %}
-{%   set api_vip = (mp3 ~ '.' ~ node_ip_offset) if ncount == 1 else (mp3 ~ '.' ~ api_o) %}
-{%   set ingress_vip = (mp3 ~ '.' ~ node_ip_offset) if ncount == 1 else (mp3 ~ '.' ~ ing_o) %}
 {%   set mode = c.install_mode | default(install_mode) %}
 {%   set boot = c.boot_via | default(boot_via) %}
+{#   VIP/LB target: SNO collapses onto the node IP; multi-node baremetal uses the
+     keepalived VIPs; multi-node upi (platform: none) points api/ingress DNS at the
+     host HAProxy on the machine gateway (.1). #}
+{%   set api_vip = (mp3 ~ '.' ~ node_ip_offset) if ncount == 1 else ((mp3 ~ '.1') if mode == 'upi' else (mp3 ~ '.' ~ api_o)) %}
+{%   set ingress_vip = (mp3 ~ '.' ~ node_ip_offset) if ncount == 1 else ((mp3 ~ '.1') if mode == 'upi' else (mp3 ~ '.' ~ ing_o)) %}
 {%   set static_iso = (mode == 'agent') and (boot == 'iso') %}
 {#   upi can netboot (boot_via: pxe): the machine net dnsmasq chainloads ipxe.efi
      over tftp, then serves an iPXE script over http that boots RHCOS live. #}
 {%   set pxe = (mode == 'upi') and (boot == 'pxe') %}
 {%   set oob_cidr = (networks.oob.cidr | replace('{c}', ci | string)) if networks.oob is defined else '' %}
-{%   set bmc_host = (oob_cidr.split('/')[0].rsplit('.', 1)[0] ~ '.1') if oob_cidr else (mp3 ~ '.1') %}
+{#   BMC host: the oob LAN gateway normally. For upi the in-cluster metal3/ironic
+     must reach the BMC, and cluster nodes have no route to the host-only oob net,
+     so upi points the BMC at the machine gateway (sushy binds 0.0.0.0). #}
+{%   set bmc_host = (mp3 ~ '.1') if mode == 'upi' else ((oob_cidr.split('/')[0].rsplit('.', 1)[0] ~ '.1') if oob_cidr else (mp3 ~ '.1')) %}
 {#   provisioning interface for IPI Managed: the vlan/bond carrying it #}
 {%   set pn = namespace(dev='') %}
 {%   for b in nic_layout %}
@@ -123,6 +129,11 @@
         - "dhcp-boot=tag:ipxe,http://{{ p3 }}.1:{{ pxe_http_port | default(8099) }}/boot.ipxe"
 {%         endif %}
       reservations:
+{%         if mode == 'upi' and ncount > 1 %}
+        - name: {{ c.name }}-bootstrap
+          mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_ip_offset - 1) }}"
+          ip: {{ p3 }}.{{ node_ip_offset - 1 }}
+{%         endif %}
 {%         for nidx in range(ncount) %}
         - name: {{ c.name }}-node{{ nidx }}
           mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(node_ip_offset + nidx) }}"
@@ -194,6 +205,32 @@
         - { suffix: {{ d.suffix }}, capacity_gib: {{ d.capacity_gib }}, target: {{ d.target }} }
 {%     endfor %}
 {%   endfor %}
+{#   Multi-node upi needs a transient bootstrap node (removed after
+     bootstrap-complete). It only needs the machine net; it boots the live env in
+     RAM and never installs to disk. #}
+{%   if mode == 'upi' and ncount > 1 %}
+{%     set bo = node_ip_offset - 1 %}
+    - name: bootstrap
+      fullname: {{ c.name }}-bootstrap
+      role: bootstrap
+      ip: {{ mp3 }}.{{ bo }}
+      mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(bo) }}"
+      uuid: {{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(bo) }}
+      bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(bo) }}"
+      memory_mib: {{ c.master_memory_mib | default(c.memory_mib | default(default_memory_mib)) }}
+      vcpus: {{ c.master_vcpus | default(c.vcpus | default(default_vcpus)) }}
+      addresses:
+        machine: {{ mp3 }}.{{ bo }}
+      interfaces:
+        - devname: eth0
+          bond: {{ nic_layout[0].bond }}
+          attach: {{ c.name }}-machine
+          mac: "{{ mac_oui }}:{{ '%02x' | format(ci) }}:00:{{ '%02x' | format(bo) }}"
+      disks:
+{%     for d in default_disks %}
+        - { suffix: {{ d.suffix }}, capacity_gib: {{ d.capacity_gib }}, target: {{ d.target }} }
+{%     endfor %}
+{%   endif %}
   day2_workers:{{ ' []' if day2_count == 0 else '' }}
 {%   for widx in range(day2_count) %}
 {%     set node_o = node_ip_offset + ncount + widx %}

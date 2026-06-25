@@ -70,6 +70,8 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT   # clean up even on early (set -e
     -e '{"clusters":[{"name":"ipichk","control_plane":3,"workers":0,"install_mode":"ipi"}]}' >/dev/null )
 ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
     -e '{"clusters":[{"name":"upichk","control_plane":1,"workers":0,"install_mode":"upi"}]}' >/dev/null )
+( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
+    -e '{"clusters":[{"name":"upimn","control_plane":3,"workers":2,"install_mode":"upi","boot_via":"pxe"}]}' >/dev/null )
 "$PY" tests/parse_configs.py "$TMP"
 pass "install/agent/ipi/upi configs parse"
 rm -rf "$TMP"

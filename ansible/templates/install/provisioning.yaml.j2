@@ -1,9 +1,9 @@
 {#
-  metal3 Provisioning CR. Creating this on a platform: baremetal cluster tells
-  the cluster-baremetal-operator to deploy metal3/ironic, which then reconciles
-  BareMetalHost objects. Virtual-media mode (no provisioning network), matching
-  the emulated Redfish BMC. Not used on platform: none (single-node) clusters,
-  where the operator stays dormant.
+  metal3 Provisioning CR. Creating this tells the cluster-baremetal-operator to
+  deploy metal3/ironic, which then reconciles BareMetalHost objects. Virtual-media
+  mode (no provisioning network), matching the emulated Redfish BMC. Works on
+  platform: none (upi) too, where there are no Machine objects, so the metal3 pod
+  cannot infer its NIC and we must pass the control-plane MACs explicitly.
 #}
 apiVersion: metal3.io/v1alpha1
 kind: Provisioning
@@ -13,3 +13,9 @@ spec:
   provisioningNetwork: Disabled
   watchAllNamespaces: true
   virtualMediaViaExternalNetwork: true
+{% if cluster.mode == 'upi' %}
+  provisioningMacAddresses:
+{% for n in cluster.nodes if n.role == 'master' %}
+  - {{ n.mac }}
+{% endfor %}
+{% endif %}

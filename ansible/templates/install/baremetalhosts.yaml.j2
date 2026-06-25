@@ -5,7 +5,7 @@
   For agent-based installs this is the Day-2 hook that wires the cluster to the
   Redfish BMC; for IPI the same data already lives in install-config.
 #}
-{% for node in cluster.nodes %}
+{% for node in cluster.nodes if node.role != 'bootstrap' %}
 ---
 apiVersion: v1
 kind: Secret
@@ -24,6 +24,10 @@ metadata:
   namespace: openshift-machine-api
 spec:
   online: true
+{% if cluster.mode == 'upi' %}
+{#  upi nodes are already installed; adopt for power only, never reprovision #}
+  externallyProvisioned: true
+{% endif %}
   bootMACAddress: {{ node.mac }}
   bmc:
     address: {{ node.bmc_address }}

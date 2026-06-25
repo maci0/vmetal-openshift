@@ -65,6 +65,9 @@ def check(label, clusters):
             xmllint(nt.render(net=net, **v), f"net {net['name']}")
         sched = c["masters_schedulable"]
         for node in c["nodes"] + (c.get("day2_workers") or []):
+            # The transient upi bootstrap node only needs the machine NIC.
+            if node["role"] == "bootstrap":
+                continue
             ifaces = node["interfaces"]
             exp = expected_nics(node["role"], sched)
             if len(ifaces) != exp:

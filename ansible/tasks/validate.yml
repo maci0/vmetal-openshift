@@ -39,19 +39,19 @@
   loop_control:
     label: "{{ item.name }}"
 
-# upi today is single-node only (platform: none, bootstrap-in-place). Multi-node
-# upi (external HAProxy + bootstrap VM + CSR approval) is designed in
-# docs/upi-plan.md but not implemented, so fail fast rather than render a config
-# that cannot install.
-- name: Validate upi is single-node (for now)
+# Multi-node upi uses a transient bootstrap node + an external (host) HAProxy and
+# is netboot-only here, so it requires boot_via: pxe. Single-node upi works with
+# either boot method (ISO embed or pxe).
+- name: Validate multi-node upi uses pxe
   ansible.builtin.assert:
     that:
       - (item.install_mode | default(install_mode)) != 'upi' or
-        ((item.control_plane | default(control_plane_count_default) | int) == 1 and (item.workers | default(0) | int) == 0)
+        (item.control_plane | default(control_plane_count_default) | int) == 1 or
+        (item.boot_via | default(boot_via)) == 'pxe'
     fail_msg: >-
-      cluster '{{ item.name }}': install_mode upi currently supports single-node
-      only (control_plane 1, workers 0). Multi-node upi is not implemented yet
-      (see docs/upi-plan.md).
+      cluster '{{ item.name }}': multi-node install_mode upi requires boot_via: pxe
+      (the ISO/Redfish path is single-node only). Set boot_via: pxe, or use
+      control_plane 1 for single-node upi.
     quiet: true
   loop: "{{ clusters }}"
   loop_control:

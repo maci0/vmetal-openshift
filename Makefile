@@ -47,7 +47,7 @@ PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install install-upi ignition configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -87,6 +87,12 @@ ignition:
 
 install-upi:
 	./scripts/install-upi.sh $(CLUSTER)
+
+haproxy:
+	./scripts/haproxy.sh $(CLUSTER) up
+
+haproxy-down:
+	./scripts/haproxy.sh $(CLUSTER) down
 
 serve-iso:
 	$(PY) -m http.server $(HTTP_PORT) --directory build

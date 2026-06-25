@@ -33,10 +33,13 @@ that requires; the lab does not wire it automatically yet.
 1. Run a registry on the host, e.g. `mirror-registry install` or a podman Quay,
    listening on the OOB or machine gateway IP.
 2. Mirror a release with `oc-mirror` to that registry.
-3. Set the machine network `forward` to `none` (drop NAT) in `network_profile`
-   so the nodes truly have no internet:
+3. Drop NAT on the machine network so the nodes truly have no internet: change
+   its `kind` from `nat` to `isolated` in the `networks` map
+   (`ansible/group_vars/all.yml`). `isolated` renders a libvirt network with no
+   forward, keeping DHCP/DNS but no route out:
    ```yaml
-   - { role: machine, suffix: net, forward: none, nics: 2, dns: true, reservations: true, cidr: "10.{c}.0.0/24" }
+   networks:
+     machine: { cidr: "10.{c}.0.0/24", kind: isolated, dns: true }
    ```
 4. Add to install-config (a `disconnected:` block of vars would drive this; not
    yet templated). Minimum, by hand in the generated `install-config.yaml`:

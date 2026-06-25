@@ -66,8 +66,8 @@ Run `make check` first; it catches most environment problems up front.
 * **Jumbo frames not working**: MTU 9000 is set on the storage network, bond, and
   slaves. The host bridge must also be 9000 (it is, via the network `<mtu>`).
 * **Subnet clash with existing libvirt nets**: cleanup only touches the derived
-  topology. If a pre-existing network uses 10.0.0.0/24 etc., change the role
-  `cidr`s in `network_profile`.
+  topology. If a pre-existing network uses 10.0.0.0/24 etc., change the `cidr`s in
+  the `networks` map (or a cluster's `subnet_index`) in `ansible/group_vars/all.yml`.
 
 ## Ansible / libvirt
 

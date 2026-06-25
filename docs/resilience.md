@@ -15,8 +15,9 @@ OC=build/oc422/oc          # a 4.17+ client; the system oc works for most of thi
 V() { virsh -c qemu:///system "$@"; }
 ```
 
-Node MACs are derived: `52:54:00:00:0<bond*16+nic>:0<node-octet>`, node N is octet
-`10+N`. So node4's bond0 NIC0 = `52:54:00:00:00:0e`, NIC1 = `52:54:00:00:01:0e`.
+Node MACs are derived: `52:54:00:<cluster-index>:<bond*16+nic>:<node-octet>`, node
+N is octet `10+N`. So for cluster0 (index 0) node4's bond0 NIC0 =
+`52:54:00:00:00:0e`, NIC1 = `52:54:00:00:01:0e`.
 
 ## 1. Bond failover (active-backup, bond0)
 

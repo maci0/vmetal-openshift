@@ -42,6 +42,42 @@ of an agent ISO and embedding it into the boot ISO.
 **Tier 1, multi-node UPI (the real feature).** Adds exactly three things: a
 host-side load balancer, a transient bootstrap VM, and CSR approval.
 
+## platform: none vs platform: baremetal (and why UPI uses none)
+
+A natural question: can UPI just use `platform: baremetal` and reuse the
+in-cluster keepalived + HAProxy, avoiding the host load balancer entirely? The
+difference between the two platforms is exactly the load balancer:
+
+| Aspect | `platform: none` | `platform: baremetal` |
+|--------|------------------|-----------------------|
+| install-config stanza | `none: {}` | `baremetal: { apiVIPs, ingressVIPs, hosts[] }` |
+| API / ingress VIPs | none; you supply them | declared, owned by the cluster |
+| In-cluster VIP + LB stack | none | keepalived + HAProxy + CoreDNS + mDNS static pods (the on-prem runtime) |
+| External load balancer | required (api `6443`, machine-config `22623`, ingress `80`/`443`) | not needed, the integrated stack does it |
+| metal3 / Machine API | none | present (Day-2 BareMetalHost power management) |
+| DNS you must provide | `api`, `api-int`, `*.apps` | same, but the targets are the stable VIPs keepalived owns |
+| SNO | always uses `none` | n/a (SNO is `none`) |
+| Lab modes today | agent SNO | agent multi-node, IPI |
+
+So `platform: baremetal` would indeed remove the host HAProxy. The catch is how
+you *get* it: the integrated stack is rendered from the install-config platform
+type, but `openshift-install create ignition-configs` with `platform: baremetal`
+is wired for the IPI flow (it expects `platform.baremetal.hosts[]` and a
+provisioning/bootstrap setup), so there is no clean manual-ignition UPI on
+`platform: baremetal`. The supported way to get "boot the nodes yourself **and**
+keep the integrated VIPs" is the **agent-based installer**, which is exactly what
+the lab already ships as `agent` mode (multi-node agent runs `platform:
+baremetal` with keepalived + HAProxy, no external LB).
+
+Consequence for this plan:
+
+- If you want self-boot **with** integrated VIPs, you do not need a new mode:
+  `agent` already is that, on `platform: baremetal`.
+- A distinct `upi` mode is worth adding only for the `platform: none` fidelity:
+  truly external load balancing, no on-prem stack in the cluster, the way a
+  hand-built bare-metal UPI cluster actually runs. That is the path documented
+  below, and the external load balancer is the reason it adds a host HAProxy.
+
 ## Minimal-component design (multi-node)
 
 Two choices keep the cost down:

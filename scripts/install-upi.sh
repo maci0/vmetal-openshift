@@ -3,7 +3,7 @@
 #   single-node: bootstrap-in-place, one VM, no LB. boot_via iso (Redfish) or pxe.
 #   multi-node:  transient bootstrap node + control plane + workers, an external
 #                host HAProxy for api/ingress, and CSR approval. pxe only.
-# See docs/upi-plan.md.
+# See docs/ipi-vs-agent.md (UPI).
 #
 #   scripts/install-upi.sh [cluster]      (or CLUSTER=...)
 set -euo pipefail

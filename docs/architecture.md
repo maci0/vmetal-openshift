@@ -77,9 +77,9 @@ With `platform: baremetal` (what the agent-based installer uses on-prem),
 OpenShift runs its **own** load balancer for these, `keepalived` floats each VIP
 to a live node, `HAProxy` balances across the control plane / ingress nodes. No
 external LB appliance. For single-node (SNO) both VIPs collapse onto the node IP
-and there is no LB. An external HAProxy is only needed for `platform: none`. See
-[upi-plan.md](upi-plan.md#platform-none-vs-platform-baremetal-and-why-upi-uses-none)
-for a full `none` vs `baremetal` comparison.
+and there is no LB. An external HAProxy is only needed for `platform: none`
+(`upi`); see [ipi-vs-agent.md](ipi-vs-agent.md#why-platform-none-and-not-baremetal)
+for the `none` vs `baremetal` comparison.
 
 > Agent-based note: unlike IPI/metal3, the agent-based installer does **not**
 > require a provisioning network, nodes boot the discovery ISO via **virtual

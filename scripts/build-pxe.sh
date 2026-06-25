@@ -9,7 +9,7 @@
 #   kernel / initramfs / rootfs -> RHCOS PXE artifacts served over HTTP
 #   boot.ipxe -> iPXE script: picks the role ignition by MAC, boots RHCOS live
 #
-# See docs/upi-plan.md (virtual-media vs PXE; multi-node tiers).
+# See docs/ipi-vs-agent.md (UPI).
 #   ./build-pxe.sh [cluster]
 set -euo pipefail
 

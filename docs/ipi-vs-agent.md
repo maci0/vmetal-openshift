@@ -2,9 +2,11 @@
 
 <sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · **IPI vs agent** · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Virtualization](virtualization.md) · [Resilience](resilience.md) · [Cloud](cloud.md) · [Troubleshooting](troubleshooting.md)</sub>
 
-Both install baremetal OpenShift with the same `platform: baremetal` networking
-(integrated keepalived + HAProxy for the API and ingress VIPs). They differ in
-how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
+Agent and IPI install baremetal OpenShift with the same `platform: baremetal`
+networking (integrated keepalived + HAProxy for the API and ingress VIPs); a
+third mode, `upi`, runs `platform: none` with an external load balancer (see
+[UPI](#upi-user-provisioned) below). They differ in how nodes get provisioned.
+Set per cluster with `install_mode: agent | ipi | upi` in
 `ansible/group_vars/all.yml`.
 
 ## Agent-based (default)
@@ -54,18 +56,79 @@ how nodes get provisioned. Set per cluster with `install_mode: agent | ipi` in
 * Best for: continuous metal3-managed lifecycle, large fleets, mirroring how
   many production baremetal clusters are run.
 
-## UPI (single-node)
+## UPI (user-provisioned)
 
-A third mode, `install_mode: upi`, runs `platform: none` UPI. Single-node is
-implemented (`make install-upi`): `openshift-install create
-single-node-ignition-config` produces a bootstrap-in-place ignition,
-`coreos-installer` embeds it into the RHCOS live ISO, and the node boots it
-through the existing Redfish virtual-media path. api and ingress collapse onto
-the single node IP, so no external load balancer is needed. Multi-node UPI (a
-host HAProxy on the gateway plus a transient bootstrap node and CSR approval) is
-designed but not implemented; `validate.yml` rejects multi-node upi for now. See
-[upi-plan.md](upi-plan.md) for the full design and the `none` vs `baremetal`
-trade-off.
+A third mode, `install_mode: upi`, runs `platform: none`: you generate ignition
+and boot RHCOS yourself, providing DHCP, DNS and (for multi-node) the load
+balancer. The lab already supplies DHCP/DNS via the libvirt network, so
+`make install-upi` wires the rest.
+
+### Why `platform: none` (and not `baremetal`)
+
+`platform: baremetal` would give the integrated keepalived + HAProxy VIP stack
+(no external LB), but `create ignition-configs` ties that platform to the IPI
+flow (it expects `platform.baremetal.hosts[]` and provisioning). The supported
+way to boot the nodes yourself *and* keep the integrated VIPs is the
+agent-based installer, which the lab already ships as `agent` mode (multi-node
+agent is `platform: baremetal`). So `upi` exists for the distinct `platform:
+none` fidelity: a truly external load balancer and no on-prem stack in the
+cluster.
+
+| | `platform: none` (upi) | `platform: baremetal` (agent/ipi) |
+|--|--|--|
+| API / ingress VIPs | none; you supply them | declared, cluster-owned |
+| In-cluster LB stack | none | keepalived + HAProxy static pods |
+| External load balancer | required for multi-node | not needed |
+| metal3 / Machine API | optional, Day-2 (see Adoption) | present |
+
+### Single-node
+
+`openshift-install create single-node-ignition-config` produces a
+bootstrap-in-place ignition; the one node installs itself and api/ingress
+collapse onto its IP, so there is no load balancer and no separate bootstrap.
+Booted via `boot_via`:
+
+* `redfish` / `iso` (default): `coreos-installer` embeds the ignition into the
+  RHCOS live ISO, mounted over the sushy Redfish virtual-media path.
+* `pxe`: UEFI netboot, no media (see below).
+
+### Multi-node (PXE only)
+
+`create ignition-configs` produces `bootstrap`/`master`/`worker` ignitions and a
+transient bootstrap node joins the control plane, then is removed. Because
+`platform: none` has no in-cluster LB, `make install-upi` runs a **host HAProxy**
+(`make haproxy`, a container on the machine gateway) balancing api (6443),
+machine-config (22623) and ingress (80/443); api/ingress DNS point at the
+gateway. The bootstrap sits in the api/mcs backends with tcp health checks, so
+destroying its VM drops it with no reload. Workers join via CSRs that nothing
+auto-approves on `platform: none`, so `approve-csrs.sh` approves them while the
+control plane settles.
+
+### PXE netboot (`boot_via: pxe`)
+
+The classic media-less flow, used for all multi-node upi and optionally for
+single-node. The libvirt machine network's dnsmasq hands `ipxe.efi` to UEFI
+firmware over TFTP, then an iPXE script (`build/boot.ipxe`) over HTTP that boots
+the RHCOS live kernel/initramfs/rootfs. Multi-node picks each node's role
+ignition by its machine-net MAC and installs to disk
+(`coreos.inst.install_dev=/dev/sda`); single-node uses the bootstrap-in-place
+firstboot path. `ipxe.efi` is extracted from a fedora image via docker (matching
+the FRR/NFS host-appliance pattern). The VM boot order is disk first, NIC second,
+so an empty disk falls through to netboot and the installed disk takes over after.
+
+### Adoption (Day-2 power management)
+
+`platform: none` still runs `cluster-baremetal-operator` and ships the
+BareMetalHost CRD, so upi nodes can be adopted for power management with
+`make adopt`, with three upi-specific points (all rendered automatically):
+
+* The Provisioning CR carries `provisioningMacAddresses` (the control-plane
+  MACs): upi has no Machine objects for metal3 to infer the NIC from.
+* The BMC address uses the machine gateway, not the host-only oob LAN, so
+  in-cluster ironic can reach sushy (which binds `0.0.0.0`).
+* BareMetalHosts are `externallyProvisioned: true`: the nodes are already
+  installed, so this manages power only and never inspects/reprovisions a running
+  node. The transient bootstrap is excluded.
 
 ## What the lab wires either way
 

@@ -301,7 +301,7 @@ Verify with `scripts/test-dns.sh`.
   LB. Multi-node (PXE only) adds a transient bootstrap node, a **host HAProxy**
   (`make haproxy`) for api/ingress, and CSR approval. PXE-installed nodes can be
   **adopted** by metal3 for power management (`make adopt`, `externallyProvisioned`
-  BareMetalHosts). See [docs/upi-plan.md](docs/upi-plan.md).
+  BareMetalHosts). See [docs/ipi-vs-agent.md](docs/ipi-vs-agent.md#upi-user-provisioned).
 
 See [docs/ipi-vs-agent.md](docs/ipi-vs-agent.md).
 

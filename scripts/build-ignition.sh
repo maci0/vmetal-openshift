@@ -3,9 +3,9 @@
 #   render configs -> openshift-install create single-node-ignition-config
 #   -> embed the ignition into the RHCOS live ISO with coreos-installer.
 #
-# This is the UPI counterpart of build-iso.sh (which builds the agent ISO).
-# Multi-node UPI (separate bootstrap.ign / master.ign / worker.ign + external LB)
-# is designed in docs/upi-plan.md but not implemented; this handles SNO-UPI only.
+# This is the ISO/Redfish path for single-node UPI (the counterpart of
+# build-iso.sh for agent). Multi-node UPI, and any PXE boot, go through
+# build-pxe.sh instead. See docs/ipi-vs-agent.md (UPI).
 #
 #   ./build-ignition.sh            # cluster0 (default)
 #   ./build-ignition.sh sno-upi    # a named upi cluster from group_vars/all.yml

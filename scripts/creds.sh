@@ -21,4 +21,4 @@ echo "cluster:    $CLUSTER"
 echo "kubeconfig: export KUBECONFIG=$kubeconfig"
 [[ -n "$console" ]] && echo "console:    https://$console"
 echo "username:   kubeadmin"
-[[ -f "$AUTH/kubeadmin-password" ]] && echo "password:   $(cat "$AUTH/kubeadmin-password")"
+[[ -f "$AUTH/kubeadmin-password" ]] && echo "password:   $(cat "$AUTH/kubeadmin-password")" || true

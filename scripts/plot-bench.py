@@ -21,11 +21,15 @@ out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "docs", "bench.pn
 
 with open(src) as fh:
     rows = list(csv.DictReader(fh))
+def col(r, k):  # tolerate an empty cell from a truncated/partial CSV row
+    return int(r[k] or 0)
+
+
 states = [r["state"] for r in rows]
-rss = [int(r["vm_rss_mib"]) / 1024 for r in rows]
-ksm = [int(r["ksm_saved_mib"]) / 1024 for r in rows]
-zsw = [int(r["zram_compr_mib"]) / 1024 for r in rows]
-perf = [int(r["perf_ops_s"]) for r in rows]
+rss = [col(r, "vm_rss_mib") / 1024 for r in rows]
+ksm = [col(r, "ksm_saved_mib") / 1024 for r in rows]
+zsw = [col(r, "zram_compr_mib") / 1024 for r in rows]
+perf = [col(r, "perf_ops_s") for r in rows]
 # True memory cost: resident VM pages plus the cold pages held compressed in zram.
 # vm_rss alone undercounts zram states (squeezed pages left RSS but still cost RAM).
 used = [r + z for r, z in zip(rss, zsw)]

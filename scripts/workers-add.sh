@@ -23,7 +23,7 @@ OCN="$ROOT/build/openshift-install/oc"
 [[ -x "$OCN" ]] || OCN="$ROOT/build/oc422/oc"
 [[ -x "$OCN" ]] || OCN="oc"
 ocver="$("$OCN" version --client -o json 2>/dev/null | jq -r '.releaseClientVersion // .clientVersion.gitVersion' 2>/dev/null || echo 0)"
-case "$ocver" in 4.1[0-6].*|0) die "need an oc >= 4.17 for 'adm node-image' (have $ocver); fetch the matching client into build/oc422/oc" ;; esac
+case "$ocver" in 4.[0-9].*|4.1[0-6].*|0) die "need an oc >= 4.17 for 'adm node-image' (have $ocver); fetch the matching client into build/oc422/oc" ;; esac
 
 kubeconfig="$ROOT/clusters/$CLUSTER/auth/kubeconfig"
 [[ -f "$kubeconfig" ]] || die "no kubeconfig for '$CLUSTER' (install the cluster first)"

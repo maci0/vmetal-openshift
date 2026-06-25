@@ -42,8 +42,8 @@ ANSIBLE_ARGS ?=
 OCP_CHANNEL  ?= stable
 OCP_VERSION  ?=          # e.g. 4.22.0; empty = newest in channel
 ADOPT_HOSTS  ?=
-AP           := $(abspath $(shell [ -x .venv/bin/ansible-playbook ] && echo .venv/bin/ansible-playbook || echo ansible-playbook))
-PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3))
+AP           := $(shell [ -x .venv/bin/ansible-playbook ] && echo $(CURDIR)/.venv/bin/ansible-playbook || echo ansible-playbook)
+PY           := $(shell [ -x .venv/bin/python ] && echo $(CURDIR)/.venv/bin/python || echo python3)
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install install-upi ignition configs iso sushy sushy-install host-dns up down \

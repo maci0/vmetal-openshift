@@ -106,6 +106,9 @@ restore_host() {
   w /proc/sys/vm/swappiness "$ORIG_SWAPPINESS"
   w /sys/kernel/mm/ksm/pages_to_scan 100
   w /sys/kernel/mm/ksm/sleep_millisecs 20
+  # The run leaves zram swapped off between states; re-enable it on exit so an
+  # early death (die/Ctrl-C) does not leave the host with no swap.
+  grep -q zram0 /proc/swaps || set_zram_algo zstd >/dev/null 2>&1 || true
 }
 trap restore_host EXIT
 w /proc/sys/vm/swappiness 0

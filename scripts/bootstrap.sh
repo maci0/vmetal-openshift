@@ -72,6 +72,17 @@ else
   chmod 0755 "$INSTALL_DIR/oc"
 fi
 
+# coreos-installer (embeds ignition into the RHCOS live ISO for UPI installs).
+# A single static binary, kept in build/ alongside the other self-contained tools.
+if [[ -x "$BUILD_DIR/coreos-installer" && -z "${FORCE:-}" ]]; then
+  log "coreos-installer present"
+else
+  log "Downloading coreos-installer ($ARCH)"
+  curl -fL --retry 3 -o "$BUILD_DIR/coreos-installer" \
+    "https://mirror.openshift.com/pub/openshift-v4/${ARCH}/clients/coreos-installer/latest/coreos-installer"
+  chmod 0755 "$BUILD_DIR/coreos-installer"
+fi
+
 # --- 4. TLS cert for sushy-emulator ---
 if [[ ! -f "$CERTS_DIR/localhost-cert.pem" || ! -f "$CERTS_DIR/localhost-key.pem" || -n "${FORCE:-}" ]]; then
   log "Generating self-signed TLS cert in $CERTS_DIR"

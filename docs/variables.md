@@ -33,7 +33,7 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `install_mode` | `agent` | `agent` or `ipi` (override per cluster) |
+| `install_mode` | `agent` | `agent`, `ipi`, or `upi` (`upi` single-node only for now; override per cluster) |
 | `boot_via` | `redfish` | agent ISO delivery: `redfish` (sushy virtual media) or `iso` (attach directly) |
 | `sushy_port` | `8000` | Redfish endpoint port |
 | `bmc_username` / `bmc_password` | `admin` / `password` | BMC creds in configs (sushy ignores) |

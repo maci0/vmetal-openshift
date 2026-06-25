@@ -2,8 +2,9 @@
 
 <sub>[Home](../README.md) · [IPI vs agent](ipi-vs-agent.md) · [Architecture](architecture.md) · [Variables](variables.md)</sub>
 
-> Status: **proposal, not yet implemented.** This is a design for a future
-> `install_mode: upi`; the lab currently supports `agent` and `ipi` only.
+> Status: **single-node UPI implemented** (`make install-upi`, Tier 0 below).
+> Multi-node UPI (Tier 1: host HAProxy + bootstrap node + CSR approval) is still a
+> proposal; `validate.yml` rejects multi-node `upi` until it lands.
 
 Plan for a User Provisioned Infrastructure (UPI) install mode alongside the
 existing `agent` and `ipi` modes, reusing as much of the current lab as possible.

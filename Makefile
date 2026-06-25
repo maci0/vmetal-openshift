@@ -46,7 +46,7 @@ AP           := $(abspath $(shell [ -x .venv/bin/ansible-playbook ] && echo .ven
 PY           := $(abspath $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3))
 
 .DEFAULT_GOAL := help
-.PHONY: check optimize optimize-undo bootstrap install configs iso sushy sushy-install host-dns up down \
+.PHONY: check optimize optimize-undo bootstrap install install-upi ignition configs iso sushy sushy-install host-dns up down \
         serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram pdf clean help
 
 help:
@@ -81,6 +81,12 @@ sushy-install: sushy
 
 install:
 	./scripts/install.sh $(CLUSTER)
+
+ignition:
+	./scripts/build-ignition.sh $(CLUSTER)
+
+install-upi:
+	./scripts/install-upi.sh $(CLUSTER)
 
 serve-iso:
 	$(PY) -m http.server $(HTTP_PORT) --directory build

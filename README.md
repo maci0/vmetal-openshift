@@ -294,9 +294,12 @@ Verify with `scripts/test-dns.sh`.
 * **ipi**: `openshift-install create cluster` drives metal3 over Redfish; the
   install-config carries `platform.baremetal.hosts[]` with BMC + bond nmstate.
   `make iso` refuses IPI clusters and points you at `create cluster`.
-* **upi** (planned): `platform: none` with ignition booted via the existing
-  Redfish path and a host HAProxy on the gateway. Design in
-  [docs/upi-plan.md](docs/upi-plan.md); not yet implemented.
+* **upi** (single-node): `platform: none`, bootstrap-in-place. `make install-upi`
+  generates ignition (`create single-node-ignition-config`), embeds it into the
+  RHCOS live ISO with `coreos-installer`, and boots it via the existing Redfish
+  path. api/ingress collapse onto the node IP, so no external LB. Multi-node UPI
+  (external HAProxy + bootstrap node) is still planned, see
+  [docs/upi-plan.md](docs/upi-plan.md).
 
 See [docs/ipi-vs-agent.md](docs/ipi-vs-agent.md).
 

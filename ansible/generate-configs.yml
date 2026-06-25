@@ -40,7 +40,9 @@
       loop_control:
         label: "{{ item.name }}"
 
-    - name: Render agent install-config.yaml
+    # The 'none'/'baremetal' install-config flavour serves both agent and upi
+    # (upi is platform: none, single-node today). IPI has its own template below.
+    - name: Render install-config.yaml (agent + upi)
       ansible.builtin.template:
         src: templates/install/install-config.yaml.j2
         dest: "{{ out_dir }}/{{ item.name }}/install-config.yaml"
@@ -50,7 +52,7 @@
         label: "{{ item.name }}"
       vars:
         cluster: "{{ item }}"
-      when: item.mode == 'agent'
+      when: item.mode in ['agent', 'upi']
 
     - name: Render agent-config.yaml
       ansible.builtin.template:

@@ -58,7 +58,7 @@ emulated.
 ## Highlights
 
 - 🖥️ **Redfish BMC emulation** (sushy-tools): power + virtual media, per-node URLs
-- 🔀 **Agent-based and IPI** installs from the same derived topology
+- 🔀 **Agent-based, IPI, and UPI** installs from the same derived topology (UPI is `platform: none`: ISO or PXE boot, host HAProxy for multi-node, metal3 adoption)
 - 🧩 **Data-driven**: edit one `clusters` list; subnets, MACs, VIPs, bridges, UUIDs all computed
 - 🪢 **Production NIC layout**: onboard bond + 4-port active-active VLAN trunk (storage + live-migration), jumbo MTU
 - 🌐 **Two VIPs** (api / ingress) via integrated keepalived + HAProxy; libvirt split-DNS

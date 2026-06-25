@@ -5,6 +5,7 @@
 #   make bootstrap [OCP_VERSION=4.22.0]   host prep (venv, deps, installer, cert)
 #   make sushy-install        render + start the sushy Redfish BMC (systemd --user)
 #   make install CLUSTER=c     one-shot: build ISO, provision, boot, wait for cluster
+#   make install-upi CLUSTER=c one-shot UPI install (platform: none); pxe for multi-node
 #   make configs              render install/agent configs for all clusters
 #   make iso CLUSTER=prod     render configs + build discovery ISO (agent mode)
 #   make sushy                render sushy Redfish config + systemd unit
@@ -13,7 +14,9 @@
 #   make serve-iso            serve build/ over HTTP (for redfish virtual media)
 #   make bmc CLUSTER=c BMC_ACTION=...  Redfish BMC: status|on|off|force-off|reset|
 #                                       cycle|pxe|boot-disk|boot-iso|set-boot|media-* (NODE=node0)
-#   make adopt CLUSTER=c                in-cluster BMH adoption (platform baremetal only)
+#   make adopt CLUSTER=c                in-cluster BMH adoption (agent baremetal or upi)
+#   make haproxy CLUSTER=c              external HAProxy for multi-node UPI (host appliance)
+#   make haproxy-down CLUSTER=c         stop the UPI HAProxy appliance
 #   make metallb CLUSTER=c              install MetalLB (LoadBalancer services, L2 pool)
 #   make metallb-bgp CLUSTER=c          MetalLB BGP mode + FRR peer on the host (ECMP)
 #   make metallb-bgp-down CLUSTER=c     stop the FRR peer + remove BGP config
@@ -26,6 +29,7 @@
 #   make status CLUSTER=c     nodes + operators + BareMetalHosts
 #   make creds CLUSTER=c      console URL + kubeadmin + kubeconfig
 #   make lint / make e2e      offline checks / live test
+#   make bench / bench-zram   memory benchmarks: KSM+zram on the cluster / where zram wins
 #   make pdf                  export docs/architecture.pdf
 #
 # Pass extra ansible flags via ANSIBLE_ARGS, e.g.:

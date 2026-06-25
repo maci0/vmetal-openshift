@@ -33,6 +33,12 @@ platform:
     ingressVIPs:
     - {{ cluster.ingress_vip }}
 {% endif %}
+{% if cluster.mode == 'upi' %}
+{#   Single-node UPI is bootstrap-in-place: the live ISO installs RHCOS to this
+     disk (sda = first disk, boot order 1). Override with upi_install_disk. #}
+bootstrapInPlace:
+  installationDisk: {{ cluster.upi_install_disk | default('/dev/sda') }}
+{% endif %}
 pullSecret: '{{ (ps | from_json | to_json) if ps else "REPLACE_WITH_PULL_SECRET_JSON" }}'
 {% if sk %}
 sshKey: '{{ sk | trim }}'

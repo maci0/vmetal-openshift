@@ -76,6 +76,7 @@ if [[ ! -f "$rhcos" ]]; then
 fi
 
 dest="$ROOT/build/upi_image_${CLUSTER}.iso"
+rm -f "$dest"   # coreos-installer refuses to overwrite an existing --output file
 log "Embedding ignition into a fresh boot ISO"
 "$CI" iso ignition embed --force --ignition-file "$ign" --output "$dest" "$rhcos"
 log "Wrote $dest"

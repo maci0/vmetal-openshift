@@ -294,6 +294,9 @@ Verify with `scripts/test-dns.sh`.
 * **ipi**: `openshift-install create cluster` drives metal3 over Redfish; the
   install-config carries `platform.baremetal.hosts[]` with BMC + bond nmstate.
   `make iso` refuses IPI clusters and points you at `create cluster`.
+* **upi** (planned): `platform: none` with ignition booted via the existing
+  Redfish path and a host HAProxy on the gateway. Design in
+  [docs/upi-plan.md](docs/upi-plan.md); not yet implemented.
 
 See [docs/ipi-vs-agent.md](docs/ipi-vs-agent.md).
 

@@ -17,6 +17,8 @@
 #   make adopt CLUSTER=c                in-cluster BMH adoption (agent baremetal or upi)
 #   make haproxy CLUSTER=c              external HAProxy for multi-node UPI (host appliance)
 #   make haproxy-down CLUSTER=c         stop the UPI HAProxy appliance
+#   make mirror CLUSTER=c               disconnected: registry on the gateway + mirror the release
+#   make mirror-down CLUSTER=c          stop the mirror registry
 #   make metallb CLUSTER=c              install MetalLB (LoadBalancer services, L2 pool)
 #   make metallb-bgp CLUSTER=c          MetalLB BGP mode + FRR peer on the host (ECMP)
 #   make metallb-bgp-down CLUSTER=c     stop the FRR peer + remove BGP config
@@ -51,7 +53,7 @@ PY           := $(shell [ -x .venv/bin/python ] && echo $(CURDIR)/.venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install install-upi ignition configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-down pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -97,6 +99,12 @@ haproxy:
 
 haproxy-down:
 	./scripts/haproxy.sh $(CLUSTER) down
+
+mirror:
+	./scripts/mirror.sh $(CLUSTER) release
+
+mirror-down:
+	./scripts/mirror.sh $(CLUSTER) down
 
 serve-iso:
 	$(PY) -m http.server $(HTTP_PORT) --directory build

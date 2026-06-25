@@ -4,8 +4,9 @@
 
 By default the machine network NATs to the host uplink, so the lab is
 **connected**: nodes pull the release payload and operator images from the
-internet. Production baremetal is frequently disconnected. This documents what
-that requires; the lab does not wire it automatically yet.
+internet. Production baremetal is frequently disconnected. `make mirror` plus a
+`disconnected: true` switch wire most of this up; the release payload is covered,
+operator catalogs are the remaining manual piece.
 
 ## What disconnected needs
 
@@ -28,39 +29,35 @@ that requires; the lab does not wire it automatically yet.
 5. **Telemetry disabled** (no Insights/phone-home) and any proxy via
    install-config `proxy:` if egress is through one.
 
-## Emulating it in this lab
+## Doing it in this lab
 
-1. Run a registry on the host, e.g. `mirror-registry install` or a podman Quay,
-   listening on the OOB or machine gateway IP.
-2. Mirror a release with `oc-mirror` to that registry.
-3. Drop NAT on the machine network so the nodes truly have no internet: change
-   its `kind` from `nat` to `isolated` in the `networks` map
-   (`ansible/group_vars/all.yml`). `isolated` renders a libvirt network with no
-   forward, keeping DHCP/DNS but no route out:
+1. **Mirror the release**: `make mirror CLUSTER=c`. This starts a TLS `registry:2`
+   container on the machine gateway (`<gw>:5000`, a host appliance like NFS/FRR/
+   HAProxy) and runs `oc adm release mirror` to copy the release payload for the
+   bootstrapped version into `<gw>:5000/openshift/release`. It emits a self-signed
+   CA at `certs/mirror/ca.pem`. (`make mirror-down` stops the registry; `OCP_VERSION`
+   overrides the version.)
+2. **Flip the switch**: set `disconnected: true` (global in `group_vars`, or per
+   cluster). `generate-configs` then injects into `install-config.yaml`:
+   * `imageDigestSources` mapping `ocp-release` / `ocp-v4.0-art-dev` to the mirror,
+   * `additionalTrustBundle` from `certs/mirror/ca.pem`.
+3. **Cut the cord** (optional, for a true air gap): change the machine network's
+   `kind` from `nat` to `isolated` in the `networks` map. `isolated` renders a
+   libvirt network with no forward, keeping DHCP/DNS but no route out:
    ```yaml
    networks:
      machine: { cidr: "10.{c}.0.0/24", kind: isolated, dns: true }
    ```
-4. Add to install-config (a `disconnected:` block of vars would drive this; not
-   yet templated). Minimum, by hand in the generated `install-config.yaml`:
-   ```yaml
-   additionalTrustBundle: |
-     -----BEGIN CERTIFICATE-----
-     ... mirror registry CA ...
-     -----END CERTIFICATE-----
-   imageDigestSources:
-   - mirrors:
-     - registry.example.lab:8443/openshift/release
-     source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
-   - mirrors:
-     - registry.example.lab:8443/openshift/release-images
-     source: quay.io/openshift-release-dev/ocp-release
-   ```
-5. Point `ntp_servers` at the internal source and rebuild configs.
+4. Build and install as usual (`make iso` / `make install` / `make install-upi`).
 
-## Not yet implemented
+## Remaining manual pieces
 
-A first-class `disconnected: true` switch that injects `additionalTrustBundle`,
-`imageDigestSources`, internal NTP, and flips the machine net to `forward: none`
-would make this one variable. It is intentionally left as a documented manual
-step for now.
+`make mirror` covers the **release payload**, which is what an install needs.
+Still manual:
+
+* **Operator catalogs**: mirror with `oc-mirror` (an `ImageSetConfiguration`) into
+  the same registry and apply the generated `CatalogSource` / `ImageDigestMirrorSet`.
+  The Day-2 operators here (MetalLB, LVMS, CNV) need this in a true air gap.
+* **NTP**: point `ntp_servers` at an internal source (not a pool) for a real air gap.
+* **Proxy / telemetry**: add `proxy:` to install-config if egress is via a proxy;
+  Insights is disabled by the disconnected pull secret.

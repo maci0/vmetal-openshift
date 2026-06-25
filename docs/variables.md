@@ -42,6 +42,9 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | `masters_schedulable` | `auto` | `auto` (schedulable only when no workers) / `true` / `false` |
 | `default_bond_mode` | `active-backup` | fallback bond mode when a `nic_layout` bond omits `mode`. Use `active-backup` or `balance-tlb` (active-active TX, stable MAC); `balance-alb` / `802.3ad` / `balance-xor` break the agent install (IP collision, see [fidelity](fidelity.md)) |
 | `ntp_servers` | `0/1.pool.ntp.org` | `additionalNTPSources`; empty to omit |
+| `disconnected` | `false` | inject mirror `imageDigestSources` + `additionalTrustBundle` into install-config (run `make mirror` first); see [disconnected](disconnected.md) |
+| `mirror_registry_port` | `5000` | host mirror registry port (on the machine gateway) |
+| `mirror_ca_file` | `certs/mirror/ca.pem` | mirror CA injected as the trust bundle (emitted by `make mirror`) |
 
 ## Per-node sizing
 
@@ -65,6 +68,7 @@ For single-node clusters both VIPs collapse onto the node IP (no LB).
 | `masters_schedulable` | no | override global; run workloads on masters when workers exist |
 | `install_mode` | no | override global `install_mode` |
 | `boot_via` | no | override global `boot_via` |
+| `disconnected` | no | override global `disconnected` (mirror injection into install-config) |
 | `base_domain` | no | override global `base_domain` |
 | `api_vip_offset` / `ingress_vip_offset` | no | override VIP octets |
 | `memory_mib` / `vcpus` / `disks` | no | override node sizing (all roles) |

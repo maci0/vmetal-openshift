@@ -41,6 +41,18 @@ platform:
 bootstrapInPlace:
   installationDisk: {{ cluster.upi_install_disk | default('/dev/sda') }}
 {% endif %}
+{% if cluster.disconnected | default(false) %}
+{% set mirror_ca = lookup('file', playbook_dir + '/../' + (mirror_ca_file | default('certs/mirror/ca.pem')), errors='ignore') %}
+imageDigestSources:
+- mirrors:
+  - {{ cluster.mirror_registry }}/openshift/release
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+- mirrors:
+  - {{ cluster.mirror_registry }}/openshift/release
+  source: quay.io/openshift-release-dev/ocp-release
+additionalTrustBundle: |
+{{ (mirror_ca if mirror_ca else "  REPLACE_WITH_MIRROR_REGISTRY_CA_PEM (run make mirror)") | indent(2, True) }}
+{% endif %}
 pullSecret: '{{ (ps | from_json | to_json) if ps else "REPLACE_WITH_PULL_SECRET_JSON" }}'
 {% if sk %}
 sshKey: '{{ sk | trim }}'

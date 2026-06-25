@@ -36,6 +36,7 @@
 {#   upi can netboot (boot_via: pxe): the machine net dnsmasq chainloads ipxe.efi
      over tftp, then serves an iPXE script over http that boots RHCOS live. #}
 {%   set pxe = (mode == 'upi') and (boot == 'pxe') %}
+{%   set disc = c.disconnected | default(disconnected) %}
 {%   set oob_cidr = (networks.oob.cidr | replace('{c}', ci | string)) if networks.oob is defined else '' %}
 {#   BMC host: the oob LAN gateway normally. For upi the in-cluster metal3/ironic
      must reach the BMC, and cluster nodes have no route to the host-only oob net,
@@ -63,6 +64,8 @@
   mode: {{ mode }}
   static_iso: {{ static_iso }}
   pxe: {{ pxe }}
+  disconnected: {{ disc }}
+  mirror_registry: {{ mp3 }}.1:{{ mirror_registry_port | default(5000) }}
   api_vip: {{ api_vip }}
   ingress_vip: {{ ingress_vip }}
   control_plane_replicas: {{ cp }}

@@ -98,6 +98,15 @@ install_mode: agent
 # redfish needs sushy running and the ISO served over HTTP (see make bmc / bmc.yml).
 boot_via: redfish
 
+# Disconnected (air-gapped) install. With `disconnected: true` (global or per
+# cluster), the install-config gets the mirror registry CA (additionalTrustBundle)
+# and imageDigestSources pointing the release registries at the host mirror. Run
+# `make mirror` first (registry appliance on the machine gateway + `oc adm release
+# mirror`), and flip the machine net `kind` to `isolated` for a true air gap.
+disconnected: false
+mirror_registry_port: 5000        # host registry (machine gateway) for the mirror
+mirror_ca_file: certs/mirror/ca.pem   # CA emitted by mirror.sh, injected as trust bundle
+
 # sushy-emulator Redfish endpoint. BMCs live on each cluster's OOB LAN
 # (172.16.{c}.1). Credentials are placeholders, sushy runs without auth by
 # default; install-config still requires the fields.

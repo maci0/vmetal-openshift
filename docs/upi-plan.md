@@ -136,7 +136,8 @@ cluster is `boot_via: pxe`):
 - No `coreos-installer` embed; ignition is served, not baked in.
 
 A live single-node PXE install was validated end to end (UEFI PXE -> tftp
-`ipxe.efi` -> iPXE -> HTTP `boot.ipxe` -> kernel + rootfs + ignition -> cluster).
+`ipxe.efi` -> iPXE -> HTTP `boot.ipxe` -> kernel + rootfs + ignition -> cluster
+`4.22.0`, all operators available, ~33 min).
 
 Recommendation: keep the ISO path for SNO (simplest, BMC-realistic), and use PXE
 for multi-node UPI, where avoiding per-node media and serving one ignition URL

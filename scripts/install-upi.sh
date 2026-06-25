@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# One-shot single-node UPI install (platform: none):
-#   build ignition ISO -> provision the VM -> boot it via Redfish -> wait.
-# The node installs itself from the ignition-embedded RHCOS live ISO
-# (bootstrap-in-place), so there is no separate bootstrap node and no external
-# load balancer (api/ingress collapse onto the single node IP).
+# One-shot single-node UPI install (platform: none, bootstrap-in-place).
+# Two boot methods, chosen by the cluster's boot_via:
+#   redfish/iso (default): ignition embedded in the RHCOS live ISO, mounted via
+#                          the sushy Redfish virtual-media path.
+#   pxe:                   UEFI netboot, ignition served over http (no media).
+# The node installs itself from the live environment, so there is no separate
+# bootstrap node and no external load balancer (api/ingress = the node IP).
 #
-# Multi-node UPI is not implemented (see docs/upi-plan.md); this is SNO only and
-# validate.yml enforces that.
+# Multi-node UPI is not implemented (see docs/upi-plan.md); validate.yml enforces
+# single-node.
 #
 #   scripts/install-upi.sh [cluster]      (or CLUSTER=...)
 set -euo pipefail
@@ -28,32 +30,43 @@ command -v jq >/dev/null || die "jq required"
 if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_become=false); else BECOME=(); fi
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
-log "Building single-node UPI ignition ISO"
-./scripts/build-ignition.sh "$CLUSTER"
+# Topology facts: boot method, BMC host, fqdn, node domain names.
+topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
+read -r PXE BMC_HOST FQDN < <(
+  jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.pxe) \(.bmc_host) \(.fqdn)"' "$topo"
+) || true
+mapfile -t NODE_VMS < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[].fullname' "$topo")
+rm -f "$topo"
+[[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology (check group_vars/all.yml clusters)"
+
+if [[ "$PXE" == "True" || "$PXE" == "true" ]]; then
+  log "Preparing PXE artifacts (ignition, ipxe.efi, RHCOS kernel/initramfs/rootfs)"
+  ./scripts/build-pxe.sh "$CLUSTER"
+else
+  log "Building single-node UPI ignition ISO"
+  ./scripts/build-ignition.sh "$CLUSTER"
+fi
 
 log "Provisioning libvirt (networks, volumes, VM)"
 ap setup.yml "${BECOME[@]}"
 
-# Topology facts for this cluster (via jq, no embedded code).
-topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
-read -r BMC_HOST FQDN < <(
-  jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.bmc_host) \(.fqdn)"' "$topo"
-) || true
-rm -f "$topo"
-[[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology (check group_vars/all.yml clusters)"
-
-log "Serving the ISO + driving the BMC"
-curl -sk --max-time 5 "https://${BMC_HOST}:8000/redfish/v1/" | grep -q RedfishVersion \
-  || die "sushy Redfish not reachable at ${BMC_HOST}:8000. Start it: make sushy-install"
+# Serve build/ over HTTP: the ISO (redfish) or the iPXE script + RHCOS artifacts (pxe).
 "$PY" -m http.server "$HTTP_PORT" --directory "$ROOT/build" >/tmp/vmetal-iso-http.log 2>&1 &
 http_pid=$!
 trap 'kill "$http_pid" 2>/dev/null || true' EXIT
-iso="upi_image_${CLUSTER}.iso"
-for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" && break; sleep 1; done
-curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" \
-  || die "ISO HTTP server not serving on :${HTTP_PORT} (see /tmp/vmetal-iso-http.log)"
-ap bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso \
-  -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" -e iso_name="$iso"
+
+if [[ "$PXE" == "True" || "$PXE" == "true" ]]; then
+  log "Netbooting the node(s) (UEFI PXE -> iPXE -> RHCOS live)"
+  for vm in "${NODE_VMS[@]}"; do virsh -c qemu:///system start "$vm" >/dev/null 2>&1 || virsh -c qemu:///system reset "$vm" >/dev/null 2>&1 || true; done
+else
+  log "Serving the ISO + driving the BMC"
+  curl -sk --max-time 5 "https://${BMC_HOST}:8000/redfish/v1/" | grep -q RedfishVersion \
+    || die "sushy Redfish not reachable at ${BMC_HOST}:8000. Start it: make sushy-install"
+  iso="upi_image_${CLUSTER}.iso"
+  for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" && break; sleep 1; done
+  ap bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso \
+    -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" -e iso_name="$iso"
+fi
 
 if ! getent hosts "api.${FQDN}" >/dev/null 2>&1; then
   log "note: host cannot resolve api.${FQDN} yet; run 'make host-dns' if wait-for stalls"

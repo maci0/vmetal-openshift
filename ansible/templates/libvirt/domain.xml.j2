@@ -43,7 +43,11 @@
 {% endif %}
     </disk>
 {% endfor %}
-{% if cluster.static_iso %}
+{% if cluster.pxe | default(false) %}
+    {# upi boot_via=pxe: no cdrom. The machine NIC is boot order 2, so an empty
+       disk (order 1) falls through to UEFI netboot; once RHCOS is written the
+       disk boots and PXE is never reached again (same fall-through as the ISO). #}
+{% elif cluster.static_iso %}
     {# agent + boot_via=iso: attach the discovery ISO directly (boot with
        `virsh start`, no BMC needed). Otherwise the drive is empty and sushy/
        metal3 inserts the image over Redfish virtual media. #}
@@ -71,6 +75,9 @@
       <model type="virtio"/>
 {% if nic.mtu is defined %}
       <mtu size="{{ nic.mtu }}"/>
+{% endif %}
+{% if cluster.pxe | default(false) and loop.first %}
+      <boot order="2"/>
 {% endif %}
     </interface>
 {% endfor %}

@@ -16,6 +16,10 @@
 {% endif %}
 {% if net.gateway is defined %}
   <ip address="{{ net.gateway }}" netmask="{{ net.netmask }}">
+{% if net.pxe | default(false) %}
+    {# UEFI netboot: dnsmasq serves ipxe.efi from here (dhcp-boot set via options) #}
+    <tftp root="{{ pxe_tftp_root }}"/>
+{% endif %}
     <dhcp>
       <range start="{{ net.dhcp_start }}" end="{{ net.dhcp_end }}"/>
 {% for r in net.reservations | default([]) %}

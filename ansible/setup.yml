@@ -48,6 +48,7 @@
         label: "{{ item.1.name }}"
       vars:
         net: "{{ item.1 }}"
+        pxe_tftp_root: "{{ (playbook_dir + '/../build/tftp') | realpath }}"
       when: item.1.name not in existing_nets.list_nets
 
     - name: Start networks and enable autostart

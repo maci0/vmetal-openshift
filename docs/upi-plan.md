@@ -97,40 +97,46 @@ Two choices keep the cost down:
    `coreos-installer` is the only new host tool (a single static binary, added in
    `bootstrap.sh` the same way `oc` and `openshift-install` are).
 
-## Boot method: virtual-media ISO vs PXE
+## Boot method: virtual-media ISO vs PXE (both implemented)
 
-The implemented SNO-UPI boots an ignition-embedded RHCOS live ISO through the
-Redfish virtual-media path. That is realistic (it is the BMC-driven flow that
-iLO / iDRAC / Redfish use, and the lab already emulates it for agent and IPI),
-and it reuses the existing boot path with no new infrastructure. The cost is that
-ignition is baked into per-node media, which is fine for one node but does not
-scale to a fleet.
+Single-node UPI supports two boot methods, chosen per cluster with `boot_via`:
 
-The other realistic option, and the more classic data-center UPI flow, is **PXE
-/ iPXE network boot**: no media at all. Nodes netboot, pull the RHCOS live
-kernel / initramfs / rootfs and an `ignition.config.url` over HTTP, and install
-themselves. One ignition URL per role serves any number of nodes.
+`boot_via: redfish` (default) boots an ignition-embedded RHCOS live ISO through
+the Redfish virtual-media path. Realistic (the BMC-driven flow iLO / iDRAC /
+Redfish use, which the lab already emulates for agent and IPI) and reuses the
+existing boot path with no new infrastructure. The cost is per-node media, fine
+for one node but it does not scale to a fleet.
 
-| | virtual-media ISO (implemented) | PXE / iPXE |
+`boot_via: pxe` netboots, the more classic data-center UPI flow: no media. The
+machine network's dnsmasq hands `ipxe.efi` to UEFI firmware over TFTP, then an
+iPXE script over HTTP boots the RHCOS live kernel / initramfs / rootfs with
+`ignition.config.url`. One ignition URL serves any number of nodes.
+
+| | virtual-media ISO (`redfish`) | PXE (`pxe`) |
 |--|--|--|
-| Per-node media | yes (embed or mount) | none |
+| Per-node media | yes (embedded ISO) | none |
 | Ignition delivery | embedded in the ISO | `ignition.config.url` over HTTP |
-| New host tools | `coreos-installer` | none for boot (just the PXE artifacts) |
-| New infra | none (reuses Redfish virtual media) | TFTP/iPXE on the libvirt net + RHCOS PXE artifacts + boot-order change |
+| Extra host tools | `coreos-installer` | `ipxe.efi` (extracted from a fedora image via docker) |
+| Extra infra | none (reuses Redfish virtual media) | TFTP + dhcp-boot on the libvirt machine net |
 | Scales to N nodes | clunky (N ISOs) | clean (one URL per role) |
 | Realistic for | BMC virtual-media installs (what the lab emulates) | classic fleet UPI |
 
-What a PXE path would add here:
+How the PXE path works here (`scripts/build-pxe.sh` + `make install-upi` when the
+cluster is `boot_via: pxe`):
 
-- Download the RHCOS PXE artifacts (`rhcos-live-kernel`, `rhcos-live-initramfs`,
-  `rhcos-live-rootfs`) from the `metal.formats.pxe` stream, serve them on the
-  existing `:8099`.
-- Give the libvirt machine network a boot file: dnsmasq `dhcp-boot` / an
-  `<bootp>` + `<tftp>` block in `network.xml.j2`, chainloading an iPXE script
-  whose kernel args carry `coreos.live.rootfs_url=...` and
-  `ignition.config.url=http://<host>:8099/<role>.ign`.
-- Set the VM first-boot order to network in `domain.xml.j2` (disk takes over once
-  RHCOS is written), so no per-node media and no `coreos-installer` embed.
+- Fetch the RHCOS PXE artifacts (`rhcos-live-kernel`, `rhcos-live-initramfs`,
+  `rhcos-live-rootfs`) from the `metal.formats.pxe` stream and serve them on the
+  existing `:8099`, alongside the single-node ignition and a rendered `boot.ipxe`.
+- `topology.yml.j2` flags the machine net `pxe: true`; `network.xml.j2` then adds
+  a `<tftp>` root and dnsmasq `dhcp-match` / `dhcp-boot` options that serve
+  `ipxe.efi` to firmware (no user-class 175) and the HTTP `boot.ipxe` to iPXE.
+- `domain.xml.j2` drops the cdrom and gives the machine NIC boot order 2, so an
+  empty disk (order 1) falls through to netboot and, once RHCOS is written, the
+  disk boots and PXE is never reached again (the same fall-through as the ISO).
+- No `coreos-installer` embed; ignition is served, not baked in.
+
+A live single-node PXE install was validated end to end (UEFI PXE -> tftp
+`ipxe.efi` -> iPXE -> HTTP `boot.ipxe` -> kernel + rootfs + ignition -> cluster).
 
 Recommendation: keep the ISO path for SNO (simplest, BMC-realistic), and use PXE
 for multi-node UPI, where avoiding per-node media and serving one ignition URL

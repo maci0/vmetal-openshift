@@ -30,6 +30,9 @@
 {%   set mode = c.install_mode | default(install_mode) %}
 {%   set boot = c.boot_via | default(boot_via) %}
 {%   set static_iso = (mode == 'agent') and (boot == 'iso') %}
+{#   upi can netboot (boot_via: pxe): the machine net dnsmasq chainloads ipxe.efi
+     over tftp, then serves an iPXE script over http that boots RHCOS live. #}
+{%   set pxe = (mode == 'upi') and (boot == 'pxe') %}
 {%   set oob_cidr = (networks.oob.cidr | replace('{c}', ci | string)) if networks.oob is defined else '' %}
 {%   set bmc_host = (oob_cidr.split('/')[0].rsplit('.', 1)[0] ~ '.1') if oob_cidr else (mp3 ~ '.1') %}
 {#   provisioning interface for IPI Managed: the vlan/bond carrying it #}
@@ -53,6 +56,7 @@
   sno: {{ ncount == 1 }}
   mode: {{ mode }}
   static_iso: {{ static_iso }}
+  pxe: {{ pxe }}
   api_vip: {{ api_vip }}
   ingress_vip: {{ ingress_vip }}
   control_plane_replicas: {{ cp }}
@@ -106,10 +110,18 @@
 {%       endif %}
 {%       if n.dns | default(false) %}
       domain: {{ domain }}
+{%         if pxe %}
+      pxe: true
+{%         endif %}
       dns_options:
         - "address=/.apps.{{ domain }}/{{ ingress_vip }}"
         - "address=/api.{{ domain }}/{{ api_vip }}"
         - "address=/api-int.{{ domain }}/{{ api_vip }}"
+{%         if pxe %}
+        - "dhcp-match=set:ipxe,175"
+        - "dhcp-boot=tag:!ipxe,ipxe.efi"
+        - "dhcp-boot=tag:ipxe,http://{{ p3 }}.1:{{ pxe_http_port | default(8099) }}/boot.ipxe"
+{%         endif %}
       reservations:
 {%         for nidx in range(ncount) %}
         - name: {{ c.name }}-node{{ nidx }}

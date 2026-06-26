@@ -38,7 +38,7 @@ command -v jq >/dev/null || die "jq required"
 # Machine gateway = where the registry listens and what the nodes pull from.
 gw() {
   local topo; topo="$(mktemp)"
-  ( cd ansible && "$AP" dump-topology.yml -e out="$topo" ) >/dev/null 2>&1
+  ( cd ansible && "$AP" lifecycle/dump-topology.yml -e out="$topo" ) >/dev/null 2>&1
   jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .machine_gateway' "$topo"; rm -f "$topo"
 }
 

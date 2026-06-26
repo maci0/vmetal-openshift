@@ -3,7 +3,7 @@
    on that VLAN and live-migration traffic flows over it instead of the machine net.
    Red Hat recommends isolating migration traffic; this lab built the VLAN for it.
    Rendered empty when the cluster has no migration network (it is removable). #}
-{% if cluster.migration_iface is defined %}
+{% if cnv_migration_network | default(false) and cluster.migration_iface is defined %}
 ---
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition

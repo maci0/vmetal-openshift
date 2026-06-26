@@ -11,6 +11,6 @@ spec:
   liveMigrationConfig:
     parallelMigrationsPerCluster: 5
     parallelOutboundMigrationsPerNode: 2
-{% if cnv_migration_network | default(true) and cluster.migration_iface is defined %}
+{% if cnv_migration_network | default(false) and cluster.migration_iface is defined %}
     network: migration
 {% endif %}

@@ -86,8 +86,8 @@ def check(label, clusters):
 
 check("default", base["clusters"])
 check("multi-2x3", [
-    {"name": "c0", "node_count": 3, "subnet_index": 0},
-    {"name": "c1", "node_count": 1, "subnet_index": 1},
+    {"name": "c0", "control_plane": 3, "workers": 0, "subnet_index": 0},
+    {"name": "c1", "control_plane": 1, "workers": 0, "subnet_index": 1},
 ])
 
 if failures:

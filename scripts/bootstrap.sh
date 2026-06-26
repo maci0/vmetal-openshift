@@ -108,4 +108,4 @@ echo
 echo "Next:"
 echo "  source .venv/bin/activate"
 echo "  export PATH=\"$INSTALL_DIR:\$PATH\"   # use the self-contained installer"
-echo "  cd ansible && ansible-playbook setup.yml   # -K if not in libvirt group"
+echo "  cd ansible && ansible-playbook lifecycle/setup.yml   # -K if not in libvirt group"

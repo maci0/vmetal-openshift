@@ -23,7 +23,7 @@ while [[ "$(cut -d. -f1 /proc/uptime)" -lt "$deadline" ]]; do
     # shellcheck disable=SC2086
     "$OC" adm certificate approve $pending >/dev/null 2>&1 && log "approved: $(echo "$pending" | tr '\n' ' ')" || true
   fi
-  ready="$("$OC" get nodes --no-headers 2>/dev/null | awk '$2=="Ready"' | wc -l)"
+  ready="$("$OC" get nodes --no-headers 2>/dev/null | awk '$2 ~ /^Ready/' | wc -l)"
   [[ "$EXPECT" -gt 0 && "$ready" -ge "$EXPECT" ]] && { log "all $EXPECT nodes Ready"; exit 0; }
   sleep 15
 done

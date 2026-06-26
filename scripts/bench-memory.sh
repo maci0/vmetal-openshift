@@ -35,7 +35,7 @@ export KUBECONFIG="$kubeconfig"
 PODS="${BENCH_PODS:-0}"
 for _ in $(seq 1 30); do
   [[ "$PODS" -gt 0 ]] && break
-  PODS=$(oc get nodes --no-headers 2>/dev/null | awk '$2=="Ready"' | wc -l)
+  PODS=$(oc get nodes --no-headers 2>/dev/null | awk '$2 ~ /^Ready/' | wc -l)
   [[ "$PODS" -gt 0 ]] || sleep 10
 done
 [[ "$PODS" -gt 0 ]] || die "no Ready nodes after waiting"

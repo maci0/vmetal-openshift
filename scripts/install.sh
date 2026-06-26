@@ -30,8 +30,9 @@ ap setup.yml "${BECOME[@]}"
 # Topology facts for this cluster (via jq, no embedded code).
 command -v jq >/dev/null || die "jq required"
 topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
-read -r STATIC_ISO BMC_HOST FQDN < <(
-  jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.static_iso) \(.bmc_host) \(.fqdn)"' "$topo"
+# tab-delimited so an empty field never collapses and shifts the columns
+IFS=$'\t' read -r STATIC_ISO BMC_HOST FQDN < <(
+  jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | [.static_iso, .bmc_host, .fqdn] | @tsv' "$topo"
 ) || true
 rm -f "$topo"
 [[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology (check group_vars/all.yml clusters)"

@@ -1,0 +1,5 @@
+---
+# Run modules with the same python that runs ansible-playbook (the project .venv,
+# which has kubernetes / docker / libvirt-python), not the auto-discovered system
+# python. Applies to the [local] group (localhost).
+ansible_python_interpreter: "{{ ansible_playbook_python }}"

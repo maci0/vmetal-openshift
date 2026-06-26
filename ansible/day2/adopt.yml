@@ -91,6 +91,7 @@
 
     - name: List existing BareMetalHosts
       kubernetes.core.k8s_info:
+        api_version: metal3.io/v1alpha1   # required: k8s_info can't resolve the CRD by kind alone
         kind: BareMetalHost
         namespace: "{{ ns }}"
         kubeconfig: "{{ kubeconfig }}"

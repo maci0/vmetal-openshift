@@ -61,8 +61,9 @@ cp certs/mirror/cert.pem certs/mirror/ca.pem
 (a host appliance, like NFS-Ganesha / FRR / HAProxy):
 
 ```bash
+docker rm -f vmetal-mirror 2>/dev/null || true   # re-run safe
 docker run -d --name vmetal-mirror --network host \
-  -v "$PWD/build/mirror/data:/var/lib/registry" -v "$PWD/certs/mirror:/certs:ro" \
+  -v "$PWD/build/mirror/data:/var/lib/registry:Z" -v "$PWD/certs/mirror:/certs:ro,Z" \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:5000 \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/cert.pem \
   -e REGISTRY_HTTP_TLS_KEY=/certs/key.pem \

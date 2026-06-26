@@ -41,7 +41,7 @@
         label: "{{ item.name }}"
 
     # The 'none'/'baremetal' install-config flavour serves both agent and upi
-    # (upi is platform: none, single-node today). IPI has its own template below.
+    # (upi is platform: none; single- or multi-node). IPI has its own template below.
     - name: Render install-config.yaml (agent + upi)
       ansible.builtin.template:
         src: "{{ playbook_dir | dirname }}/templates/install/install-config.yaml.j2"

@@ -48,6 +48,8 @@ make nfs-down CLUSTER=cluster0
     -v "$PWD/build/nfs-export/cluster0:/data/nfs" \
     -e NFS_EXPORT_0="/data/nfs *(rw,sync,no_subtree_check,no_root_squash)" \
     docker.io/janeczku/nfs-ganesha:latest
+  oc create namespace openshift-storage                    # the playbook creates + labels this
+  oc label ns openshift-storage pod-security.kubernetes.io/enforce=privileged --overwrite
   oc apply -f clusters/cluster0/nfs-ganesha.yaml           # provisioner + nfs-rwx SC
   ```
 

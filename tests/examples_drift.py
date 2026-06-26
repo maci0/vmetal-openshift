@@ -33,9 +33,9 @@ def illustrative(b):
 
 
 def main():
-    with open(sys.argv[1]) as fh:
+    with open(sys.argv[1], encoding="utf-8") as fh:
         doc = fh.read()
-    with open(sys.argv[2]) as fh:
+    with open(sys.argv[2], encoding="utf-8") as fh:
         corpus_lines = [ln.rstrip() for ln in fh.read().splitlines()]
 
     blocks = re.findall(r"```[A-Za-z0-9]*\n(.*?)```", doc, re.S)

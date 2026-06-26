@@ -16,7 +16,7 @@ Set once:
 
 ```bash
 export KUBECONFIG=clusters/cluster0/auth/kubeconfig
-OC=build/oc422/oc          # a 4.17+ client; the system oc works for most of this
+OC=build/openshift-install/oc   # the bundled client; the system oc works for most of this
 V() { virsh -c qemu:///system "$@"; }
 ```
 
@@ -36,7 +36,7 @@ ssh core@10.0.0.14 'cat /proc/net/bonding/bond0 | grep -E "Currently Active|MII 
 # pull the active NIC (host-side link down)
 V domif-setlink cluster0-node4 52:54:00:00:00:0e down
 
-# expect: Currently Active Slave flips to enp2s0, bond MII still up, node Ready
+# expect: Currently Active Slave flips to eth1, bond MII still up, node Ready
 ssh core@10.0.0.14 'cat /proc/net/bonding/bond0 | grep -E "Currently Active|Slave Interface|MII Status"'
 $OC get node cluster0-node4 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
 

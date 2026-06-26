@@ -6,6 +6,7 @@
 #   make sushy-install        render + start the sushy Redfish BMC (systemd --user)
 #   make install CLUSTER=c     one-shot: build ISO, provision, boot, wait for cluster
 #   make install-upi CLUSTER=c one-shot UPI install (platform: none); pxe for multi-node
+#   make ignition CLUSTER=c    build the single-node UPI boot ISO (embedded ignition)
 #   make lab CLUSTER=c         infra only: build ISO + boot the nodes, but DON'T install
 #                                (practice driving openshift-install yourself)
 #   make configs              render install/agent configs for all clusters

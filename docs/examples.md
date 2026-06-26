@@ -202,7 +202,7 @@ platform:
     - 10.0.0.6
     provisioningNetwork: Managed
     provisioningNetworkCIDR: 172.22.0.0/24
-    provisioningDHCPRange: 172.22.0.10,172.22.0.100
+    provisioningDHCPRange: 172.22.0.150,172.22.0.250
     clusterProvisioningIP: 172.22.0.2
     bootstrapProvisioningIP: 172.22.0.3
     provisioningInterface: bond0.20

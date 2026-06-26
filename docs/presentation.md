@@ -29,7 +29,7 @@ Data-driven Ansible topology. No hardware required.
 A single-host lab that deploys **virtual baremetal OpenShift** on libvirt/KVM.
 
 - Emulates production baremetal features on one Linux machine
-- Tests agent-based **and** IPI installs with realistic networking
+- Tests agent-based, IPI **and** UPI installs with realistic networking
 - Minimal, reproducible, fully configurable
 - Ideal for dev, CI, edge scenarios, and learning advanced OCP features
 
@@ -74,12 +74,13 @@ Plain L2/ARP (`make metallb`) too, but BGP is the one that exercises real routin
 
 ## Install modes
 
-Both derived from the **same topology**.
+All three derived from the **same topology**.
 
 | Mode | Driver | Boot |
 |------|--------|------|
 | **agent** (default) | openshift-install agent | Discovery ISO via Redfish virtual media |
 | **IPI** | metal3 / Ironic | Redfish-driven, `platform: baremetal` |
+| **UPI** | manual (`platform: none`) | ISO/Redfish (SNO) or PXE + host HAProxy (multi-node) |
 
 Switch by changing config, not by rewriting the lab.
 
@@ -140,7 +141,7 @@ Measured, 3 masters + 2 workers (92 GiB allocated):
 
 | setting | footprint | saved | CPU |
 |---------|----------:|------:|----:|
-| baseline | 85.9 GiB | : | 24.2M |
+| baseline | 85.9 GiB | n/a | 24.2M |
 | **KSM** | **46.2 GiB** | **39.7 GiB (~46%)** | 24.4M |
 | zram (zstd) | 53.5 GiB | 32.4 GiB | 24.6M |
 | KSM + zram (zstd) | 49.2 GiB | 36.8 GiB | 24.4M |
@@ -210,7 +211,7 @@ Subnets, MACs, VIPs, node roles, replicas, BMC URLs: **all derived**.
 # Summary
 
 - Virtual baremetal OpenShift on **one** KVM host
-- Agent + IPI from a **single** data-driven topology
+- Agent + IPI + UPI from a **single** data-driven topology
 - Realistic networking: bonds, VLANs, Redfish, VIPs
 - Full day-2: MetalLB, LVMS, NFS, CNV
 - `make bootstrap && make install` → cluster

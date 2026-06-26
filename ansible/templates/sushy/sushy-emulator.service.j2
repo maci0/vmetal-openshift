@@ -1,7 +1,7 @@
 [Unit]
 Description=sushy-emulator (Redfish BMC for libvirt)
-After=libvirtd.service network-online.target
-Wants=network-online.target
+# This is a `systemctl --user` unit; it cannot order against system units
+# (libvirtd/network-online), so Restart=on-failure covers a not-yet-ready libvirt.
 
 [Service]
 ExecStart={{ venv_bin }}/sushy-emulator \

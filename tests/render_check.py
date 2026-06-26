@@ -10,6 +10,7 @@ asserts:
 Run: python3 tests/render_check.py
 """
 import os
+import shutil
 import subprocess
 import sys
 
@@ -19,6 +20,10 @@ try:
 except ImportError:
     print("SKIP: pyyaml/jinja2 not installed (activate .venv)")
     sys.exit(0)
+
+HAVE_XMLLINT = shutil.which("xmllint") is not None
+if not HAVE_XMLLINT:
+    print("SKIP: xmllint not installed (libxml2-utils); XML well-formedness not checked")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANS = os.path.join(ROOT, "ansible")
@@ -30,6 +35,8 @@ failures = []
 
 
 def xmllint(xml, label):
+    if not HAVE_XMLLINT:
+        return
     p = subprocess.run(["xmllint", "--noout", "-"], input=xml.encode(),
                        capture_output=True)
     if p.returncode != 0:
@@ -85,7 +92,7 @@ def check(label, clusters):
 
 
 check("default", base["clusters"])
-check("multi-2x3", [
+check("multi-3node+SNO", [
     {"name": "c0", "control_plane": 3, "workers": 0, "subnet_index": 0},
     {"name": "c1", "control_plane": 1, "workers": 0, "subnet_index": 1},
 ])

@@ -149,7 +149,7 @@ mem_row() {  # vm_rss_MiB ksm_saved_MiB zram_data_MiB zram_compr_MiB ratio swap_
   echo "$used $ksm $zdata $zcompr $ratio $swu"
 }
 
-run_bench() {  # echo summed cpu bogo-ops/s across pods
+run_bench() {  # echo summed cpu openssl sha256 throughput (1000 bytes/s) across pods
   oc create ns "$NS" >/dev/null 2>&1 || true
   oc -n "$NS" delete job stress >/dev/null 2>&1 || true
   cat <<YAML | oc -n "$NS" apply -f - >/dev/null

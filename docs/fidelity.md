@@ -21,7 +21,7 @@ layer underneath is emulated. Know the gaps before trusting a result.
 | VLAN trunk | real 802.1Q subinterfaces on a bond; guest-to-guest isolation by tag |
 | Diverse subnets | per-role RFC1918 ranges (machine 10.x, OOB 172.16.x, prov 172.22.x) |
 | Jumbo frames | MTU 9000 on the storage VLAN + bond + slaves end to end |
-| UEFI + Secure Boot | OVMF secboot firmware, matches RHCOS expectations |
+| UEFI | OVMF firmware (Secure Boot available in the firmware but not enabled on the domains) |
 
 ## Not faithful (and why)
 

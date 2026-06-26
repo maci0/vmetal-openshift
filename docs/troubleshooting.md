@@ -15,6 +15,10 @@ Run `make check` first; it catches most environment problems up front.
 * **`make bmc` virtual-media insert fails**: the ISO must be served over HTTP.
   Serve `build/`: run `python -m http.server 8099 --directory build` and pass
   `-e iso_base_url=http://<host-on-OOB-LAN>:8099`. sushy fetches the image by URL.
+* **Redfish 500 `Cannot write data: Broken pipe`** on power / virtual-media: sushy
+  holds one long-lived libvirt connection, and restarting the libvirt daemons
+  (e.g. enabling `virtqemud.socket` / `make check`'s modular-daemon fix) breaks it.
+  Reconnect it: `systemctl --user restart sushy-emulator`, then retry.
 * **Wrong System URL**: BMC URLs use the deterministic domain UUID. If you
   redefined a VM, re-run `make sushy` to regenerate `sushy/bmc-urls.txt`.
 

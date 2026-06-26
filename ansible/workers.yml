@@ -47,27 +47,19 @@
           vars:
             cluster: "{{ tgt }}"
 
-        - name: Check which worker volumes already exist
-          ansible.builtin.command: >-
-            virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }}
-            {{ item.0.fullname }}-{{ item.1.suffix }}.qcow2
+        - name: Create worker volumes (idempotent; skips any that already exist)
+          community.libvirt.virt_volume:
+            command: create
+            pool: "{{ storage_pool }}"
+            name: "{{ item.0.fullname }}-{{ item.1.suffix }}.qcow2"
+            xml: >-
+              <volume><name>{{ item.0.fullname }}-{{ item.1.suffix }}.qcow2</name>
+              <capacity unit="G">{{ item.1.capacity_gib }}</capacity>
+              <target><format type="qcow2"/></target></volume>
+            uri: "{{ libvirt_uri }}"
           loop: "{{ tgt.day2_workers | subelements('disks') }}"
           loop_control:
             label: "{{ item.0.fullname }}-{{ item.1.suffix }}"
-          register: w_volinfo
-          changed_when: false
-          failed_when: false
-
-        - name: Create missing worker volumes
-          ansible.builtin.command: >-
-            virsh -c {{ libvirt_uri }} vol-create-as {{ storage_pool }}
-            {{ item.item.0.fullname }}-{{ item.item.1.suffix }}.qcow2
-            {{ item.item.1.capacity_gib }}G --format qcow2
-          loop: "{{ w_volinfo.results }}"
-          loop_control:
-            label: "{{ item.item.0.fullname }}-{{ item.item.1.suffix }}"
-          when: item.rc != 0
-          changed_when: true
 
         - name: Define worker domains
           community.libvirt.virt:
@@ -85,7 +77,10 @@
       when: worker_action == 'remove'
       block:
         - name: Check which worker domains exist
-          ansible.builtin.command: "virsh -c {{ libvirt_uri }} domstate {{ item.fullname }}"
+          community.libvirt.virt:
+            command: status
+            name: "{{ item.fullname }}"
+            uri: "{{ libvirt_uri }}"
           loop: "{{ tgt.day2_workers }}"
           loop_control:
             label: "{{ item.fullname }}"
@@ -94,21 +89,26 @@
           failed_when: false
 
         - name: Destroy running worker domains
-          ansible.builtin.command: "virsh -c {{ libvirt_uri }} destroy {{ item.item.fullname }}"
+          community.libvirt.virt:
+            name: "{{ item.item.fullname }}"
+            state: destroyed
+            uri: "{{ libvirt_uri }}"
           loop: "{{ w_domstate.results }}"
           loop_control:
             label: "{{ item.item.fullname }}"
-          when: item.rc == 0 and 'running' in item.stdout
-          changed_when: true
+          when: (item.status | default('')) == 'running'
           failed_when: false
 
         - name: Undefine worker domains (with nvram + storage)
-          ansible.builtin.command: >-
-            virsh -c {{ libvirt_uri }} undefine {{ item.item.fullname }}
-            --nvram --remove-all-storage
+          community.libvirt.virt:
+            command: undefine
+            name: "{{ item.item.fullname }}"
+            flags:
+              - nvram
+              - delete_volumes
+            uri: "{{ libvirt_uri }}"
           loop: "{{ w_domstate.results }}"
           loop_control:
             label: "{{ item.item.fullname }}"
-          when: item.rc == 0
-          changed_when: true
+          when: not (item.failed | default(false))
           failed_when: false

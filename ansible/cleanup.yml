@@ -20,8 +20,11 @@
       ansible.builtin.set_fact:
         all_nodes: "{{ (topology | map(attribute='nodes') | flatten) + (topology | map(attribute='day2_workers') | flatten) }}"
 
-    - name: Check which domains exist
-      ansible.builtin.command: "virsh -c {{ libvirt_uri }} domstate {{ item.fullname }}"
+    - name: Check each domain's state (fails cleanly when undefined)
+      community.libvirt.virt:
+        command: status
+        name: "{{ item.fullname }}"
+        uri: "{{ libvirt_uri }}"
       loop: "{{ all_nodes }}"
       loop_control:
         label: "{{ item.fullname }}"
@@ -30,45 +33,30 @@
       failed_when: false
 
     - name: Destroy running domains
-      ansible.builtin.command: "virsh -c {{ libvirt_uri }} destroy {{ item.item.fullname }}"
+      community.libvirt.virt:
+        name: "{{ item.item.fullname }}"
+        state: destroyed
+        uri: "{{ libvirt_uri }}"
       loop: "{{ domstate.results }}"
       loop_control:
         label: "{{ item.item.fullname }}"
-      when: item.rc == 0 and 'running' in item.stdout
-      changed_when: true
+      when: (item.status | default('')) == 'running'
       failed_when: false
 
+    # flags nvram + delete_volumes = `virsh undefine --nvram --remove-all-storage`:
+    # removes the domain, its UEFI nvram, and all its qcow2 volumes in one go.
     - name: Undefine domains (with nvram + storage)
-      ansible.builtin.command: >-
-        virsh -c {{ libvirt_uri }} undefine {{ item.item.fullname }}
-        --nvram --remove-all-storage
+      community.libvirt.virt:
+        command: undefine
+        name: "{{ item.item.fullname }}"
+        flags:
+          - nvram
+          - delete_volumes
+        uri: "{{ libvirt_uri }}"
       loop: "{{ domstate.results }}"
       loop_control:
         label: "{{ item.item.fullname }}"
-      when: item.rc == 0
-      changed_when: true
-      failed_when: false
-
-    - name: Check which volumes remain
-      ansible.builtin.command: >-
-        virsh -c {{ libvirt_uri }} vol-info --pool {{ storage_pool }}
-        {{ item.0.fullname }}-{{ item.1.suffix }}.qcow2
-      loop: "{{ all_nodes | subelements('disks') }}"
-      loop_control:
-        label: "{{ item.0.fullname }}-{{ item.1.suffix }}"
-      register: voldel_info
-      changed_when: false
-      failed_when: false
-
-    - name: Delete leftover volumes
-      ansible.builtin.command: >-
-        virsh -c {{ libvirt_uri }} vol-delete --pool {{ storage_pool }}
-        {{ item.item.0.fullname }}-{{ item.item.1.suffix }}.qcow2
-      loop: "{{ voldel_info.results }}"
-      loop_control:
-        label: "{{ item.item.0.fullname }}-{{ item.item.1.suffix }}"
-      when: item.rc == 0
-      changed_when: true
+      when: not (item.failed | default(false))
       failed_when: false
 
     - name: Destroy and undefine networks

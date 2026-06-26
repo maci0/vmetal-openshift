@@ -39,7 +39,7 @@ gw() {
 }
 
 if [[ "$ACTION" == "down" ]]; then
-  "$ENGINE" rm -f "$NAME" >/dev/null 2>&1 && log "removed $NAME" || log "$NAME not running"
+  if "$ENGINE" rm -f "$NAME" >/dev/null 2>&1; then log "removed $NAME"; else log "$NAME not running"; fi
   exit 0
 fi
 

@@ -38,7 +38,7 @@ def main():
     with open(sys.argv[2]) as fh:
         corpus_lines = [ln.rstrip() for ln in fh.read().splitlines()]
 
-    blocks = re.findall(r"```[a-z]*\n(.*?)```", doc, re.S)
+    blocks = re.findall(r"```[A-Za-z0-9]*\n(.*?)```", doc, re.S)
     checked = skipped = 0
     missing = []
     for b in blocks:

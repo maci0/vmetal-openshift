@@ -22,7 +22,7 @@ ENGINE="$(command -v docker || command -v podman || true)"
 [[ -n "$ENGINE" ]] || die "need docker or podman for the HAProxy appliance"
 
 if [[ "$ACTION" == "down" ]]; then
-  "$ENGINE" rm -f "$NAME" >/dev/null 2>&1 && log "removed $NAME" || log "$NAME not running"
+  if "$ENGINE" rm -f "$NAME" >/dev/null 2>&1; then log "removed $NAME"; else log "$NAME not running"; fi
   exit 0
 fi
 

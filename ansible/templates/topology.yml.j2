@@ -93,8 +93,10 @@
 {%   if prov_cidr %}
   provisioning_mode: {{ c.provisioning_network_mode | default(provisioning_network_mode) }}
   provisioning_cidr: {{ prov_cidr }}
-  provisioning_dhcp_start: {{ prov_p3 }}.10
-  provisioning_dhcp_end: {{ prov_p3 }}.100
+{#   metal3's PXE/inspection DHCP pool; kept above the static node provisioning
+     IPs (.10+) so it never hands out an address a node statically owns. #}
+  provisioning_dhcp_start: {{ prov_p3 }}.150
+  provisioning_dhcp_end: {{ prov_p3 }}.250
   cluster_provisioning_ip: {{ prov_p3 }}.2
   bootstrap_provisioning_ip: {{ prov_p3 }}.3
   prov_interface: {{ pn.dev }}

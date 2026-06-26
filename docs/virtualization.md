@@ -181,7 +181,7 @@ spec:
     }
 ```
 
-Range `.100-.200` stays clear of the static node IPs (`.10-.14`).
+Range `.100-.200` stays clear of the static node IPs (from `.10`).
 
 #### The HyperConverged setting
 

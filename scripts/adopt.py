@@ -95,9 +95,9 @@ def main():
         for d in docs:
             if not d:
                 continue
-            if d["kind"] == "Secret":
+            if d.get("kind") == "Secret":
                 secrets[d["metadata"]["name"]] = d["stringData"]
-            elif d["kind"] == "BareMetalHost":
+            elif d.get("kind") == "BareMetalHost":
                 hosts.append(d)
         for h in hosts:
             name = h["metadata"]["name"]

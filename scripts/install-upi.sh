@@ -27,7 +27,8 @@ ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
 # Topology facts.
 topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
-read -r PXE BMC_HOST FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.pxe) \(.bmc_host) \(.fqdn)"' "$topo") || true
+# tab-delimited so an empty field never collapses and shifts the columns
+IFS=$'\t' read -r PXE BMC_HOST FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | [.pxe, .bmc_host, .fqdn] | @tsv' "$topo") || true
 mapfile -t ALL_VMS  < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[].fullname' "$topo")
 mapfile -t BOOT_VMS < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[] | select(.role=="bootstrap") | .fullname' "$topo")
 EXPECT="$(jq -r --arg c "$CLUSTER" '[.[] | select(.name==$c) | .nodes[] | select(.role!="bootstrap")] | length' "$topo")"

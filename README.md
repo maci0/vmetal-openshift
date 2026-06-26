@@ -4,15 +4,14 @@
 
 **Virtual baremetal OpenShift, on a single KVM host.**
 
-Redfish BMC emulation · agent &amp; IPI installs · bonded NICs + VLAN trunks · in-cluster
+Redfish BMC emulation · agent, IPI &amp; UPI installs · bonded NICs + VLAN trunks · in-cluster
 BareMetalHost power management, all from one data-driven Ansible topology.
 
+[![lint](https://github.com/maci0/vmetal-openshift/actions/workflows/lint.yml/badge.svg)](https://github.com/maci0/vmetal-openshift/actions/workflows/lint.yml)
 ![OpenShift](https://img.shields.io/badge/OpenShift-4.x-EE0000?logo=redhatopenshift&logoColor=white)
-![Install](https://img.shields.io/badge/install-agent%20%7C%20IPI-1f6feb)
+![Install](https://img.shields.io/badge/install-agent%20%7C%20IPI%20%7C%20UPI-1f6feb)
 ![Platform](https://img.shields.io/badge/platform-libvirt%2FKVM-10b981)
 ![BMC](https://img.shields.io/badge/BMC-sushy%20Redfish-0ea5e9)
-![ansible--lint](https://img.shields.io/badge/ansible--lint-production-6366f1?logo=ansible&logoColor=white)
-![shellcheck](https://img.shields.io/badge/shellcheck-clean-2ea44f)
 
 [Architecture](docs/architecture.md) ·
 [Requirements](docs/requirements.md) ·
@@ -66,6 +65,7 @@ emulated.
 - 💾 **Storage**: LVM Storage RWO (`make lvms`) + a host **NFS-Ganesha appliance** for RWX (`make nfs`)
 - 🖧 **OpenShift Virtualization** (`make virt`): live migration on a dedicated VLAN ([docs](docs/virtualization.md))
 - ⚡ **In-cluster BareMetalHost** power management (metal3 → Redfish → libvirt)
+- 📡 **Disconnected**: `make mirror` (TLS registry on the gateway) + a `disconnected: true` switch injects the mirror into install-config ([docs](docs/disconnected.md))
 - 📦 **Multi-cluster**: SNO, compact, dedicated workers, or SNO + day-2 workers (edge)
 - 🛡️ **Resilience-tested**: bond, etcd-quorum, VIP, and node-drain failure drills ([docs](docs/resilience.md))
 - 🧪 **Tested**: offline lint + render checks + live e2e; ansible-lint production profile
@@ -420,7 +420,8 @@ docs/                     architecture, requirements, ipi-vs-agent, fidelity, di
 ## 📋 TODO
 
 * macOS host support
-* first-class disconnected switch (see [docs/disconnected.md](docs/disconnected.md))
+* mirror operator catalogs (`oc-mirror`) for fully air-gapped Day-2 operators
+  (the release payload is covered, see [docs/disconnected.md](docs/disconnected.md))
 
 ## License
 

@@ -23,6 +23,16 @@
       ansible.builtin.set_fact:
         topology: "{{ lookup('template', '../templates/topology.yml.j2') | from_yaml }}"
 
+    - name: Validate inputs (fail fast instead of a silent no-op)
+      ansible.builtin.assert:
+        that:
+          - worker_action in ['add', 'remove']
+          - cluster_name in (topology | map(attribute='name') | list)
+        fail_msg: >-
+          bad input: worker_action='{{ worker_action }}' (add|remove),
+          cluster_name='{{ cluster_name }}' (known: {{ topology | map(attribute='name') | join(', ') }})
+        quiet: true
+
     - name: Select target cluster
       ansible.builtin.set_fact:
         tgt: "{{ topology | selectattr('name', 'equalto', cluster_name) | first }}"

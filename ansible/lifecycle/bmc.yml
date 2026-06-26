@@ -22,8 +22,8 @@
 #
 # node: limit to one node (e.g. node0); default = all nodes in the cluster.
 # bootdev: device for `set-boot` (default Pxe).
-# media-insert / boot-iso need the ISO served over HTTP, e.g. from the repo root:
-#   python -m http.server 8099
+# media-insert / boot-iso need the ISO served over HTTP from build/, e.g.:
+#   python -m http.server 8099 --directory build   (or: make serve-iso)
 # then pass -e iso_base_url=http://<host-on-oob-lan>:8099
 - name: Redfish BMC control
   hosts: local
@@ -58,6 +58,19 @@
     - name: Build topology from addressing scheme
       ansible.builtin.set_fact:
         topology: "{{ lookup('template', '../templates/topology.yml.j2') | from_yaml }}"
+
+    - name: Validate inputs (fail fast instead of a silent no-op)
+      ansible.builtin.assert:
+        that:
+          - bmc_action in (power_map.keys() | list) + ['status', 'set-boot', 'media-insert', 'media-eject']
+          - node_set in ['nodes', 'day2_workers']
+          - cluster in (topology | map(attribute='name') | list)
+        fail_msg: >-
+          bad input: bmc_action='{{ bmc_action }}'
+          (valid: {{ ((power_map.keys() | list) + ['status', 'set-boot', 'media-insert', 'media-eject']) | join(', ') }}),
+          node_set='{{ node_set }}' (nodes|day2_workers),
+          cluster='{{ cluster }}' (known: {{ topology | map(attribute='name') | join(', ') }})
+        quiet: true
 
     - name: Select target cluster
       ansible.builtin.set_fact:

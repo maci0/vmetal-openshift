@@ -1,5 +1,34 @@
 ---
 # Sanity-check the `clusters` input before doing any work.
+- name: Validate cluster names + indices are unique (collisions reuse subnets/MACs/UUIDs)
+  ansible.builtin.assert:
+    that:
+      - (clusters | map(attribute='name') | list | unique | length) == (clusters | length)
+      - (clusters | selectattr('subnet_index', 'defined') | map(attribute='subnet_index') | list | unique | length)
+        == (clusters | selectattr('subnet_index', 'defined') | list | length)
+    fail_msg: >-
+      duplicate cluster name or subnet_index in `clusters`: names
+      {{ clusters | map(attribute='name') | list }}, pinned indices
+      {{ clusters | selectattr('subnet_index', 'defined') | map(attribute='subnet_index') | list }}.
+      Each cluster needs a unique name, and any pinned subnet_index must be distinct.
+    quiet: true
+
+- name: Validate non-negative node counts + masters_schedulable value
+  ansible.builtin.assert:
+    that:
+      - (item.workers | default(0) | int) >= 0
+      - (item.day2_workers | default(0) | int) >= 0
+      - (item.masters_schedulable | default('auto')) in ['auto', true, false]
+    fail_msg: >-
+      cluster '{{ item.name }}': workers/day2_workers must be >= 0 and
+      masters_schedulable must be auto|true|false (got workers={{ item.workers | default(0) }},
+      day2_workers={{ item.day2_workers | default(0) }},
+      masters_schedulable={{ item.masters_schedulable | default('auto') }}).
+    quiet: true
+  loop: "{{ clusters }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 - name: Validate control-plane size (1 for single-node, or 3 for an HA etcd quorum)
   ansible.builtin.assert:
     that:

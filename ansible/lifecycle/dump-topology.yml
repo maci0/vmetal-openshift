@@ -16,7 +16,7 @@
       ansible.builtin.copy:
         content: "{{ topology | to_nice_json }}"
         dest: "{{ out }}"
-        mode: "0644"
+        mode: "0600"   # carries bmc_user / bmc_pass
 
     - name: Show where it went
       ansible.builtin.debug:

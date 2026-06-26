@@ -68,6 +68,15 @@
         wait: true
         wait_condition: { type: Available, status: "True" }
         wait_timeout: 300
+      register: metal3_dep
+
+    # k8s_info wait passes with resources:[] if metal3 was never created (the
+    # Provisioning CR did not reconcile), so assert it actually exists.
+    - name: Assert metal3 appeared
+      ansible.builtin.assert:
+        that: metal3_dep.resources | default([]) | length > 0
+        fail_msg: "metal3 Deployment never appeared in {{ ns }} (Provisioning CR did not reconcile; is this a baremetal platform?)."
+        quiet: true
 
     - name: Wait for the baremetal-operator admission webhook endpoints
       kubernetes.core.k8s_info:
@@ -102,6 +111,7 @@
           loop: "{{ bmh_docs | selectattr('kind', 'eq', 'Secret') | list }}"
           loop_control:
             label: "{{ item.metadata.name }}"
+          no_log: true   # the Secret body carries the BMC password
 
         # merge-patch only spec.bmc onto the running BMH (== `oc patch --type merge`).
         - name: Patch each BMH with its BMC address + creds

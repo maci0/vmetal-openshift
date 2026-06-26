@@ -59,6 +59,9 @@ trap 'kill "$http_pid" 2>/dev/null || true' EXIT
 
 if is_pxe; then
   log "Netbooting ${#ALL_VMS[@]} node(s) (UEFI PXE -> iPXE -> RHCOS live)"
+  for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/boot.ipxe" && break; sleep 1; done
+  curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/boot.ipxe" \
+    || die "iPXE HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
   for vm in "${ALL_VMS[@]}"; do "${VIRSH[@]}" start "$vm" >/dev/null 2>&1 || "${VIRSH[@]}" reset "$vm" >/dev/null 2>&1 || true; done
 else
   log "Serving the ISO + driving the BMC"
@@ -66,6 +69,8 @@ else
     || die "sushy Redfish not reachable at ${BMC_HOST}:8000. Start it: make sushy-install"
   iso="upi_image_${CLUSTER}.iso"
   for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" && break; sleep 1; done
+  curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" \
+    || die "ISO HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
   ap lifecycle/bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" -e iso_name="$iso"
 fi
 

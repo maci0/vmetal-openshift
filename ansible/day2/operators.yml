@@ -73,6 +73,16 @@
         wait: true
         wait_condition: { type: Available, status: "True" }
         wait_timeout: 300
+      register: rollout_dep
+      when: spec.rollout is defined
+
+    # k8s_info wait returns success with resources:[] if the Deployment was never
+    # created (OLM stalled), so assert it actually exists.
+    - name: Assert the operator deployment appeared
+      ansible.builtin.assert:
+        that: rollout_dep.resources | default([]) | length > 0
+        fail_msg: "operator deployment {{ spec.rollout.namespace }}/{{ spec.rollout.name }} never appeared (check the Subscription / InstallPlan)."
+        quiet: true
       when: spec.rollout is defined
 
     # Retry: the operator's admission webhook can lag the CRD right after install.
@@ -100,6 +110,14 @@
         wait: true
         wait_condition: { type: "{{ spec.ready.condition }}", status: "True" }
         wait_timeout: 1800
+      register: ready_cr
+      when: spec.ready.condition is defined
+
+    - name: Assert the CR appeared
+      ansible.builtin.assert:
+        that: ready_cr.resources | default([]) | length > 0
+        fail_msg: "{{ spec.ready.kind }}/{{ spec.ready.name }} never appeared; the operator did not create it."
+        quiet: true
       when: spec.ready.condition is defined
 
     - name: Wait for the CR's status.state to reach the ready value

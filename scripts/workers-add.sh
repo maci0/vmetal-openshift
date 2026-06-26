@@ -72,7 +72,8 @@ while (( SECONDS < deadline )); do
     [[ "$(oc get node "$w" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" == "True" ]] && ready=$((ready + 1))
   done
   log "workers Ready: $ready/${#WORKERS[@]}"
-  [[ "$ready" -eq "${#WORKERS[@]}" ]] && { log "all workers joined"; break; }
+  [[ "$ready" -eq "${#WORKERS[@]}" ]] && { log "all workers joined"; joined=true; break; }
   sleep 20
 done
 oc get nodes
+[[ "${joined:-false}" == true ]] || die "timed out after 2400s: only ${ready:-0}/${#WORKERS[@]} workers joined"

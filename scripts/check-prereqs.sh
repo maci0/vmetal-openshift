@@ -68,6 +68,21 @@ if id -nG 2>/dev/null | grep -qw libvirt || [[ "$(id -u)" == 0 ]]; then
 else
   warn "user not in libvirt group: ansible needs -K or use_become=true"
 fi
+# Modular libvirt (virtqemud/virtnetworkd/virtstoraged) replaces the monolithic
+# libvirtd; if a socket is inactive the matching ops fail (volumes need
+# virtstoraged, networks need virtnetworkd). Only relevant when modular daemons exist.
+if systemctl cat virtqemud.socket >/dev/null 2>&1; then
+  off=""
+  for d in virtqemud virtnetworkd virtstoraged; do
+    systemctl is-active --quiet "$d.socket" 2>/dev/null || systemctl is-active --quiet "$d.service" 2>/dev/null || off="$off $d"
+  done
+  if [[ -n "$off" ]]; then
+    warn "modular libvirt socket(s) inactive:$off ('make up' fails on the matching resource, e.g. virtstoraged -> volumes).
+       Enable: sudo systemctl enable --now virtqemud.socket virtnetworkd.socket virtstoraged.socket"
+  else
+    pass "modular libvirt daemons active (qemu / network / storage)"
+  fi
+fi
 
 echo "== firmware (OVMF / UEFI) =="
 ovmf_found=""
@@ -102,12 +117,27 @@ have ansible-playbook && AP="${AP:-ansible-playbook}"
 if [[ -n "$AP" ]]; then
   pass "ansible-playbook ($AP)"
   galaxy="${AP%ansible-playbook}ansible-galaxy"
-  for col in community.libvirt community.general; do
+  for col in community.libvirt community.general kubernetes.core community.docker; do
     if "$galaxy" collection list 2>/dev/null | grep -q "$col"; then pass "collection $col"
     else warn "collection $col missing (run scripts/bootstrap.sh or ansible-galaxy install -r)"; fi
   done
+  # The modules import these python libs from the same venv (see group_vars/local.yml):
+  # libvirt for community.libvirt, kubernetes for kubernetes.core, docker for community.docker.
+  py="${AP%ansible-playbook}python"
+  if [[ -x "$py" ]]; then
+    miss=""
+    for m in libvirt kubernetes docker; do "$py" -c "import $m" 2>/dev/null || miss="$miss $m"; done
+    if [[ -n "$miss" ]]; then warn "venv python missing module(s):$miss (run scripts/bootstrap.sh)"
+    else pass "venv python libs (libvirt / kubernetes / docker)"; fi
+  fi
 else
   warn "ansible not installed yet (run scripts/bootstrap.sh)"
+fi
+
+if have oc || [[ -x "$ROOT/build/openshift-install/oc" ]] || have kubectl; then
+  pass "oc / kubectl present (day-2: adopt, operators, status, mirror)"
+else
+  warn "no oc / kubectl: day-2 (make adopt / operators / status) and mirror need it (bootstrap fetches oc)"
 fi
 
 echo "== openshift-install =="
@@ -130,9 +160,21 @@ if [[ -d /var/lib/libvirt/images ]]; then
 fi
 
 echo "== container runtime (optional) =="
-if have podman; then pass "podman ($(podman --version 2>/dev/null))"
-elif have docker; then pass "docker ($(docker --version 2>/dev/null))"
-else warn "no podman/docker (only needed for host appliances: make haproxy, make nfs, make metallb-bgp, make mirror)"; fi
+if have docker; then
+  pass "docker ($(docker --version 2>/dev/null))"
+elif have podman; then
+  pass "podman ($(podman --version 2>/dev/null))"
+  # community.docker (the host appliances) talks to a Docker API socket; podman has
+  # no daemon, so its socket is opt-in.
+  if systemctl --user is-active --quiet podman.socket 2>/dev/null || systemctl is-active --quiet podman.socket 2>/dev/null; then
+    pass "podman.socket active (community.docker can reach it)"
+  else
+    warn "podman.socket inactive: host appliances (community.docker) need it.
+       Enable: systemctl --user enable --now podman.socket (rootless) or sudo for rootful"
+  fi
+else
+  warn "no podman/docker (only needed for host appliances: make haproxy, make nfs, make metallb-bgp, make mirror)"
+fi
 
 echo "== docs tooling (optional) =="
 for t in pandoc mmdc chromium; do

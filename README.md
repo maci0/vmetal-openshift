@@ -328,7 +328,7 @@ nominal RAM far exceed what it actually consumes, without touching the host OS.
 `make optimize-undo` reverts it.
 
 ```bash
-make optimize        # KSM + zram + per-VM cgroup hook
+make optimize        # KSM + zram + per-VM cgroup hook (root; add ANSIBLE_ARGS="-K" if sudo prompts)
 make optimize-undo   # revert
 ```
 
@@ -407,7 +407,7 @@ KEEP=1 scripts/e2e.sh
 
 ```
 Makefile                  check / bootstrap / configs / iso / sushy / host-dns / up / down / bmc / adopt / lint / e2e / pdf
-scripts/                  bootstrap, install, build-iso, check-prereqs, adopt(.py), status, creds, test-dns, lint, e2e, export-pdf
+scripts/                  bootstrap, install, install-upi, lab, build-iso, mirror, check-prereqs, status, creds, workers-add/remove, approve-csrs, bench-*, test-dns, lint, e2e, export-pdf
 build/                    downloaded installer + built ISOs (git-ignored)
 certs/                    local TLS material for sushy (git-ignored)
 ansible/                  see ansible/README.md for the full map
@@ -417,8 +417,10 @@ ansible/                  see ansible/README.md for the full map
   sushy.yml bmc.yml       Redfish config + power / boot / virtual-media
   host-dns.yml            host split-DNS for the cluster domains
   dump-topology.yml       render derived topology to JSON (test oracle)
+  operators.yml adopt.yml optimize.yml   day-2 operators / BMH adoption / host tuning
+  haproxy.yml nfs.yml metallb-bgp.yml     host appliances (community.docker)
   templates/               topology.yml.j2 + libvirt/ + install/ + sushy/
-  tasks/                  detect_ovmf, validate
+  tasks/                  preflight, detect_ovmf, validate, container_runtime
 tests/render_check.py     offline template + XML validation
 docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, examples, memory-optimization, virtualization, resilience, cloud, troubleshooting
 ```

@@ -103,13 +103,16 @@ Default lab `cluster0` = **SNO + 2 day-2 workers** (edge pattern).
 | Tool | Role |
 |------|------|
 | libvirt + qemu-kvm | VM host (the nodes) |
-| Ansible | Derives all networking/configs from one topology |
+| Ansible | Provisioning, day-2, appliances, host tuning, all via modules |
 | sushy-tools | Redfish BMC emulation |
 | nmstate | Bond/VLAN static config |
 | metal3-io | Day-2 baremetal mgmt (IPI via Ironic) |
 | MetalLB | LoadBalancer pool (L2 or BGP+FRR) |
 | LVMS / NFS-Ganesha | RWO + RWX storage |
 | OpenShift Virtualization | VMs on the cluster, live migration |
+
+Declarative work is Ansible modules (`community.libvirt` / `kubernetes.core` /
+`community.docker`), no shelling out; bash only wraps `openshift-install` + `oc adm`.
 
 ---
 

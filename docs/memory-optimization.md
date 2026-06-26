@@ -63,6 +63,9 @@ make optimize        # KSM + zram + per-VM cgroup hook
 make optimize-undo   # revert (KSM off + unmerge, lift memory.high, remove hook)
 ```
 
+It tunes the host (sysfs, zram, libvirt hook), so it runs with `become`: use
+passwordless sudo or `make optimize ANSIBLE_ARGS="-K"` to be prompted.
+
 `make optimize` (`optimize.yml`, `make optimize-undo` reverts) does three things:
 
 * **KSM**: `ksmtuned` if packaged, else `run=1` directly.

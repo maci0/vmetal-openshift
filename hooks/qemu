@@ -3,7 +3,7 @@
 # get pushed into the host's zram (compressed-RAM swap) early, instead of pinning
 # all of the VM's RAM. The host OS and other processes are left untouched.
 #
-# Install to /etc/libvirt/hooks/qemu (scripts/optimize-host.sh does this). libvirt
+# Install to /etc/libvirt/hooks/qemu (ansible/optimize.yml does this). libvirt
 # calls it as:  qemu <guest> <op> <sub-op> <extra>  with the domain XML on stdin.
 #
 # On 'started' for our guests it finds the VM's transient systemd scope

@@ -23,9 +23,12 @@ playbooks (run from this dir, e.g. ansible-playbook setup.yml):
   haproxy.yml          host HAProxy appliance for multi-node UPI (community.docker)
   nfs.yml              NFS-Ganesha host appliance + RWX provisioner
   metallb-bgp.yml      MetalLB BGP: host FRR peer + BGP config
+  adopt.yml            in-cluster BMH adoption (metal3 power mgmt, kubernetes.core)
+  optimize.yml         host memory tuning: KSM + zram + hook (mode=apply|undo, become)
 
 tasks/
   validate.yml         assert control_plane (1 or 3) and workers are valid
+  preflight.yml        host gate: kvm, OVMF firmware, nested virt
   detect_ovmf.yml      locate OVMF firmware across distros
   container_runtime.yml resolve the docker/podman API socket (host appliances)
 

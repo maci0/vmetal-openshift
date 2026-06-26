@@ -42,7 +42,7 @@ bootstrapInPlace:
   installationDisk: {{ cluster.upi_install_disk | default('/dev/' ~ cluster.nodes[0].disks[0].target) }}
 {% endif %}
 {% if cluster.disconnected | default(false) %}
-{% set mirror_ca = lookup('file', playbook_dir + '/../' + (mirror_ca_file | default('certs/mirror/ca.pem')), errors='ignore') %}
+{% set mirror_ca = lookup('file', playbook_dir + '/../../' + (mirror_ca_file | default('certs/mirror/ca.pem')), errors='ignore') %}
 imageDigestSources:
 - mirrors:
   - {{ cluster.mirror_registry }}/openshift/release

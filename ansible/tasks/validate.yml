@@ -1,16 +1,28 @@
 ---
 # Sanity-check the `clusters` input before doing any work.
-- name: Validate cluster names + indices are unique (collisions reuse subnets/MACs/UUIDs)
+- name: Validate cluster names are unique
   ansible.builtin.assert:
     that:
       - (clusters | map(attribute='name') | list | unique | length) == (clusters | length)
-      - (clusters | selectattr('subnet_index', 'defined') | map(attribute='subnet_index') | list | unique | length)
-        == (clusters | selectattr('subnet_index', 'defined') | list | length)
+    fail_msg: "duplicate cluster name in `clusters`: {{ clusters | map(attribute='name') | list }}."
+    quiet: true
+
+# Effective index = pinned subnet_index, else the cluster's list position. A
+# collision (pinned vs another cluster's auto position) reuses subnets/MACs/UUIDs.
+- name: Compute effective cluster indices
+  ansible.builtin.set_fact:
+    eff_idx: "{{ (eff_idx | default([])) + [item.subnet_index | default(idx)] }}"
+  loop: "{{ clusters }}"
+  loop_control:
+    index_var: idx
+    label: "{{ item.name }}"
+
+- name: Validate effective cluster indices are unique
+  ansible.builtin.assert:
+    that: (eff_idx | map('int') | unique | list | length) == (clusters | length)
     fail_msg: >-
-      duplicate cluster name or subnet_index in `clusters`: names
-      {{ clusters | map(attribute='name') | list }}, pinned indices
-      {{ clusters | selectattr('subnet_index', 'defined') | map(attribute='subnet_index') | list }}.
-      Each cluster needs a unique name, and any pinned subnet_index must be distinct.
+      subnet_index collision (effective indices {{ eff_idx }}): a pinned subnet_index
+      matches another cluster's auto-assigned list position. Pin all clusters or none.
     quiet: true
 
 - name: Validate non-negative node counts + masters_schedulable value

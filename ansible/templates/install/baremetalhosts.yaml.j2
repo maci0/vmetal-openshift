@@ -34,5 +34,5 @@ spec:
     credentialsName: {{ node.fullname }}-bmc-secret
     disableCertificateVerification: true
   rootDeviceHints:
-    deviceName: /dev/sda
+    deviceName: /dev/{{ node.disks[0].target }}
 {% endfor %}

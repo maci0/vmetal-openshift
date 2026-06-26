@@ -58,7 +58,7 @@ platform:
 {{ net.nmstate(node, cluster) | indent(8, true) }}
 {% endfor %}
 {% if cluster.disconnected | default(false) %}
-{% set mirror_ca = lookup('file', playbook_dir + '/../' + (mirror_ca_file | default('certs/mirror/ca.pem')), errors='ignore') %}
+{% set mirror_ca = lookup('file', playbook_dir + '/../../' + (mirror_ca_file | default('certs/mirror/ca.pem')), errors='ignore') %}
 imageDigestSources:
 - mirrors:
   - {{ cluster.mirror_registry }}/openshift/release

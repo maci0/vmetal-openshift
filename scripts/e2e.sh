@@ -55,6 +55,13 @@ clusters=$(jq 'length' "$TOPO"); ok "topology rendered ($clusters cluster(s))"
 echo "== provision =="
 provision; ok "lifecycle/setup.yml applied"
 
+# setup.yml only auto-starts ISO-boot clusters; power the rest on so the infra
+# asserts below hold regardless of boot_via (redfish/ipi/upi normally boot via BMC).
+echo "== power on domains =="
+while read -r dom; do virsh -c "$URI" start "$dom" >/dev/null 2>&1 || true; done \
+  < <(jq -r '.[].nodes[].fullname' "$TOPO")
+sleep 2; ok "domains started"
+
 echo "== assert networks active =="
 while read -r net; do
   state=$(virsh -c "$URI" net-info "$net" 2>/dev/null | awk '/Active:/{print $2}')
@@ -72,19 +79,21 @@ while read -r row; do
 done < <(jq -r '.[].nodes[] | "\(.fullname)|\(.interfaces|length)"' "$TOPO")
 ok "domains running with expected NIC counts"
 
-echo "== assert DNS resolves to the right VIPs (api vs ingress) =="
-resolve() {  # first A record for a name, via dig or getent
-  if command -v dig >/dev/null; then dig +short "$1" | grep -m1 -E '^[0-9.]+$'
-  else getent ahostsv4 "$1" | awk 'NR==1{print $1}'; fi
-}
-while IFS='|' read -r fqdn api ing; do
-  for pair in "api.$fqdn=$api" "api-int.$fqdn=$api" "console-openshift-console.apps.$fqdn=$ing"; do
-    rec=${pair%=*}; want=${pair#*=}
-    got=$(resolve "$rec" || true)
-    [[ "$got" == "$want" ]] || fail "DNS $rec -> '${got:-NXDOMAIN}', want $want"
-  done
-  ok "DNS ok for $fqdn (api=$api, ingress=$ing)"
-done < <(jq -r '.[] | "\(.fqdn)|\(.api_vip)|\(.ingress_vip)"' "$TOPO")
+# Query the cluster's libvirt dnsmasq directly (@gateway), so the assert does not
+# depend on the host resolver being pointed at it (that is `make host-dns`).
+if command -v dig >/dev/null; then
+  echo "== assert DNS resolves to the right VIPs (api vs ingress) =="
+  while IFS='|' read -r fqdn api ing gw; do
+    for pair in "api.$fqdn=$api" "api-int.$fqdn=$api" "console-openshift-console.apps.$fqdn=$ing"; do
+      rec=${pair%=*}; want=${pair#*=}
+      got=$(dig +short @"$gw" "$rec" 2>/dev/null | grep -m1 -E '^[0-9.]+$' || true)
+      [[ "$got" == "$want" ]] || fail "DNS $rec @$gw -> '${got:-NXDOMAIN}', want $want"
+    done
+    ok "DNS ok for $fqdn (api=$api, ingress=$ing)"
+  done < <(jq -r '.[] | "\(.fqdn)|\(.api_vip)|\(.ingress_vip)|\(.machine_gateway)"' "$TOPO")
+else
+  printf '\033[1;33mSKIP\033[0m dig not installed; DNS assertion skipped\n'
+fi
 
 echo "== sushy Redfish endpoint (optional) =="
 if curl -sk --max-time 5 "$SUSHY_URL/redfish/v1/" | grep -q RedfishVersion; then

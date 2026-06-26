@@ -68,10 +68,9 @@
             restart_policy: unless-stopped
             network_mode: host
             privileged: true
-            mounts:
-              - source: "{{ export_dir }}"
-                target: /data/nfs
-                type: bind
+            # :Z relabels the export bind for SELinux hosts; harmless elsewhere.
+            volumes:
+              - "{{ export_dir }}:/data/nfs:Z"
             env:
               NFS_EXPORT_0: "/data/nfs *(rw,sync,no_subtree_check,no_root_squash)"
             docker_host: "{{ docker_host }}"

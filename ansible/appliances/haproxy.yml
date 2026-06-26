@@ -54,11 +54,10 @@
             network_mode: host
             user: "0"
             capabilities: [NET_BIND_SERVICE]
-            mounts:
-              - source: "{{ cfg }}"
-                target: /usr/local/etc/haproxy/haproxy.cfg
-                type: bind
-                read_only: true
+            # short-form volume with :Z so the bind is relabeled for SELinux
+            # (podman/docker on enforcing hosts); harmless elsewhere.
+            volumes:
+              - "{{ cfg }}:/usr/local/etc/haproxy/haproxy.cfg:ro,Z"
             docker_host: "{{ docker_host }}"
           register: hap
 

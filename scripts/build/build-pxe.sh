@@ -44,7 +44,7 @@ multinode=false; grep -q '"role":"bootstrap"' <<<"$nodes_json" && multinode=true
 if [[ ! -s "$BUILD/tftp/ipxe.efi" ]]; then
   [[ -n "$DOCKER" ]] || die "need docker/podman to obtain ipxe.efi (or drop one at build/tftp/ipxe.efi)"
   log "Extracting ipxe.efi from $IPXE_IMAGE"
-  "$DOCKER" run --rm -v "$BUILD/tftp:/out" "$IPXE_IMAGE" bash -c \
+  "$DOCKER" run --rm -v "$BUILD/tftp:/out:Z" "$IPXE_IMAGE" bash -c \
     "dnf install -y -q ipxe-bootimgs >/dev/null 2>&1 && cp /usr/share/ipxe/ipxe-x86_64.efi /out/ipxe.efi"
   [[ -s "$BUILD/tftp/ipxe.efi" ]] || die "failed to extract ipxe.efi"
 fi

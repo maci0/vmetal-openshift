@@ -105,9 +105,10 @@
             restart_policy: unless-stopped
             network_mode: host
             privileged: true
-            mounts:
-              - { source: "{{ dir }}/frr.conf", target: /etc/frr/frr.conf, type: bind, read_only: true }
-              - { source: "{{ dir }}/frr-daemons", target: /etc/frr/daemons, type: bind, read_only: true }
+            # :Z relabels the binds for SELinux hosts; harmless elsewhere.
+            volumes:
+              - "{{ dir }}/frr.conf:/etc/frr/frr.conf:ro,Z"
+              - "{{ dir }}/frr-daemons:/etc/frr/daemons:ro,Z"
             docker_host: "{{ docker_host }}"
 
         - name: Apply the BGP peer + advertisement

@@ -67,7 +67,7 @@ if ! "$ENGINE" ps --filter "name=$NAME" --filter status=running --format '{{.Nam
   "$ENGINE" rm -f "$NAME" >/dev/null 2>&1 || true
   log "Starting mirror registry ($REG)"
   "$ENGINE" run -d --name "$NAME" --restart unless-stopped --network host \
-    -v "$DATA:/var/lib/registry" -v "$CERTS:/certs:ro" \
+    -v "$DATA:/var/lib/registry:Z" -v "$CERTS:/certs:ro,Z" \
     -e "REGISTRY_HTTP_ADDR=0.0.0.0:${PORT}" \
     -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/cert.pem \
     -e REGISTRY_HTTP_TLS_KEY=/certs/key.pem \

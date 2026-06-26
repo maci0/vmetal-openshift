@@ -41,7 +41,7 @@ make nfs-down CLUSTER=cluster0
   oc apply -f clusters/cluster0/lvms-cluster.yaml          # LVMCluster CR
   oc -n openshift-storage get lvmcluster lvmcluster -o jsonpath='{.status.state}'  # -> Ready
   ```
-* `make nfs` (`scripts/nfs.sh`): a host NFS-Ganesha container plus an in-cluster
+* `make nfs` (`nfs.yml`, community.docker + kubernetes.core): a host NFS-Ganesha container plus an in-cluster
   provisioner + StorageClass.
   ```bash
   docker run -d --name vmetal-nfs-cluster0 --network host --privileged \

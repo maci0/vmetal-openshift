@@ -1,0 +1,109 @@
+---
+# NFS RWX storage appliance: an NFS-Ganesha container on the host exports a
+# disk-backed dir on the machine net, and an in-cluster nfs-subdir provisioner
+# turns it into the nfs-rwx StorageClass (RWX lets CNV VMs live-migrate).
+# Container via community.docker (docker or podman socket); cluster side via
+# kubernetes.core.
+#
+#   ansible-playbook nfs.yml -e cluster=cluster0
+#   ansible-playbook nfs.yml -e cluster=cluster0 -e appliance_action=down
+#
+- name: NFS-Ganesha host appliance + RWX provisioner
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    cluster: cluster0
+    appliance_action: up
+    container_name: "vmetal-nfs-{{ cluster }}"
+    image: docker.io/janeczku/nfs-ganesha:latest
+    export_dir: "{{ playbook_dir }}/../build/nfs-export/{{ cluster }}"
+    dir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+
+  tasks:
+    - name: Resolve the container runtime socket
+      ansible.builtin.import_tasks: tasks/container_runtime.yml
+
+    - name: Tear down
+      when: appliance_action == 'down'
+      block:
+        - name: Remove the NFS-Ganesha container
+          community.docker.docker_container:
+            name: "{{ container_name }}"
+            state: absent
+            docker_host: "{{ docker_host }}"
+        - name: Remove the in-cluster provisioner
+          kubernetes.core.k8s:
+            src: "{{ dir }}/nfs-ganesha.yaml"
+            state: absent
+            kubeconfig: "{{ kubeconfig }}"
+          failed_when: false
+
+    - name: Bring up
+      when: appliance_action != 'down'
+      block:
+        - name: Require the rendered provisioner manifest
+          ansible.builtin.stat:
+            path: "{{ dir }}/nfs-ganesha.yaml"
+          register: nfs_manifest
+        - name: Fail if no manifest
+          ansible.builtin.fail:
+            msg: "no {{ dir }}/nfs-ganesha.yaml (run 'make configs' first)"
+          when: not nfs_manifest.stat.exists
+
+        - name: Create the disk-backed export dir
+          ansible.builtin.file:
+            path: "{{ export_dir }}"
+            state: directory
+            mode: "0777"
+
+        # privileged + host network so Ganesha can serve NFS on :2049.
+        - name: Run the NFS-Ganesha container
+          community.docker.docker_container:
+            name: "{{ container_name }}"
+            image: "{{ image }}"
+            state: started
+            recreate: true
+            restart_policy: unless-stopped
+            network_mode: host
+            privileged: true
+            mounts:
+              - source: "{{ export_dir }}"
+                target: /data/nfs
+                type: bind
+            env:
+              NFS_EXPORT_0: "/data/nfs *(rw,sync,no_subtree_check,no_root_squash)"
+            docker_host: "{{ docker_host }}"
+
+        - name: Ensure the openshift-storage namespace (privileged pod security)
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig }}"
+            definition:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: openshift-storage
+                labels:
+                  pod-security.kubernetes.io/enforce: privileged
+
+        - name: Apply the provisioner + nfs-rwx StorageClass
+          kubernetes.core.k8s:
+            src: "{{ dir }}/nfs-ganesha.yaml"
+            state: present
+            kubeconfig: "{{ kubeconfig }}"
+          register: nfs_apply
+          until: nfs_apply is succeeded
+          retries: 30
+          delay: 5
+
+        - name: Wait for the provisioner deployment to be Available
+          kubernetes.core.k8s_info:
+            kind: Deployment
+            namespace: openshift-storage
+            name: nfs-client-provisioner
+            kubeconfig: "{{ kubeconfig }}"
+            wait: true
+            wait_condition: { type: Available, status: "True" }
+            wait_timeout: 180

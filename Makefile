@@ -147,10 +147,10 @@ metallb:
 	cd ansible && $(AP) operators.yml -e op=metallb -e cluster=$(CLUSTER)
 
 metallb-bgp:
-	./scripts/metallb-bgp.sh $(CLUSTER) up
+	cd ansible && $(AP) metallb-bgp.yml -e cluster=$(CLUSTER)
 
 metallb-bgp-down:
-	./scripts/metallb-bgp.sh $(CLUSTER) down
+	cd ansible && $(AP) metallb-bgp.yml -e cluster=$(CLUSTER) -e appliance_action=down
 
 lvms:
 	cd ansible && $(AP) operators.yml -e op=lvms -e cluster=$(CLUSTER)
@@ -159,10 +159,10 @@ virt:
 	cd ansible && $(AP) operators.yml -e op=virt -e cluster=$(CLUSTER)
 
 nfs:
-	./scripts/nfs.sh $(CLUSTER) up
+	cd ansible && $(AP) nfs.yml -e cluster=$(CLUSTER)
 
 nfs-down:
-	./scripts/nfs.sh $(CLUSTER) down
+	cd ansible && $(AP) nfs.yml -e cluster=$(CLUSTER) -e appliance_action=down
 
 lint:
 	./scripts/lint.sh

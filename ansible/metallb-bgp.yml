@@ -1,0 +1,119 @@
+---
+# MetalLB BGP mode: an FRR router on the host peers with the speakers and learns
+# the advertised /32s (zebra installs them with ECMP). Container via
+# community.docker (docker or podman socket); MetalLB operator/instance/peer via
+# kubernetes.core.
+#
+#   ansible-playbook metallb-bgp.yml -e cluster=cluster0
+#   ansible-playbook metallb-bgp.yml -e cluster=cluster0 -e appliance_action=down
+#
+- name: MetalLB BGP peer (host FRR) + config
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    cluster: cluster0
+    appliance_action: up
+    container_name: "vmetal-frr-{{ cluster }}"
+    image: quay.io/frrouting/frr:10.4.4
+    dir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+
+  tasks:
+    - name: Resolve the container runtime socket
+      ansible.builtin.import_tasks: tasks/container_runtime.yml
+
+    - name: Tear down
+      when: appliance_action == 'down'
+      block:
+        - name: Remove the FRR container
+          community.docker.docker_container:
+            name: "{{ container_name }}"
+            state: absent
+            docker_host: "{{ docker_host }}"
+        - name: Remove the BGP peer + advertisement
+          kubernetes.core.k8s:
+            src: "{{ dir }}/metallb-bgp.yaml"
+            state: absent
+            kubeconfig: "{{ kubeconfig }}"
+          failed_when: false
+
+    - name: Bring up
+      when: appliance_action != 'down'
+      block:
+        - name: Require the rendered BGP manifests
+          ansible.builtin.stat:
+            path: "{{ item }}"
+          loop:
+            - "{{ dir }}/frr.conf"
+            - "{{ dir }}/metallb-bgp.yaml"
+          register: bgp_files
+        - name: Fail if missing
+          ansible.builtin.fail:
+            msg: "missing frr.conf / metallb-bgp.yaml (run 'make configs' first)"
+          when: bgp_files.results | rejectattr('stat.exists') | list | length > 0
+
+        - name: Install the MetalLB operator
+          kubernetes.core.k8s:
+            src: "{{ dir }}/metallb-operator.yaml"
+            state: present
+            kubeconfig: "{{ kubeconfig }}"
+        - name: Wait for the MetalLB CRDs
+          kubernetes.core.k8s_info:
+            api_version: apiextensions.k8s.io/v1
+            kind: CustomResourceDefinition
+            name: bgppeers.metallb.io
+            kubeconfig: "{{ kubeconfig }}"
+          register: bgp_crd
+          until: bgp_crd.resources | length > 0
+          retries: 60
+          delay: 10
+
+        - name: Apply the MetalLB instance
+          kubernetes.core.k8s:
+            src: "{{ dir }}/metallb-config.yaml"
+            state: present
+            kubeconfig: "{{ kubeconfig }}"
+          register: mlb_cfg
+          until: mlb_cfg is succeeded
+          retries: 30
+          delay: 10
+        - name: Wait for the speaker DaemonSet
+          kubernetes.core.k8s_info:
+            kind: DaemonSet
+            namespace: metallb-system
+            name: speaker
+            kubeconfig: "{{ kubeconfig }}"
+          register: speaker
+          until: >-
+            speaker.resources | length > 0 and
+            (speaker.resources[0].status.numberReady | default(0)) ==
+            (speaker.resources[0].status.desiredNumberScheduled | default(-1))
+          retries: 30
+          delay: 10
+
+        # privileged + host network so zebra can write the learned routes into
+        # the host kernel.
+        - name: Run the FRR BGP router
+          community.docker.docker_container:
+            name: "{{ container_name }}"
+            image: "{{ image }}"
+            state: started
+            recreate: true
+            restart_policy: unless-stopped
+            network_mode: host
+            privileged: true
+            mounts:
+              - { source: "{{ dir }}/frr.conf", target: /etc/frr/frr.conf, type: bind, read_only: true }
+              - { source: "{{ dir }}/frr-daemons", target: /etc/frr/daemons, type: bind, read_only: true }
+            docker_host: "{{ docker_host }}"
+
+        - name: Apply the BGP peer + advertisement
+          kubernetes.core.k8s:
+            src: "{{ dir }}/metallb-bgp.yaml"
+            state: present
+            kubeconfig: "{{ kubeconfig }}"
+          register: bgp_apply
+          until: bgp_apply is succeeded
+          retries: 30
+          delay: 5

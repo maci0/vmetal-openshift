@@ -162,6 +162,8 @@ make bootstrap                   # venv, deps, installer, cert
 make sushy-install               # start the sushy Redfish BMC (systemd --user)
 make install CLUSTER=cluster0    # one-shot: build ISO, provision, boot, wait for the cluster
 make status                      # nodes + operators + BareMetalHosts
+# or, to practice the install yourself:
+make lab CLUSTER=cluster0        # infra + boot the nodes, but DON'T install; prints the wait-for steps
 make creds                       # console URL + kubeadmin password
 make down                        # tear everything down
 ```

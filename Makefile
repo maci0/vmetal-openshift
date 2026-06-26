@@ -6,6 +6,8 @@
 #   make sushy-install        render + start the sushy Redfish BMC (systemd --user)
 #   make install CLUSTER=c     one-shot: build ISO, provision, boot, wait for cluster
 #   make install-upi CLUSTER=c one-shot UPI install (platform: none); pxe for multi-node
+#   make lab CLUSTER=c         infra only: build ISO + boot the nodes, but DON'T install
+#                                (practice driving openshift-install yourself)
 #   make configs              render install/agent configs for all clusters
 #   make iso CLUSTER=prod     render configs + build discovery ISO (agent mode)
 #   make sushy                render sushy Redfish config + systemd unit
@@ -52,7 +54,7 @@ AP           := $(shell [ -x .venv/bin/ansible-playbook ] && echo $(CURDIR)/.ven
 PY           := $(shell [ -x .venv/bin/python ] && echo $(CURDIR)/.venv/bin/python || echo python3)
 
 .DEFAULT_GOAL := help
-.PHONY: check optimize optimize-undo bootstrap install install-upi ignition configs iso sushy sushy-install host-dns up down \
+.PHONY: check optimize optimize-undo bootstrap install install-upi lab ignition configs iso sushy sushy-install host-dns up down \
         serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-down pdf clean help
 
 help:
@@ -93,6 +95,9 @@ ignition:
 
 install-upi:
 	./scripts/install-upi.sh $(CLUSTER)
+
+lab:
+	./scripts/lab.sh $(CLUSTER)
 
 haproxy:
 	./scripts/haproxy.sh $(CLUSTER) up

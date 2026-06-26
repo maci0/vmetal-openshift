@@ -35,11 +35,11 @@ platform:
     - {{ cluster.ingress_vip }}
 {% endif %}
 {% if cluster.mode == 'upi' and cluster.sno %}
-{#   Single-node UPI is bootstrap-in-place: the live ISO installs RHCOS to this
-     disk (sda = first disk, boot order 1). Override with upi_install_disk.
+{#   Single-node UPI is bootstrap-in-place: the live ISO installs RHCOS to the
+     node's first disk (sda for scsi, vda for virtio). Override with upi_install_disk.
      Multi-node UPI uses a real bootstrap node, so no bootstrapInPlace. #}
 bootstrapInPlace:
-  installationDisk: {{ cluster.upi_install_disk | default('/dev/sda') }}
+  installationDisk: {{ cluster.upi_install_disk | default('/dev/' ~ cluster.nodes[0].disks[0].target) }}
 {% endif %}
 {% if cluster.disconnected | default(false) %}
 {% set mirror_ca = lookup('file', playbook_dir + '/../' + (mirror_ca_file | default('certs/mirror/ca.pem')), errors='ignore') %}

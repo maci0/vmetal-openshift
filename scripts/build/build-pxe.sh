@@ -37,6 +37,9 @@ topo="$(mktemp)"; ( cd ansible && "$AP" lifecycle/dump-topology.yml -e out="$top
 gw="$(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .machine_gateway' "$topo")"
 [[ -n "$gw" ]] || die "could not resolve machine_gateway for '$CLUSTER'"
 nodes_json="$(jq -c --arg c "$CLUSTER" '[.[] | select(.name==$c) | .nodes[] | {mac, role}]' "$topo")"
+# install device from the first node's OS disk (sda for scsi, vda for virtio)
+install_dev="$(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "/dev/" + .nodes[0].disks[0].target' "$topo")"
+[[ -n "$install_dev" && "$install_dev" != "/dev/null" ]] || install_dev="/dev/sda"
 rm -f "$topo"
 multinode=false; grep -q '"role":"bootstrap"' <<<"$nodes_json" && multinode=true
 
@@ -95,7 +98,7 @@ common="initrd=main coreos.live.rootfs_url=${base}/rhcos-live-rootfs.img console
     # ignition is chosen per role by the machine-net MAC (default worker).
     echo "set ign ${base}/worker.ign"
     jq -r '.[] | select(.role!="worker") | "iseq ${net0/mac} \(.mac) && set ign '"${base}"'/\(.role).ign ||"' <<<"$nodes_json"
-    echo "kernel ${base}/rhcos-live-kernel ${common} coreos.inst.install_dev=/dev/sda coreos.inst.ignition_url=\${ign}"
+    echo "kernel ${base}/rhcos-live-kernel ${common} coreos.inst.install_dev=${install_dev} coreos.inst.ignition_url=\${ign}"
   else
     # Single-node: the bootstrap-in-place ignition already does the install, applied
     # via the firstboot path.

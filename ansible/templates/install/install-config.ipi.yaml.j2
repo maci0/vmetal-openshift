@@ -53,7 +53,7 @@ platform:
         password: {{ cluster.bmc_pass }}
         disableCertificateVerification: true
       rootDeviceHints:
-        deviceName: /dev/sda
+        deviceName: /dev/{{ node.disks[0].target }}
       networkConfig:
 {{ net.nmstate(node, cluster) | indent(8, true) }}
 {% endfor %}

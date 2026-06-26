@@ -15,7 +15,7 @@ hosts:
 - hostname: {{ node.fullname }}
   role: {{ node.role }}
   rootDeviceHints:
-    deviceName: /dev/sda
+    deviceName: /dev/{{ node.disks[0].target }}
   interfaces:
 {%   for nic in node.interfaces %}
   - name: {{ nic.devname }}

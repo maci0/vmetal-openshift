@@ -63,7 +63,7 @@ make optimize        # KSM + zram + per-VM cgroup hook
 make optimize-undo   # revert (KSM off + unmerge, lift memory.high, remove hook)
 ```
 
-`scripts/optimize-host.sh apply` does three things:
+`make optimize` (`optimize.yml`, `make optimize-undo` reverts) does three things:
 
 * **KSM**: `ksmtuned` if packaged, else `run=1` directly.
 * **zram**: verifies `/dev/zram0` is an active swap (creates one sized to RAM if
@@ -88,7 +88,7 @@ Reboot the VMs (`make down` / `make up`) so the hook squeezes them.
 | Knob | Where | Effect |
 |------|-------|--------|
 | `VMETAL_MEM_HIGH_PCT` | hook env (default 60) | uncompressed-RAM cap per VM; lower = more aggressive eviction to zram |
-| `ZRAM_COMP` | optimize-host.sh (default zstd) | zram compression algorithm |
+| `zram_comp` | optimize.yml var (default zstd) | zram compression algorithm |
 | `vm.swappiness` | sysctl | how eagerly the kernel swaps anon pages (0 = only under real pressure) |
 | `SQUEEZE_PCT` / `BENCH_ALGOS` | bench env | squeeze cap and algorithms swept in the benchmark |
 

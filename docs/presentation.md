@@ -130,7 +130,7 @@ Layer features after install, each independent:
 VMs run concurrently; RAM does not oversubscribe. So the host gets tuned.
 
 - **KSM** dedup identical RHCOS pages; **zram** compress cold pages
-- **cgroup tuning** via `optimize-host.sh`
+- **cgroup tuning** via `make optimize`
 - Measured per-VM via cgroup `memory.current` (`make bench`)
 
 Measured, 3 masters + 2 workers (92 GiB allocated):

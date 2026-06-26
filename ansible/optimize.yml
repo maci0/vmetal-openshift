@@ -1,0 +1,140 @@
+---
+# Host memory-optimization stack for the lab VMs (mode: apply | undo):
+#   1. KSM          - dedup identical guest pages (same RHCOS on every node)
+#   2. zram         - compressed-RAM swap (zstd); evicted pages compress in RAM
+#   3. libvirt hook - per-VM memory.high so cold pages get pushed into zram early
+# Runtime settings (reset on reboot). Needs root: run with passwordless sudo, -K,
+# or as root.
+#
+#   ansible-playbook optimize.yml -e mode=apply
+#   ansible-playbook optimize.yml -e mode=undo
+#
+- name: Host memory optimization
+  hosts: local
+  gather_facts: true
+  become: true
+  vars:
+    mode: apply
+    zram_comp: zstd
+    ksm: /sys/kernel/mm/ksm
+    hook_src: "{{ playbook_dir }}/../hooks/qemu"
+
+  tasks:
+    - name: Validate mode
+      ansible.builtin.assert:
+        that: mode in ['apply', 'undo']
+        fail_msg: "set -e mode=apply|undo"
+        quiet: true
+
+    - name: Gather service list (ksmtuned / libvirt)
+      ansible.builtin.service_facts:
+
+    - name: Apply the optimization stack
+      when: mode == 'apply'
+      block:
+        # --- KSM ---
+        - name: Enable ksmtuned (if packaged)
+          ansible.builtin.systemd:
+            name: ksmtuned
+            enabled: true
+            state: started
+          when: "'ksmtuned.service' in ansible_facts.services"
+
+        - name: Turn KSM on via sysfs (no ksmtuned packaged)  # noqa: risky-file-permissions
+          ansible.builtin.copy:
+            dest: "{{ ksm }}/{{ item.f }}"
+            content: "{{ item.v }}\n"
+            unsafe_writes: true
+          loop:
+            - { f: run, v: "1" }
+            - { f: pages_to_scan, v: "1000" }
+          loop_control: { label: "{{ item.f }}" }
+          when: "'ksmtuned.service' not in ansible_facts.services"
+
+        # --- zram (compressed-RAM swap) ---
+        - name: Load the zram module
+          community.general.modprobe:
+            name: zram
+            state: present
+
+        - name: Read active swaps
+          ansible.builtin.slurp:
+            src: /proc/swaps
+          register: swaps
+
+        # zramctl / mkswap / swapon have no Ansible module; size = total RAM.
+        - name: Create + size a zram device
+          ansible.builtin.command:
+            argv: [zramctl, --find, --size, "{{ (ansible_memtotal_mb | int) * 1024 * 1024 }}", --algorithm, "{{ zram_comp }}"]
+          register: zdev
+          changed_when: true
+          when: "'zram0' not in (swaps.content | b64decode)"
+
+        - name: Format + enable the zram swap  # noqa: no-handler
+          ansible.builtin.command:
+            argv: "{{ item }}"
+          loop:
+            - [mkswap, "{{ zdev.stdout | default('') | trim }}"]
+            - [swapon, "{{ zdev.stdout | default('') | trim }}", -p, "100"]
+          changed_when: true
+          when: zdev is changed
+
+        # --- libvirt qemu hook (per-VM memory.high -> cold pages to zram) ---
+        - name: Install the qemu hook
+          ansible.builtin.copy:
+            src: "{{ hook_src }}"
+            dest: /etc/libvirt/hooks/qemu
+            mode: "0755"
+
+        - name: Reload libvirt so it picks up the hook
+          ansible.builtin.systemd:
+            name: "{{ item }}"
+            state: reloaded
+          loop: [libvirtd, virtqemud]
+          when: "item ~ '.service' in ansible_facts.services"
+          failed_when: false
+
+    - name: Undo the optimization stack
+      when: mode == 'undo'
+      block:
+        - name: Disable ksmtuned
+          ansible.builtin.systemd:
+            name: ksmtuned
+            enabled: false
+            state: stopped
+          when: "'ksmtuned.service' in ansible_facts.services"
+
+        - name: Turn KSM off (+ unmerge)  # noqa: risky-file-permissions
+          ansible.builtin.copy:
+            dest: "{{ ksm }}/run"
+            content: "2\n"
+            unsafe_writes: true
+
+        - name: Remove the qemu hook
+          ansible.builtin.file:
+            path: /etc/libvirt/hooks/qemu
+            state: absent
+
+        - name: Reload libvirt
+          ansible.builtin.systemd:
+            name: "{{ item }}"
+            state: reloaded
+          loop: [libvirtd, virtqemud]
+          when: "item ~ '.service' in ansible_facts.services"
+          failed_when: false
+
+        - name: Find per-VM cgroup scopes
+          ansible.builtin.find:
+            paths: /sys/fs/cgroup/machine.slice
+            patterns: "*qemu*node*.scope"
+            file_type: directory
+          register: scopes
+
+        - name: Lift per-VM memory.high  # noqa: risky-file-permissions
+          ansible.builtin.copy:
+            dest: "{{ item.path }}/memory.high"
+            content: "max\n"
+            unsafe_writes: true
+          loop: "{{ scopes.files }}"
+          loop_control: { label: "{{ item.path }}" }
+        # zram swap is left as-is (host-managed, not torn down here).

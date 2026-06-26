@@ -64,10 +64,10 @@ check:
 	./scripts/check-prereqs.sh
 
 optimize:
-	./scripts/optimize-host.sh apply
+	cd ansible && $(AP) optimize.yml -e mode=apply $(ANSIBLE_ARGS)
 
 optimize-undo:
-	./scripts/optimize-host.sh undo
+	cd ansible && $(AP) optimize.yml -e mode=undo $(ANSIBLE_ARGS)
 
 bootstrap:
 	OCP_CHANNEL=$(OCP_CHANNEL) OCP_VERSION=$(OCP_VERSION) ./scripts/bootstrap.sh

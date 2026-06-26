@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Validate the memory-optimization stack on this host (KSM + zram). Runs an
-# identical stress-ng workload on the cluster under each setting and compares
+# identical openssl-speed workload on the cluster under each setting and compares
 # memory use AND performance.
 #   baseline        no KSM, no squeeze, swap drained -> RAM only (must fit)
 #   ksm             KSM only
@@ -214,7 +214,7 @@ for label in "${ORDER[@]}"; do
   fi
   [[ "$k" == on ]]  && { log "[$label] KSM scanning to convergence"; ksm_converge; }
   [[ "$sq" == on ]] && { log "[$label] zram compressing to convergence"; zram_converge; }
-  log "[$label] running stress-ng on $PODS pod(s)"
+  log "[$label] running openssl speed on $PODS pod(s)"
   perf=$(run_bench)
   read -r used ksm zd zc ratio swu < <(mem_row)
   RES[$label]="$used|$ksm|$zd|$zc|$ratio|$swu|$perf"

@@ -149,7 +149,7 @@ NFS appliance export (`build/nfs-export/`). Size and speed both matter:
 ## Cost + lifecycle
 
 * **Memory optimization pays for itself here**: RAM is the cost driver, and KSM +
-  zram (`make optimize`) cut real usage ~25 % (see [memory](memory-optimization.md)),
+  zram (`make optimize`) cut real usage ~40 % (see [memory](memory-optimization.md)),
   letting a smaller/cheaper VM hold the cluster.
 * Use **spot / preemptible** instances for throwaway runs (the lab rebuilds from
   scratch with `make down` + `make install`).

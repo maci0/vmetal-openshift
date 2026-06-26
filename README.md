@@ -407,7 +407,10 @@ KEEP=1 scripts/e2e.sh
 
 ```
 Makefile                  check / bootstrap / configs / iso / sushy / host-dns / up / down / bmc / adopt / lint / e2e / pdf
-scripts/                  bootstrap, install, install-upi, lab, build-iso, mirror, check-prereqs, status, creds, workers-add/remove, approve-csrs, bench-*, test-dns, lint, e2e, export-pdf
+scripts/                  bootstrap, install, install-upi, lab, mirror, check-prereqs, status, creds, workers-add/remove, approve-csrs, test-dns, lint, e2e, export-pdf
+  build/                  build-iso, build-ignition, build-pxe
+  bench/                  bench-memory, bench-zram-demo
+tools/                    memfill.py, plot-bench.py, render_md_mermaid.py
 build/                    downloaded installer + built ISOs (git-ignored)
 certs/                    local TLS material for sushy (git-ignored)
 ansible/                  see ansible/README.md for the full map

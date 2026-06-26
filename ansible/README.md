@@ -50,8 +50,9 @@ parsed into the `topology` fact → consumed by every playbook and template. Add
 a cluster or changing `nic_layout` requires no other edits: subnets, bridges,
 MACs, VIPs, node roles, replica counts, domain UUIDs, and BMC URLs are all derived.
 
-Tasks use fully-qualified modules only (no `command`/`shell`): `community.libvirt.*`
-for libvirt (incl. `virt_volume`), `kubernetes.core.*` for cluster objects,
-`community.docker.*` for host-appliance containers, plus `community.general.*` /
-`ansible.builtin.*`. Provisioning playbooks pass `become: "{{ use_become |
+Tasks use fully-qualified modules: `community.libvirt.*` for libvirt (incl.
+`virt_volume`), `kubernetes.core.*` for cluster objects, `community.docker.*` for
+host-appliance containers, plus `community.general.*` / `ansible.builtin.*`. The
+only `command` is in `day2/optimize.yml` for `zramctl`/`mkswap`/`swapon`, which
+have no module (noted in a comment). Provisioning playbooks pass `become: "{{ use_become |
 default(true) }}"`, so run with sudo or, in the libvirt group, `-e use_become=false`.

@@ -24,7 +24,7 @@
 #   make metallb CLUSTER=c              install MetalLB (LoadBalancer services, L2 pool)
 #   make metallb-bgp CLUSTER=c          MetalLB BGP mode + FRR peer on the host (ECMP)
 #   make metallb-bgp-down CLUSTER=c     stop the FRR peer + remove BGP config
-#   make lvms CLUSTER=c                 LVM Storage operator -> RWO StorageClass (workers' vdc)
+#   make lvms CLUSTER=c                 LVM Storage operator -> RWO StorageClass (workers' spare disk)
 #   make virt CLUSTER=c                 OpenShift Virtualization (CNV) operator + HyperConverged
 #   make nfs CLUSTER=c                  host NFS-Ganesha appliance -> RWX StorageClass
 #   make nfs-down CLUSTER=c             stop the NFS appliance + provisioner

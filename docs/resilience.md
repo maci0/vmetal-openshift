@@ -7,6 +7,11 @@ load balancer, etcd quorum, and node loss. The KVM host stands in for the
 hardware, so a "pulled cable" is a libvirt link toggle and a "dead server" is a
 `virsh destroy`. All tests below are recoverable.
 
+> These drills assume a 3 control-plane + 2 worker `cluster0` (node0-node4). The
+> default `cluster0` is SNO + 2 day-2 workers (one master), so the etcd/master
+> drills do not apply and `node3`/`node4` do not exist. Switch to the
+> `control_plane: 3, workers: 2` variant (commented in `group_vars/all.yml`) first.
+
 Set once:
 
 ```bash

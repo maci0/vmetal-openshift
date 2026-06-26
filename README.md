@@ -132,8 +132,11 @@ Host packages (the rest is installed into a venv by `make bootstrap`):
 * optional: `pandoc` / `mmdc` / `chromium` (docs PDF); `oc` or `kubectl` (`make adopt`)
 
 Installed by `make bootstrap` (into `.venv` / `build/`): `sushy-tools`,
-`ansible-core` + `community.libvirt` + `community.general`, `ansible-lint`,
-`yamllint`, `libvirt-python`, `lxml`, and a pinned `openshift-install`.
+`ansible-core` + the `community.libvirt` / `community.general` / `kubernetes.core`
+/ `community.docker` collections, the `libvirt-python` / `kubernetes` / `docker`
+python libs, `lxml`, and a pinned `openshift-install` (+ `oc`, `coreos-installer`).
+Dev/CI tools (`ansible-lint`, `yamllint`, `matplotlib`) are installed only with
+`DEV=1 make bootstrap`.
 
 Example (Fedora/RHEL):
 ```bash
@@ -175,9 +178,10 @@ BMC_ACTION=boot-iso` -> wait; `make install` just chains those.
 
 ## 🧭 How it fits together
 
-1. **bootstrap** installs `sushy-tools`, `ansible-core`, the `community.libvirt`
-   and `community.general` collections, a self-contained `openshift-install` in
-   `build/openshift-install/`, and a TLS cert in `certs/`. Nothing touches system paths.
+1. **bootstrap** installs `sushy-tools`, `ansible-core`, the `community.libvirt` /
+   `community.general` / `kubernetes.core` / `community.docker` collections, a
+   self-contained `openshift-install` in `build/openshift-install/`, and a TLS cert
+   in `certs/`. Nothing touches system paths.
 2. **topology** is derived from `ansible/group_vars/all.yml`. You normally edit
    only the `clusters` list:
    ```yaml
@@ -416,7 +420,7 @@ ansible/                  see ansible/README.md for the full map
   templates/               topology.yml.j2 + libvirt/ + install/ + sushy/
   tasks/                  detect_ovmf, validate
 tests/render_check.py     offline template + XML validation
-docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, examples, troubleshooting
+docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, examples, memory-optimization, virtualization, resilience, cloud, troubleshooting
 ```
 
 ## 📋 TODO

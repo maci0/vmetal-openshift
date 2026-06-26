@@ -57,8 +57,11 @@ LSO on the storage network). Thin-provisioned, but plan real headroom in
 * `nmstate` (provides `nmstatectl`), required to build an agent ISO with static /
   bonded networking; not pip-installable, use the distro/AUR package
 * Python 3 + `uv`/`pip`; `curl`, `jq`, `tar`, `openssl`
-* `ansible-core` + `community.libvirt` + `community.general`, and the
-  `libvirt-python` + `lxml` bindings (all installed into the venv by bootstrap)
+* `ansible-core` + the `community.libvirt` / `community.general` / `kubernetes.core`
+  / `community.docker` collections, with the `libvirt-python` / `kubernetes` /
+  `docker` / `lxml` python libs (all installed into the venv by bootstrap)
+* `docker` or `podman` for the host appliances (HAProxy, NFS-Ganesha, FRR, mirror);
+  podman needs its socket (`systemctl --user enable --now podman.socket`)
 * `openshift-install` (self-contained, fetched by bootstrap)
 * Optional, docs only: `pandoc`, `mmdc`, `chromium`
 

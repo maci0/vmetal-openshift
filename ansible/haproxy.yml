@@ -5,7 +5,7 @@
 # ingress (80/443). Config: clusters/<cluster>/haproxy.cfg (from generate-configs).
 #
 #   ansible-playbook haproxy.yml -e cluster=cluster0            # up
-#   ansible-playbook haproxy.yml -e cluster=cluster0 -e action=down
+#   ansible-playbook haproxy.yml -e cluster=cluster0 -e appliance_action=down
 #
 - name: Host HAProxy appliance
   hosts: local

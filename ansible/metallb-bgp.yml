@@ -46,6 +46,7 @@
             path: "{{ item }}"
           loop:
             - "{{ dir }}/frr.conf"
+            - "{{ dir }}/frr-daemons"
             - "{{ dir }}/metallb-bgp.yaml"
           register: bgp_files
         - name: Fail if missing
@@ -87,6 +88,7 @@
           register: speaker
           until: >-
             speaker.resources | length > 0 and
+            (speaker.resources[0].status.desiredNumberScheduled | default(0) | int) > 0 and
             (speaker.resources[0].status.numberReady | default(0)) ==
             (speaker.resources[0].status.desiredNumberScheduled | default(-1))
           retries: 30

@@ -132,7 +132,7 @@ fi
 echo "== container runtime (optional) =="
 if have podman; then pass "podman ($(podman --version 2>/dev/null))"
 elif have docker; then pass "docker ($(docker --version 2>/dev/null))"
-else warn "no podman/docker (only needed for the host appliances: make metallb-bgp, make nfs)"; fi
+else warn "no podman/docker (only needed for host appliances: make haproxy, make nfs, make metallb-bgp, make mirror)"; fi
 
 echo "== docs tooling (optional) =="
 for t in pandoc mmdc chromium; do

@@ -6,7 +6,8 @@ Everything is driven by one derived topology; you normally edit only the
 ```
 ansible.cfg            local config (inventory, interpreter, no retry files)
 inventory.ini          implicit localhost
-requirements.yml       collections: community.libvirt, community.general
+requirements.yml       collections: community.libvirt, community.general,
+                       kubernetes.core, community.docker
 group_vars/all.yml     addressing scheme, networks, nic_layout, clusters  <-- edit this
 
 playbooks (run from this dir, e.g. ansible-playbook setup.yml):
@@ -18,10 +19,15 @@ playbooks (run from this dir, e.g. ansible-playbook setup.yml):
   workers.yml          provision / remove day-2 worker VMs (worker_action=add|remove)
   host-dns.yml         point the host resolver at each cluster domain
   dump-topology.yml    render the derived topology to JSON (test oracle)
+  operators.yml        day-2 operator install (op=lvms|virt|metallb, kubernetes.core)
+  haproxy.yml          host HAProxy appliance for multi-node UPI (community.docker)
+  nfs.yml              NFS-Ganesha host appliance + RWX provisioner
+  metallb-bgp.yml      MetalLB BGP: host FRR peer + BGP config
 
 tasks/
   validate.yml         assert control_plane (1 or 3) and workers are valid
   detect_ovmf.yml      locate OVMF firmware across distros
+  container_runtime.yml resolve the docker/podman API socket (host appliances)
 
 templates/
   topology.yml.j2      the heart: derives the whole topology from group_vars
@@ -38,6 +44,8 @@ parsed into the `topology` fact → consumed by every playbook and template. Add
 a cluster or changing `nic_layout` requires no other edits: subnets, bridges,
 MACs, VIPs, node roles, replica counts, domain UUIDs, and BMC URLs are all derived.
 
-Most tasks use the fully-qualified `community.libvirt.*` / `community.general.*` /
-`ansible.builtin.*` modules and pass `become: "{{ use_become | default(true) }}"`,
-so you can run with sudo or, in the libvirt group, `-e use_become=false`.
+Tasks use fully-qualified modules only (no `command`/`shell`): `community.libvirt.*`
+for libvirt (incl. `virt_volume`), `kubernetes.core.*` for cluster objects,
+`community.docker.*` for host-appliance containers, plus `community.general.*` /
+`ansible.builtin.*`. Provisioning playbooks pass `become: "{{ use_become |
+default(true) }}"`, so run with sudo or, in the libvirt group, `-e use_become=false`.

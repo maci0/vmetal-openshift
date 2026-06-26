@@ -97,9 +97,9 @@ Reboot the VMs (`make down` / `make up`) so the hook squeezes them.
 
 ## Benchmark
 
-`make bench` (`scripts/bench-memory.sh`) runs an identical CPU workload
+`make bench` (`scripts/bench/bench-memory.sh`) runs an identical CPU workload
 (`openssl speed` from a UBI image) on the cluster under each setting and records
-the VMs' memory + guest throughput; `scripts/plot-bench.py` renders the chart.
+the VMs' memory + guest throughput; `tools/plot-bench.py` renders the chart.
 
 To make the comparison honest the harness:
 
@@ -155,8 +155,8 @@ The cluster bench above is KSM's best case: every node runs the same RHCOS image
 so the pages are byte-identical and dedup collapses them. The opposite case is
 memory that is *similar in shape but not identical* (logs, sparse heaps,
 partially-zeroed buffers): dedup finds no matching pages, but the content still
-compresses. `make bench-zram` (`scripts/bench-zram-demo.sh`) shows this directly,
-host-side and with no cluster. `scripts/memfill.py` allocates pages that are unique
+compresses. `make bench-zram` (`scripts/bench/bench-zram-demo.sh`) shows this directly,
+host-side and with no cluster. `tools/memfill.py` allocates pages that are unique
 (a per-page header, so KSM cannot merge them) but low-entropy (so zram compresses
 them), marks them `MADV_MERGEABLE` so KSM does try, then a cgroup `memory.high`
 squeeze pushes the cold pages into zram.

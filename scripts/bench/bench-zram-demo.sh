@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Demonstrate where zram beats KSM: a compressible-but-unique memory workload.
 #
-# The main bench (scripts/bench-memory.sh) runs identical RHCOS nodes, KSM's best
-# case (it dedups the identical pages). This is the opposite: scripts/memfill.py
+# The main bench (scripts/bench/bench-memory.sh) runs identical RHCOS nodes, KSM's best
+# case (it dedups the identical pages). This is the opposite: tools/memfill.py
 # allocates pages that are unique (so KSM can merge nothing) but low-entropy (so
 # zram compresses them). We run it under a cgroup memory.high squeeze and compare:
 #
@@ -11,12 +11,12 @@
 #
 # Host-level, no cluster needed. Uses sudo for KSM/cgroup knobs (restored on exit).
 #
-#   scripts/bench-zram-demo.sh
+#   scripts/bench/bench-zram-demo.sh
 # Env: DEMO_MIB (8192), HIGH_PCT (30 = squeeze cgroup to 30% of the alloc),
 #      SETTLE (15), KSM_WAIT (60).
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 MIB="${DEMO_MIB:-8192}"
 HIGH_PCT="${HIGH_PCT:-30}"
@@ -51,7 +51,7 @@ w /proc/sys/vm/swappiness 100
 log "launching memfill: ${MIB} MiB in a transient scope"
 sudo systemd-run --scope --unit "$SCOPE" --quiet \
   -p MemoryHigh=infinity -p MemorySwapMax=infinity -p MemoryMax=infinity \
-  "$PY" "$ROOT/scripts/memfill.py" --mib "$MIB" --seconds 0 &
+  "$PY" "$ROOT/tools/memfill.py" --mib "$MIB" --seconds 0 &
 CG=""
 for _ in $(seq 1 30); do
   CG="$(systemctl show "$SCOPE" -p ControlGroup --value 2>/dev/null || true)"

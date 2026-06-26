@@ -3,7 +3,7 @@
 
     plot-bench.py [results.csv] [out.png]
 
-Reads build/bench-results.csv (from scripts/bench-memory.sh) and writes
+Reads build/bench-results.csv (from scripts/bench/bench-memory.sh) and writes
 docs/bench.png: host RAM used + KSM saved + zram compressed per setting, plus
 guest throughput. Colours and a dark-neutral background read on light or dark.
 """

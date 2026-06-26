@@ -76,7 +76,7 @@ configs:
 	cd ansible && $(AP) lifecycle/generate-configs.yml
 
 iso:
-	./scripts/build-iso.sh $(CLUSTER)
+	./scripts/build/build-iso.sh $(CLUSTER)
 
 sushy:
 	cd ansible && $(AP) lifecycle/sushy.yml
@@ -91,7 +91,7 @@ install:
 	./scripts/install.sh $(CLUSTER)
 
 ignition:
-	./scripts/build-ignition.sh $(CLUSTER)
+	./scripts/build/build-ignition.sh $(CLUSTER)
 
 install-upi:
 	./scripts/install-upi.sh $(CLUSTER)
@@ -171,10 +171,10 @@ e2e:
 	./scripts/e2e.sh
 
 bench:
-	./scripts/bench-memory.sh $(CLUSTER)
+	./scripts/bench/bench-memory.sh $(CLUSTER)
 
 bench-zram:
-	./scripts/bench-zram-demo.sh
+	./scripts/bench/bench-zram-demo.sh
 
 pdf:
 	./scripts/export-pdf.sh

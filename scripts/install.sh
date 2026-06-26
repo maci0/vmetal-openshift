@@ -22,7 +22,7 @@ if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_becom
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
 log "Building discovery ISO"
-./scripts/build-iso.sh "$CLUSTER"      # dies for IPI clusters with guidance
+./scripts/build/build-iso.sh "$CLUSTER"      # dies for IPI clusters with guidance
 
 log "Provisioning libvirt (networks, volumes, VMs)"
 ap lifecycle/setup.yml "${BECOME[@]}"

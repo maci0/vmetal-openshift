@@ -356,7 +356,7 @@ disk swap wants pure-RAM compression; zswap only helps with a disk-swap backstop
 ### Validation (3 masters + 2 workers)
 
 `make bench` runs a CPU workload (`openssl speed`) on the cluster under each
-setting and records the VMs' memory + guest throughput; `scripts/plot-bench.py`
+setting and records the VMs' memory + guest throughput; `tools/plot-bench.py`
 renders the chart. Memory is the VMs' actual resident set, summed from each qemu
 scope's cgroup `memory.current` (not host `free`, which is polluted by page cache
 and tmpfs). For an honest baseline it forces `vm.swappiness=0` and `swapoff`s zram

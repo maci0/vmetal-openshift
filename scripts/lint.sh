@@ -50,7 +50,7 @@ echo "== shellcheck =="
 if command -v shellcheck >/dev/null 2>&1; then
   # -S warning: skip info/style notes (e.g. SC2015 on intentional `... || true`),
   # which older shellcheck versions emit and would fail CI. Real bugs are >= warning.
-  shellcheck -S warning scripts/*.sh
+  shellcheck -S warning scripts/*.sh scripts/*/*.sh
   pass "shell clean"
 else
   skip "shellcheck not installed"

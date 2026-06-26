@@ -21,7 +21,7 @@ CHROME="$(command -v chromium || command -v chromium-browser || command -v googl
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # 1. Render mermaid blocks to PNG and rewrite them as image links.
-MMDC="$MMDC" python3 "$ROOT/scripts/render_md_mermaid.py" "$SRC" "$WORK"
+MMDC="$MMDC" python3 "$ROOT/tools/render_md_mermaid.py" "$SRC" "$WORK"
 
 # 2. Markdown -> standalone HTML (images inlined).
 cat >"$WORK/style.css" <<'CSS'

@@ -39,9 +39,9 @@ MULTINODE=false; [[ "${#BOOT_VMS[@]}" -gt 0 ]] && MULTINODE=true
 $MULTINODE && ! is_pxe && die "multi-node upi requires boot_via: pxe"
 
 if is_pxe; then
-  log "Preparing PXE artifacts"; ./scripts/build-pxe.sh "$CLUSTER"
+  log "Preparing PXE artifacts"; ./scripts/build/build-pxe.sh "$CLUSTER"
 else
-  log "Building single-node UPI ignition ISO"; ./scripts/build-ignition.sh "$CLUSTER"
+  log "Building single-node UPI ignition ISO"; ./scripts/build/build-ignition.sh "$CLUSTER"
 fi
 
 log "Provisioning libvirt (networks, volumes, VMs)"

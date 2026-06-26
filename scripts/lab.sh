@@ -30,7 +30,7 @@ read -r MODE FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.mo
 [[ "$MODE" == "agent" ]] || die "lab is for agent clusters (got mode '$MODE'); ipi/upi have their own install (see docs/ipi-vs-agent.md)"
 
 log "Building the agent discovery ISO"
-./scripts/build-iso.sh "$CLUSTER"
+./scripts/build/build-iso.sh "$CLUSTER"
 
 log "Provisioning libvirt (VMs boot the ISO directly, no host services needed)"
 ap lifecycle/setup.yml -e boot_via=iso "${BECOME[@]}"

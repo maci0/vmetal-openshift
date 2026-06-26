@@ -11,7 +11,7 @@
 #   ./build-ignition.sh sno-upi    # a named upi cluster from group_vars/all.yml
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 CLUSTER="${1:-${CLUSTER:-cluster0}}"

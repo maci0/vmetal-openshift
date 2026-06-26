@@ -10,12 +10,12 @@
 # zram is the host's compressed-RAM swap (/dev/zram0). The algo sweep resets the
 # device per algorithm, so the cluster must fit in RAM at baseline (shrink it).
 #
-#   scripts/bench-memory.sh [cluster]
+#   scripts/bench/bench-memory.sh [cluster]
 # Env: BENCH_PODS (=node count), BENCH_SECS (60),
 #      KSM_SETTLE (90), SQUEEZE_PCT (55), BENCH_ALGOS ("zstd lz4 lzo"), STRESS_IMG.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLUSTER="${1:-${CLUSTER:-cluster0}}"
 SECS="${BENCH_SECS:-60}"; KSM_SETTLE="${KSM_SETTLE:-90}"
 SQUEEZE_PCT="${SQUEEZE_PCT:-55}"
@@ -234,4 +234,4 @@ for label in "${ORDER[@]}"; do
 done
 
 write_csv
-log "wrote $OUT  (plot: $ROOT/.venv/bin/python scripts/plot-bench.py)"
+log "wrote $OUT  (plot: $ROOT/.venv/bin/python tools/plot-bench.py)"

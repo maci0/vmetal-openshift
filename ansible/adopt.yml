@@ -1,0 +1,142 @@
+---
+# Day-2: enable in-cluster BareMetalHost power management on a baremetal cluster.
+# Deploys the metal3 Provisioning CR, waits for metal3 + its admission webhook,
+# then enables the BMC on each node:
+#   * existing unmanaged BMHs (from an agent baremetal install) are patched with
+#     BMC creds -> externally provisioned, enabling power control WITHOUT
+#     reprovisioning (the default, safe path);
+#   * with adopt_hosts=1 and no existing BMHs, fresh BareMetalHosts are enrolled
+#     (only for genuinely new hardware; applying a BMH to a running node wipes it).
+# Only for platform: baremetal (control_plane 3). SNO is platform: none (no
+# metal3); IPI creates BMHs during install.
+#
+#   ansible-playbook adopt.yml -e cluster=cluster0
+#   ansible-playbook adopt.yml -e cluster=cluster0 -e adopt_hosts=1
+#
+- name: Adopt BareMetalHosts (metal3 power management)
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    cluster: cluster0
+    adopt_hosts: ""
+    ns: openshift-machine-api
+    cdir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+
+  tasks:
+    - name: Require kubeconfig + provisioning manifest
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ kubeconfig }}"
+        - "{{ cdir }}/provisioning.yaml"
+        - "{{ cdir }}/baremetalhosts.yaml"
+      register: req
+    - name: Fail if missing
+      ansible.builtin.fail:
+        msg: >-
+          missing kubeconfig / provisioning.yaml / baremetalhosts.yaml for
+          '{{ cluster }}'. Adopt is for agent baremetal clusters (control_plane 3);
+          SNO is platform: none (no metal3), IPI creates BMHs during install.
+      when: req.results | rejectattr('stat.exists') | list | length > 0
+
+    - name: Check the cluster platform is BareMetal
+      kubernetes.core.k8s_info:
+        api_version: config.openshift.io/v1
+        kind: Infrastructure
+        name: cluster
+        kubeconfig: "{{ kubeconfig }}"
+      register: infra
+    - name: Fail unless BareMetal
+      ansible.builtin.fail:
+        msg: "cluster platform is '{{ infra.resources[0].status.platform | default('?') }}', not BareMetal: metal3 will not deploy."
+      when: (infra.resources[0].status.platform | default('')) != 'BareMetal'
+
+    - name: Apply the metal3 Provisioning CR (deploys metal3/ironic)
+      kubernetes.core.k8s:
+        src: "{{ cdir }}/provisioning.yaml"
+        state: present
+        kubeconfig: "{{ kubeconfig }}"
+
+    - name: Wait for metal3 to roll out
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ ns }}"
+        name: metal3
+        kubeconfig: "{{ kubeconfig }}"
+        wait: true
+        wait_condition: { type: Available, status: "True" }
+        wait_timeout: 300
+
+    - name: Wait for the baremetal-operator admission webhook endpoints
+      kubernetes.core.k8s_info:
+        kind: Endpoints
+        namespace: "{{ ns }}"
+        name: baremetal-operator-webhook-service
+        kubeconfig: "{{ kubeconfig }}"
+      register: webhook_ep
+      until: webhook_ep.resources | length > 0 and (webhook_ep.resources[0].subsets | default([]) | length) > 0
+      retries: 40
+      delay: 6
+
+    - name: List existing BareMetalHosts
+      kubernetes.core.k8s_info:
+        kind: BareMetalHost
+        namespace: "{{ ns }}"
+        kubeconfig: "{{ kubeconfig }}"
+      register: bmh
+
+    - name: Parse the rendered BMH manifest
+      ansible.builtin.set_fact:
+        bmh_docs: "{{ lookup('file', cdir ~ '/baremetalhosts.yaml') | from_yaml_all | select | list }}"
+
+    - name: Enable BMC on existing BMHs (no reprovision)
+      when: bmh.resources | length > 0
+      block:
+        - name: Apply the BMC credential secrets
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig }}"
+            definition: "{{ item }}"
+          loop: "{{ bmh_docs | selectattr('kind', 'eq', 'Secret') | list }}"
+          loop_control:
+            label: "{{ item.metadata.name }}"
+
+        # merge-patch only spec.bmc onto the running BMH (== `oc patch --type merge`).
+        - name: Patch each BMH with its BMC address + creds
+          kubernetes.core.k8s:
+            state: patched
+            kubeconfig: "{{ kubeconfig }}"
+            definition:
+              apiVersion: metal3.io/v1alpha1
+              kind: BareMetalHost
+              metadata:
+                name: "{{ item.metadata.name }}"
+                namespace: "{{ ns }}"
+              spec:
+                bmc:
+                  address: "{{ item.spec.bmc.address }}"
+                  credentialsName: "{{ item.spec.bmc.credentialsName }}"
+                  disableCertificateVerification: true
+          loop: "{{ bmh_docs | selectattr('kind', 'eq', 'BareMetalHost') | list }}"
+          loop_control:
+            label: "{{ item.metadata.name }}"
+
+    - name: Enroll fresh BareMetalHosts (new hardware only)
+      kubernetes.core.k8s:
+        src: "{{ cdir }}/baremetalhosts.yaml"
+        state: present
+        kubeconfig: "{{ kubeconfig }}"
+      when:
+        - bmh.resources | length == 0
+        - (adopt_hosts | string) in ['1', 'true', 'True', 'yes']
+
+    - name: Nothing enrolled
+      ansible.builtin.debug:
+        msg: >-
+          No existing BMHs. NOT enrolling (applying a BMH to a running node
+          reprovisions it). Re-run with adopt_hosts=1 for fresh hardware.
+      when:
+        - bmh.resources | length == 0
+        - (adopt_hosts | string) not in ['1', 'true', 'True', 'yes']

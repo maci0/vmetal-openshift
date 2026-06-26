@@ -135,7 +135,7 @@ bmc:
 	  -e node=$(NODE) -e bootdev=$(BOOTDEV) -e iso_base_url=$(ISO_BASE_URL)
 
 adopt:
-	ADOPT_HOSTS=$(ADOPT_HOSTS) $(PY) scripts/adopt.py $(CLUSTER)
+	cd ansible && $(AP) adopt.yml -e cluster=$(CLUSTER) -e adopt_hosts=$(ADOPT_HOSTS)
 
 workers-add:
 	./scripts/workers-add.sh $(CLUSTER)

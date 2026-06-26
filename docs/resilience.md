@@ -1,6 +1,6 @@
 # Resilience testing
 
-<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · **Resilience** · [Cloud](cloud.md) · [Troubleshooting](troubleshooting.md)</sub>
+<sub>[Home](../README.md) · [Architecture](architecture.md) · [Requirements](requirements.md) · [IPI vs agent](ipi-vs-agent.md) · [Fidelity](fidelity.md) · [Disconnected](disconnected.md) · [Variables](variables.md) · [Examples](examples.md) · [Memory](memory-optimization.md) · [Virtualization](virtualization.md) · **Resilience** · [Cloud](cloud.md) · [Troubleshooting](troubleshooting.md)</sub>
 
 Failure tests that exercise the baremetal-fidelity bits: bonded NICs, the VIP
 load balancer, etcd quorum, and node loss. The KVM host stands in for the

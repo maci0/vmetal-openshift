@@ -263,7 +263,7 @@ the MetalLB speaker on every node** and learns the LoadBalancer routes live.
 
 ```bash
 make metallb-bgp CLUSTER=cluster0          # FRR router + BGP advertisement (ECMP)
-make metallb-bgp CLUSTER=cluster0 down     # tear it down
+make metallb-bgp-down CLUSTER=cluster0     # tear it down
 ```
 
 ASNs and pools live in `ansible/group_vars/all.yml` (`metallb_bgp_*`). Plain L2

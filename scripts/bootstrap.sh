@@ -103,6 +103,24 @@ if [[ ! -s pull-secret.json ]]; then
   warn "pull-secret.json missing, download from https://console.redhat.com/openshift/install/pull-secret"
 fi
 
+# --- 6. modular libvirt sockets (offer to enable; make up fails without them) ---
+if systemctl cat virtqemud.socket >/dev/null 2>&1; then
+  off=""
+  for d in virtqemud virtnetworkd virtstoraged; do
+    systemctl is-active --quiet "$d.socket" 2>/dev/null || off="$off $d.socket"
+  done
+  if [[ -n "$off" ]]; then
+    log "Modular libvirt sockets inactive:$off ('make up' needs them)"
+    if [[ -t 0 ]]; then
+      read -r -p "  Enable now? sudo systemctl enable --now$off [Y/n] " ans
+      # shellcheck disable=SC2086
+      [[ "$ans" == [nN]* ]] || { sudo systemctl enable --now $off && log "enabled:$off"; }
+    else
+      log "non-interactive; enable manually: sudo systemctl enable --now$off"
+    fi
+  fi
+fi
+
 log "Bootstrap complete."
 echo
 echo "Next:"

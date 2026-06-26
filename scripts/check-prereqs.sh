@@ -77,8 +77,9 @@ if systemctl cat virtqemud.socket >/dev/null 2>&1; then
     systemctl is-active --quiet "$d.socket" 2>/dev/null || systemctl is-active --quiet "$d.service" 2>/dev/null || off="$off $d"
   done
   if [[ -n "$off" ]]; then
-    warn "modular libvirt socket(s) inactive:$off ('make up' fails on the matching resource, e.g. virtstoraged -> volumes).
-       Enable: sudo systemctl enable --now virtqemud.socket virtnetworkd.socket virtstoraged.socket"
+    bad "modular libvirt socket(s) inactive:$off ('make up' fails on the matching resource, e.g. virtstoraged -> volumes).
+       Enable persistently: sudo systemctl enable --now virtqemud.socket virtnetworkd.socket virtstoraged.socket
+       (or run 'make bootstrap', which offers to enable them)"
   else
     pass "modular libvirt daemons active (qemu / network / storage)"
   fi

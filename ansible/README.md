@@ -10,21 +10,24 @@ requirements.yml       collections: community.libvirt, community.general,
                        kubernetes.core, community.docker
 group_vars/all.yml     addressing scheme, networks, nic_layout, clusters  <-- edit this
 
-playbooks (run from this dir, e.g. ansible-playbook setup.yml):
-  setup.yml            create libvirt networks, volumes, VMs
-  cleanup.yml          tear them down (scoped to the derived topology)
-  generate-configs.yml render install-config / agent-config / BMH / Scheduler / Provisioning
-  sushy.yml            render sushy Redfish config + systemd unit + BMC URL list
-  bmc.yml              Redfish power / boot-device / virtual-media control
-  workers.yml          provision / remove day-2 worker VMs (worker_action=add|remove)
-  host-dns.yml         point the host resolver at each cluster domain
-  dump-topology.yml    render the derived topology to JSON (test oracle)
-  operators.yml        day-2 operator install (op=lvms|virt|metallb, kubernetes.core)
-  haproxy.yml          host HAProxy appliance for multi-node UPI (community.docker)
-  nfs.yml              NFS-Ganesha host appliance + RWX provisioner
-  metallb-bgp.yml      MetalLB BGP: host FRR peer + BGP config
-  adopt.yml            in-cluster BMH adoption (metal3 power mgmt, kubernetes.core)
-  optimize.yml         host memory tuning: KSM + zram + hook (mode=apply|undo, become)
+playbooks, grouped (run from this dir, e.g. ansible-playbook lifecycle/setup.yml):
+  lifecycle/           core provision/teardown + render:
+    setup.yml            create libvirt networks, volumes, VMs
+    cleanup.yml          tear them down (scoped to the derived topology)
+    generate-configs.yml render install-config / agent-config / BMH / Scheduler / Provisioning
+    sushy.yml            render sushy Redfish config + systemd unit + BMC URL list
+    bmc.yml              Redfish power / boot-device / virtual-media control
+    workers.yml          provision / remove day-2 worker VMs (worker_action=add|remove)
+    host-dns.yml         point the host resolver at each cluster domain
+    dump-topology.yml    render the derived topology to JSON (test oracle)
+  day2/                post-install cluster + host changes:
+    operators.yml        day-2 operator install (op=lvms|virt|metallb, kubernetes.core)
+    adopt.yml            in-cluster BMH adoption (metal3 power mgmt, kubernetes.core)
+    optimize.yml         host memory tuning: KSM + zram + hook (mode=apply|undo, become)
+  appliances/          host-side containers (community.docker):
+    haproxy.yml          host HAProxy for multi-node UPI
+    nfs.yml              NFS-Ganesha appliance + RWX provisioner
+    metallb-bgp.yml      MetalLB BGP: host FRR peer + BGP config
 
 tasks/
   validate.yml         assert control_plane (1 or 3) and workers are valid

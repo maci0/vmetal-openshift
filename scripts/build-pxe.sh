@@ -33,7 +33,7 @@ DOCKER="$(command -v docker || command -v podman || true)"
 mkdir -p "$BUILD/tftp"
 
 # Topology facts: gateway + each node's mac/role (for the per-MAC iPXE script).
-topo="$(mktemp)"; ( cd ansible && "$AP" dump-topology.yml -e out="$topo" ) >/dev/null 2>&1
+topo="$(mktemp)"; ( cd ansible && "$AP" lifecycle/dump-topology.yml -e out="$topo" ) >/dev/null 2>&1
 gw="$(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .machine_gateway' "$topo")"
 [[ -n "$gw" ]] || die "could not resolve machine_gateway for '$CLUSTER'"
 nodes_json="$(jq -c --arg c "$CLUSTER" '[.[] | select(.name==$c) | .nodes[] | {mac, role}]' "$topo")"
@@ -56,7 +56,7 @@ if [[ -d "$CLUSTER_DIR" ]]; then
 fi
 rm -f "$BUILD/${CLUSTER}.ign" "$BUILD/bootstrap.ign" "$BUILD/master.ign" "$BUILD/worker.ign"
 log "Rendering install config"
-( cd ansible && "$AP" generate-configs.yml )
+( cd ansible && "$AP" lifecycle/generate-configs.yml )
 [[ -f "$CLUSTER_DIR/install-config.yaml" ]] || die "no install-config for '$CLUSTER'"
 if $multinode; then
   log "Creating cluster ignition configs (bootstrap/master/worker)"

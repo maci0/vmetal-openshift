@@ -22,7 +22,7 @@ export KUBECONFIG="$kubeconfig"
 if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_become=false); else BECOME=(); fi
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
-topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
+topo="$(mktemp)"; ap lifecycle/dump-topology.yml -e out="$topo" >/dev/null 2>&1
 mapfile -t WORKERS < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .day2_workers[].fullname' "$topo")
 rm -f "$topo"
 [[ "${#WORKERS[@]}" -gt 0 ]] || die "cluster '$CLUSTER' has no day2_workers"
@@ -38,5 +38,5 @@ for w in "${WORKERS[@]}"; do
 done
 
 log "Destroying worker VMs"
-ap workers.yml -e cluster_name="$CLUSTER" -e worker_action=remove "${BECOME[@]}"
+ap lifecycle/workers.yml -e cluster_name="$CLUSTER" -e worker_action=remove "${BECOME[@]}"
 log "done"

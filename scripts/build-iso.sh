@@ -41,7 +41,7 @@ if [[ -d "$CLUSTER_DIR" ]]; then
 fi
 
 log "Rendering install + agent configs"
-( cd ansible && "$AP" generate-configs.yml )
+( cd ansible && "$AP" lifecycle/generate-configs.yml )
 
 [[ -f "$CLUSTER_DIR/install-config.yaml" ]] \
   || die "no config for '$CLUSTER': add it to the clusters list in ansible/group_vars/all.yml"
@@ -62,4 +62,4 @@ iso="$(find "$CLUSTER_DIR" -maxdepth 1 -name 'agent.*.iso' -printf '%T@ %p\n' 2>
 dest="$ROOT/build/discovery_image_${CLUSTER}.iso"
 mv -f "$iso" "$dest"
 log "Wrote $dest"
-echo "Next: cd ansible && ansible-playbook setup.yml   # VMs boot this ISO"
+echo "Next: cd ansible && ansible-playbook lifecycle/setup.yml   # VMs boot this ISO"

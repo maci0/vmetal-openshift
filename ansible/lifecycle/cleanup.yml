@@ -13,7 +13,7 @@
   tasks:
     - name: Build topology from addressing scheme
       ansible.builtin.set_fact:
-        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+        topology: "{{ lookup('template', '../templates/topology.yml.j2') | from_yaml }}"
 
     # Install nodes AND day-2 workers, so `make down` removes everything.
     - name: Collect all domains (nodes + day-2 workers)

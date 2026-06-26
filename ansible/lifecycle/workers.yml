@@ -21,7 +21,7 @@
   tasks:
     - name: Build topology from addressing scheme
       ansible.builtin.set_fact:
-        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+        topology: "{{ lookup('template', '../templates/topology.yml.j2') | from_yaml }}"
 
     - name: Select target cluster
       ansible.builtin.set_fact:
@@ -37,12 +37,12 @@
       when: worker_action == 'add'
       block:
         - name: Detect OVMF firmware paths
-          ansible.builtin.import_tasks: tasks/detect_ovmf.yml
+          ansible.builtin.import_tasks: ../tasks/detect_ovmf.yml
 
         - name: Render nodes-config.yaml for the agent node-image
           ansible.builtin.copy:
-            content: "{{ lookup('template', 'templates/install/nodes-config.yaml.j2') }}"
-            dest: "{{ playbook_dir }}/../build/nodes-config-{{ cluster_name }}.yaml"
+            content: "{{ lookup('template', '../templates/install/nodes-config.yaml.j2') }}"
+            dest: "{{ playbook_dir }}/../../build/nodes-config-{{ cluster_name }}.yaml"
             mode: "0644"
           vars:
             cluster: "{{ tgt }}"
@@ -64,7 +64,7 @@
         - name: Define worker domains
           community.libvirt.virt:
             command: define
-            xml: "{{ lookup('template', 'templates/libvirt/domain.xml.j2') }}"
+            xml: "{{ lookup('template', '../templates/libvirt/domain.xml.j2') }}"
             uri: "{{ libvirt_uri }}"
           loop: "{{ tgt.day2_workers }}"
           loop_control:

@@ -197,12 +197,12 @@ sequenceDiagram
   U->>B: scripts/bootstrap.sh
   Note over B: venv + ansible-core + collection<br/>self-contained installer + TLS cert
 
-  U->>A: ansible-playbook generate-configs.yml
+  U->>A: ansible-playbook lifecycle/generate-configs.yml
   A-->>U: clusters/<c>/{install,agent}-config.yaml<br/>(VIPs · roles · bond nmstate)
   U->>OI: agent create image
   OI-->>U: build/discovery_image_<cluster>.iso
 
-  U->>A: ansible-playbook setup.yml
+  U->>A: ansible-playbook lifecycle/setup.yml
   Note over A: derive topology →<br/>networks · volumes · VMs w/ bonded NICs
 
   alt boot_via = redfish (default) / IPI

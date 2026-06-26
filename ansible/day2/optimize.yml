@@ -17,7 +17,7 @@
     mode: apply
     zram_comp: zstd
     ksm: /sys/kernel/mm/ksm
-    hook_src: "{{ playbook_dir }}/../hooks/qemu"
+    hook_src: "{{ playbook_dir }}/../../hooks/qemu"
 
   tasks:
     - name: Validate mode

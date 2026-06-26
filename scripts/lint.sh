@@ -26,8 +26,8 @@ skip() { printf '\033[1;33mSKIP\033[0m %s\n' "$*"; }
 
 echo "== ansible syntax-check =="
 ( cd ansible && "$AP" --syntax-check \
-    setup.yml cleanup.yml dump-topology.yml generate-configs.yml \
-    bmc.yml sushy.yml host-dns.yml workers.yml operators.yml haproxy.yml nfs.yml metallb-bgp.yml adopt.yml optimize.yml >/dev/null )
+    lifecycle/setup.yml lifecycle/cleanup.yml lifecycle/dump-topology.yml lifecycle/generate-configs.yml \
+    lifecycle/bmc.yml lifecycle/sushy.yml lifecycle/host-dns.yml lifecycle/workers.yml day2/operators.yml appliances/haproxy.yml appliances/nfs.yml appliances/metallb-bgp.yml day2/adopt.yml day2/optimize.yml >/dev/null )
 pass "playbooks parse"
 
 echo "== yamllint =="
@@ -65,14 +65,14 @@ fi
 
 echo "== render install/agent configs =="
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT   # clean up even on early (set -e) exit
-( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" >/dev/null )
-( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
+( cd ansible && "$AP" lifecycle/generate-configs.yml -e out_dir="$TMP" >/dev/null )
+( cd ansible && "$AP" lifecycle/generate-configs.yml -e out_dir="$TMP" \
     -e '{"clusters":[{"name":"ipichk","control_plane":3,"workers":0,"install_mode":"ipi"}]}' >/dev/null )
-( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
+( cd ansible && "$AP" lifecycle/generate-configs.yml -e out_dir="$TMP" \
     -e '{"clusters":[{"name":"upichk","control_plane":1,"workers":0,"install_mode":"upi"}]}' >/dev/null )
-( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
+( cd ansible && "$AP" lifecycle/generate-configs.yml -e out_dir="$TMP" \
     -e '{"clusters":[{"name":"upimn","control_plane":3,"workers":2,"install_mode":"upi","boot_via":"pxe"}]}' >/dev/null )
-( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP" \
+( cd ansible && "$AP" lifecycle/generate-configs.yml -e out_dir="$TMP" \
     -e '{"clusters":[{"name":"discchk","control_plane":1,"workers":0,"disconnected":true}]}' >/dev/null )
 "$PY" tests/parse_configs.py "$TMP"
 pass "install/agent/ipi/upi configs parse"

@@ -34,14 +34,14 @@ if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_becom
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
 # Worker hostnames from the derived topology.
-topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
+topo="$(mktemp)"; ap lifecycle/dump-topology.yml -e out="$topo" >/dev/null 2>&1
 mapfile -t WORKERS < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .day2_workers[].fullname' "$topo")
 rm -f "$topo"
 [[ "${#WORKERS[@]}" -gt 0 ]] || die "cluster '$CLUSTER' has no day2_workers (set day2_workers: N in group_vars)"
 log "Adding ${#WORKERS[@]} worker(s): ${WORKERS[*]}"
 
 log "Provisioning worker VMs + rendering nodes-config.yaml"
-ap workers.yml -e cluster_name="$CLUSTER" -e worker_action=add "${BECOME[@]}"
+ap lifecycle/workers.yml -e cluster_name="$CLUSTER" -e worker_action=add "${BECOME[@]}"
 
 log "Building add-nodes image against the running cluster ($("$OCN" version --client 2>/dev/null | head -1))"
 work="$ROOT/build/nodeimg-$CLUSTER"
@@ -59,7 +59,7 @@ trap 'kill "$http_pid" 2>/dev/null || true' EXIT
 for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/node_$CLUSTER.iso" && break; sleep 1; done
 curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/node_$CLUSTER.iso" \
   || die "ISO HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
-ap bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e node_set=day2_workers \
+ap lifecycle/bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e node_set=day2_workers \
   -e iso_name="node_$CLUSTER.iso" -e iso_base_url="http://127.0.0.1:${HTTP_PORT}"
 
 log "Approving CSRs until workers join (Ctrl-C to stop watching)"

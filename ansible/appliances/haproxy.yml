@@ -16,11 +16,11 @@
     appliance_action: up
     image: docker.io/library/haproxy:lts
     container_name: "vmetal-haproxy-{{ cluster }}"
-    cfg: "{{ playbook_dir }}/../clusters/{{ cluster }}/haproxy.cfg"
+    cfg: "{{ playbook_dir }}/../../clusters/{{ cluster }}/haproxy.cfg"
 
   tasks:
     - name: Resolve the container runtime socket
-      ansible.builtin.import_tasks: tasks/container_runtime.yml
+      ansible.builtin.import_tasks: ../tasks/container_runtime.yml
 
     - name: Remove the HAProxy container
       community.docker.docker_container:

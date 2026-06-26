@@ -13,17 +13,17 @@
 
   tasks:
     - name: Validate cluster definitions
-      ansible.builtin.import_tasks: tasks/validate.yml
+      ansible.builtin.import_tasks: ../tasks/validate.yml
 
     - name: Build topology from addressing scheme
       ansible.builtin.set_fact:
-        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+        topology: "{{ lookup('template', '../templates/topology.yml.j2') | from_yaml }}"
 
     - name: Detect OVMF firmware paths
-      ansible.builtin.import_tasks: tasks/detect_ovmf.yml
+      ansible.builtin.import_tasks: ../tasks/detect_ovmf.yml
 
     - name: Host preflight (kvm, OVMF, nested virt)
-      ansible.builtin.import_tasks: tasks/preflight.yml
+      ansible.builtin.import_tasks: ../tasks/preflight.yml
 
     - name: Ensure storage pool is active
       community.libvirt.virt_pool:
@@ -41,14 +41,14 @@
       community.libvirt.virt_net:
         command: define
         name: "{{ item.1.name }}"
-        xml: "{{ lookup('template', 'templates/libvirt/network.xml.j2') }}"
+        xml: "{{ lookup('template', '../templates/libvirt/network.xml.j2') }}"
         uri: "{{ libvirt_uri }}"
       loop: "{{ topology | subelements('networks') }}"
       loop_control:
         label: "{{ item.1.name }}"
       vars:
         net: "{{ item.1 }}"
-        pxe_tftp_root: "{{ (playbook_dir + '/../build/tftp') | realpath }}"
+        pxe_tftp_root: "{{ (playbook_dir + '/../../build/tftp') | realpath }}"
       when: item.1.name not in existing_nets.list_nets
 
     - name: Start networks and enable autostart
@@ -78,7 +78,7 @@
     - name: Define domains
       community.libvirt.virt:
         command: define
-        xml: "{{ lookup('template', 'templates/libvirt/domain.xml.j2') }}"
+        xml: "{{ lookup('template', '../templates/libvirt/domain.xml.j2') }}"
         uri: "{{ libvirt_uri }}"
       loop: "{{ topology | subelements('nodes') }}"
       loop_control:

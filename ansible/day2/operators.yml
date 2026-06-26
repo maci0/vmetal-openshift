@@ -13,8 +13,8 @@
   become: false
   vars:
     cluster: cluster0
-    dir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
-    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+    dir: "{{ playbook_dir }}/../../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../../clusters/{{ cluster }}/auth/kubeconfig"
     # Per-operator: the operator manifest, the CRD that signals it is installed,
     # an optional operator Deployment to wait on, the custom resources to apply,
     # and how to know the CR is ready (a standard condition, or a status field).

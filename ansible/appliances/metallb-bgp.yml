@@ -16,12 +16,12 @@
     appliance_action: up
     container_name: "vmetal-frr-{{ cluster }}"
     image: quay.io/frrouting/frr:10.4.4
-    dir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
-    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+    dir: "{{ playbook_dir }}/../../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../../clusters/{{ cluster }}/auth/kubeconfig"
 
   tasks:
     - name: Resolve the container runtime socket
-      ansible.builtin.import_tasks: tasks/container_runtime.yml
+      ansible.builtin.import_tasks: ../tasks/container_runtime.yml
 
     - name: Tear down
       when: appliance_action == 'down'

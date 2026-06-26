@@ -17,13 +17,13 @@
     appliance_action: up
     container_name: "vmetal-nfs-{{ cluster }}"
     image: docker.io/janeczku/nfs-ganesha:latest
-    export_dir: "{{ playbook_dir }}/../build/nfs-export/{{ cluster }}"
-    dir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
-    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+    export_dir: "{{ playbook_dir }}/../../build/nfs-export/{{ cluster }}"
+    dir: "{{ playbook_dir }}/../../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../../clusters/{{ cluster }}/auth/kubeconfig"
 
   tasks:
     - name: Resolve the container runtime socket
-      ansible.builtin.import_tasks: tasks/container_runtime.yml
+      ansible.builtin.import_tasks: ../tasks/container_runtime.yml
 
     - name: Tear down
       when: appliance_action == 'down'

@@ -64,22 +64,22 @@ check:
 	./scripts/check-prereqs.sh
 
 optimize:
-	cd ansible && $(AP) optimize.yml -e mode=apply $(ANSIBLE_ARGS)
+	cd ansible && $(AP) day2/optimize.yml -e mode=apply $(ANSIBLE_ARGS)
 
 optimize-undo:
-	cd ansible && $(AP) optimize.yml -e mode=undo $(ANSIBLE_ARGS)
+	cd ansible && $(AP) day2/optimize.yml -e mode=undo $(ANSIBLE_ARGS)
 
 bootstrap:
 	OCP_CHANNEL=$(OCP_CHANNEL) OCP_VERSION=$(OCP_VERSION) ./scripts/bootstrap.sh
 
 configs:
-	cd ansible && $(AP) generate-configs.yml
+	cd ansible && $(AP) lifecycle/generate-configs.yml
 
 iso:
 	./scripts/build-iso.sh $(CLUSTER)
 
 sushy:
-	cd ansible && $(AP) sushy.yml
+	cd ansible && $(AP) lifecycle/sushy.yml
 
 sushy-install: sushy
 	mkdir -p $(HOME)/.config/systemd/user
@@ -100,10 +100,10 @@ lab:
 	./scripts/lab.sh $(CLUSTER)
 
 haproxy:
-	cd ansible && $(AP) haproxy.yml -e cluster=$(CLUSTER)
+	cd ansible && $(AP) appliances/haproxy.yml -e cluster=$(CLUSTER)
 
 haproxy-down:
-	cd ansible && $(AP) haproxy.yml -e cluster=$(CLUSTER) -e appliance_action=down
+	cd ansible && $(AP) appliances/haproxy.yml -e cluster=$(CLUSTER) -e appliance_action=down
 
 mirror:
 	./scripts/mirror.sh $(CLUSTER) release
@@ -121,21 +121,21 @@ creds:
 	./scripts/creds.sh $(CLUSTER)
 
 host-dns:
-	cd ansible && $(AP) host-dns.yml $(ANSIBLE_ARGS)
+	cd ansible && $(AP) lifecycle/host-dns.yml $(ANSIBLE_ARGS)
 
 up:
-	cd ansible && $(AP) setup.yml $(ANSIBLE_ARGS)
+	cd ansible && $(AP) lifecycle/setup.yml $(ANSIBLE_ARGS)
 
 down:
 	-./scripts/appliances-down.sh
-	cd ansible && $(AP) cleanup.yml $(ANSIBLE_ARGS)
+	cd ansible && $(AP) lifecycle/cleanup.yml $(ANSIBLE_ARGS)
 
 bmc:
-	cd ansible && $(AP) bmc.yml -e cluster=$(CLUSTER) -e bmc_action=$(BMC_ACTION) \
+	cd ansible && $(AP) lifecycle/bmc.yml -e cluster=$(CLUSTER) -e bmc_action=$(BMC_ACTION) \
 	  -e node=$(NODE) -e bootdev=$(BOOTDEV) -e iso_base_url=$(ISO_BASE_URL)
 
 adopt:
-	cd ansible && $(AP) adopt.yml -e cluster=$(CLUSTER) -e adopt_hosts=$(ADOPT_HOSTS)
+	cd ansible && $(AP) day2/adopt.yml -e cluster=$(CLUSTER) -e adopt_hosts=$(ADOPT_HOSTS)
 
 workers-add:
 	./scripts/workers-add.sh $(CLUSTER)
@@ -144,25 +144,25 @@ workers-remove:
 	./scripts/workers-remove.sh $(CLUSTER)
 
 metallb:
-	cd ansible && $(AP) operators.yml -e op=metallb -e cluster=$(CLUSTER)
+	cd ansible && $(AP) day2/operators.yml -e op=metallb -e cluster=$(CLUSTER)
 
 metallb-bgp:
-	cd ansible && $(AP) metallb-bgp.yml -e cluster=$(CLUSTER)
+	cd ansible && $(AP) appliances/metallb-bgp.yml -e cluster=$(CLUSTER)
 
 metallb-bgp-down:
-	cd ansible && $(AP) metallb-bgp.yml -e cluster=$(CLUSTER) -e appliance_action=down
+	cd ansible && $(AP) appliances/metallb-bgp.yml -e cluster=$(CLUSTER) -e appliance_action=down
 
 lvms:
-	cd ansible && $(AP) operators.yml -e op=lvms -e cluster=$(CLUSTER)
+	cd ansible && $(AP) day2/operators.yml -e op=lvms -e cluster=$(CLUSTER)
 
 virt:
-	cd ansible && $(AP) operators.yml -e op=virt -e cluster=$(CLUSTER)
+	cd ansible && $(AP) day2/operators.yml -e op=virt -e cluster=$(CLUSTER)
 
 nfs:
-	cd ansible && $(AP) nfs.yml -e cluster=$(CLUSTER)
+	cd ansible && $(AP) appliances/nfs.yml -e cluster=$(CLUSTER)
 
 nfs-down:
-	cd ansible && $(AP) nfs.yml -e cluster=$(CLUSTER) -e appliance_action=down
+	cd ansible && $(AP) appliances/nfs.yml -e cluster=$(CLUSTER) -e appliance_action=down
 
 lint:
 	./scripts/lint.sh

@@ -22,7 +22,7 @@ if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_becom
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
 topo="$(mktemp)"; trap 'rm -f "$topo"' EXIT
-ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
+ap lifecycle/dump-topology.yml -e out="$topo" >/dev/null 2>&1
 read -r MODE FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.mode) \(.fqdn)"' "$topo") || true
 [[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology"
 
@@ -33,10 +33,10 @@ log "Building the agent discovery ISO"
 ./scripts/build-iso.sh "$CLUSTER"
 
 log "Provisioning libvirt (VMs boot the ISO directly, no host services needed)"
-ap setup.yml -e boot_via=iso "${BECOME[@]}"
+ap lifecycle/setup.yml -e boot_via=iso "${BECOME[@]}"
 
 log "Wiring host split-DNS for the cluster domain"
-ap host-dns.yml || log "host-dns failed (needs sudo); run 'make host-dns' before wait-for"
+ap lifecycle/host-dns.yml || log "host-dns failed (needs sudo); run 'make host-dns' before wait-for"
 
 node0="${CLUSTER}-node0"
 cat <<EOF

@@ -25,11 +25,11 @@ log "Building discovery ISO"
 ./scripts/build-iso.sh "$CLUSTER"      # dies for IPI clusters with guidance
 
 log "Provisioning libvirt (networks, volumes, VMs)"
-ap setup.yml "${BECOME[@]}"
+ap lifecycle/setup.yml "${BECOME[@]}"
 
 # Topology facts for this cluster (via jq, no embedded code).
 command -v jq >/dev/null || die "jq required"
-topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
+topo="$(mktemp)"; ap lifecycle/dump-topology.yml -e out="$topo" >/dev/null 2>&1
 # tab-delimited so an empty field never collapses and shifts the columns
 IFS=$'\t' read -r STATIC_ISO BMC_HOST FQDN < <(
   jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | [.static_iso, .bmc_host, .fqdn] | @tsv' "$topo"
@@ -49,7 +49,7 @@ else
   for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/discovery_image_${CLUSTER}.iso" && break; sleep 1; done
   curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/discovery_image_${CLUSTER}.iso" \
     || die "ISO HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
-  ap bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e iso_base_url="http://127.0.0.1:${HTTP_PORT}"
+  ap lifecycle/bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e iso_base_url="http://127.0.0.1:${HTTP_PORT}"
 fi
 
 if ! getent hosts "api.${FQDN}" >/dev/null 2>&1; then

@@ -50,7 +50,7 @@ if [[ -d "$CLUSTER_DIR" ]]; then
 fi
 
 log "Rendering install config"
-( cd ansible && "$AP" generate-configs.yml )
+( cd ansible && "$AP" lifecycle/generate-configs.yml )
 
 [[ -f "$CLUSTER_DIR/install-config.yaml" ]] \
   || die "no install-config for '$CLUSTER': add a upi cluster to group_vars/all.yml"

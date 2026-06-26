@@ -21,7 +21,7 @@ trap 'rm -rf "$TMP"' EXIT
 # sshKey line is present, and rely on redaction. Pull secret may be absent on CI;
 # its line is redacted too.
 echo "ssh-ed25519 AAAAdummy check-examples" > "$TMP/id.pub"
-gen() { ( cd ansible && "$AP" generate-configs.yml -e out_dir="$TMP/$1" \
+gen() { ( cd ansible && "$AP" lifecycle/generate-configs.yml -e out_dir="$TMP/$1" \
           -e ssh_key_file="$TMP/id.pub" -e "$2" >/dev/null ); }
 gen sno  '{"clusters":[{"name":"sno","control_plane":1,"workers":0}]}'
 gen prod '{"clusters":[{"name":"prod","control_plane":3,"workers":0}]}'

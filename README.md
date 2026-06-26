@@ -412,14 +412,10 @@ build/                    downloaded installer + built ISOs (git-ignored)
 certs/                    local TLS material for sushy (git-ignored)
 ansible/                  see ansible/README.md for the full map
   group_vars/all.yml      addressing scheme + clusters (the file you edit)
-  setup.yml cleanup.yml   provision / teardown
-  generate-configs.yml    render install-config / agent-config / BareMetalHost / Scheduler
-  sushy.yml bmc.yml       Redfish config + power / boot / virtual-media
-  host-dns.yml            host split-DNS for the cluster domains
-  dump-topology.yml       render derived topology to JSON (test oracle)
-  operators.yml adopt.yml optimize.yml   day-2 operators / BMH adoption / host tuning
-  haproxy.yml nfs.yml metallb-bgp.yml     host appliances (community.docker)
-  templates/               topology.yml.j2 + libvirt/ + install/ + sushy/
+  lifecycle/              provision / teardown / render (setup, cleanup, generate-configs, sushy, bmc, host-dns, workers, dump-topology)
+  day2/                   operators, adopt, optimize (post-install cluster + host)
+  appliances/             haproxy, nfs, metallb-bgp (host containers, community.docker)
+  templates/              topology.yml.j2 + libvirt/ + install/ + sushy/
   tasks/                  preflight, detect_ovmf, validate, container_runtime
 tests/render_check.py     offline template + XML validation
 docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, examples, memory-optimization, virtualization, resilience, cloud, troubleshooting

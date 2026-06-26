@@ -26,7 +26,7 @@ if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_becom
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
 # Topology facts.
-topo="$(mktemp)"; ap dump-topology.yml -e out="$topo" >/dev/null 2>&1
+topo="$(mktemp)"; ap lifecycle/dump-topology.yml -e out="$topo" >/dev/null 2>&1
 # tab-delimited so an empty field never collapses and shifts the columns
 IFS=$'\t' read -r PXE BMC_HOST FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | [.pxe, .bmc_host, .fqdn] | @tsv' "$topo") || true
 mapfile -t ALL_VMS  < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[].fullname' "$topo")
@@ -45,11 +45,11 @@ else
 fi
 
 log "Provisioning libvirt (networks, volumes, VMs)"
-ap setup.yml "${BECOME[@]}"
+ap lifecycle/setup.yml "${BECOME[@]}"
 
 if $MULTINODE; then
   log "Starting external HAProxy (api/ingress load balancer)"
-  ap haproxy.yml -e cluster="$CLUSTER"
+  ap appliances/haproxy.yml -e cluster="$CLUSTER"
 fi
 
 # Serve build/ over HTTP (the ISO, or the iPXE script + RHCOS artifacts + ignitions).
@@ -66,7 +66,7 @@ else
     || die "sushy Redfish not reachable at ${BMC_HOST}:8000. Start it: make sushy-install"
   iso="upi_image_${CLUSTER}.iso"
   for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" && break; sleep 1; done
-  ap bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" -e iso_name="$iso"
+  ap lifecycle/bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" -e iso_name="$iso"
 fi
 
 getent hosts "api.${FQDN}" >/dev/null 2>&1 || log "note: host cannot resolve api.${FQDN}; run 'make host-dns' if wait-for stalls"

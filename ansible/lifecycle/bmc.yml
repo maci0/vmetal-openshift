@@ -53,11 +53,11 @@
 
   tasks:
     - name: Validate cluster definitions
-      ansible.builtin.import_tasks: tasks/validate.yml
+      ansible.builtin.import_tasks: ../tasks/validate.yml
 
     - name: Build topology from addressing scheme
       ansible.builtin.set_fact:
-        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+        topology: "{{ lookup('template', '../templates/topology.yml.j2') | from_yaml }}"
 
     - name: Select target cluster
       ansible.builtin.set_fact:

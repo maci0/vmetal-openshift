@@ -14,20 +14,20 @@
   gather_facts: false
   become: false
   vars:
-    out_dir: "{{ playbook_dir }}/../sushy"
-    repo_dir: "{{ playbook_dir | dirname }}"
-    venv_bin: "{{ playbook_dir | dirname }}/.venv/bin"
-    tls_cert: "{{ playbook_dir | dirname }}/certs/localhost-cert.pem"
-    tls_key: "{{ playbook_dir | dirname }}/certs/localhost-key.pem"
-    sushy_conf: "{{ playbook_dir | dirname }}/sushy/conf.py"
+    out_dir: "{{ playbook_dir }}/../../sushy"
+    repo_dir: "{{ playbook_dir | dirname | dirname }}"
+    venv_bin: "{{ playbook_dir | dirname | dirname }}/.venv/bin"
+    tls_cert: "{{ playbook_dir | dirname | dirname }}/certs/localhost-cert.pem"
+    tls_key: "{{ playbook_dir | dirname | dirname }}/certs/localhost-key.pem"
+    sushy_conf: "{{ playbook_dir | dirname | dirname }}/sushy/conf.py"
 
   tasks:
     - name: Detect OVMF firmware (for the UEFI boot loader map)
-      ansible.builtin.import_tasks: tasks/detect_ovmf.yml
+      ansible.builtin.import_tasks: ../tasks/detect_ovmf.yml
 
     - name: Build topology from addressing scheme
       ansible.builtin.set_fact:
-        topology: "{{ lookup('template', 'templates/topology.yml.j2') | from_yaml }}"
+        topology: "{{ lookup('template', '../templates/topology.yml.j2') | from_yaml }}"
 
     - name: Ensure output dir exists
       ansible.builtin.file:
@@ -37,13 +37,13 @@
 
     - name: Render sushy config
       ansible.builtin.template:
-        src: templates/sushy/sushy-emulator.conf.j2
+        src: "{{ playbook_dir | dirname }}/templates/sushy/sushy-emulator.conf.j2"
         dest: "{{ out_dir }}/conf.py"
         mode: "0644"
 
     - name: Render systemd --user unit
       ansible.builtin.template:
-        src: templates/sushy/sushy-emulator.service.j2
+        src: "{{ playbook_dir | dirname }}/templates/sushy/sushy-emulator.service.j2"
         dest: "{{ out_dir }}/sushy-emulator.service"
         mode: "0644"
 

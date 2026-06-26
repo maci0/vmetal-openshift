@@ -21,8 +21,8 @@
     cluster: cluster0
     adopt_hosts: ""
     ns: openshift-machine-api
-    cdir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
-    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+    cdir: "{{ playbook_dir }}/../../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../../clusters/{{ cluster }}/auth/kubeconfig"
 
   tasks:
     - name: Require kubeconfig + provisioning manifest

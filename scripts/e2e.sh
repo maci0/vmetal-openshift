@@ -34,9 +34,9 @@ ok()   { printf '\033[1;32mok  \033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31mFAIL\033[0m %s\n' "$*" >&2; exit 1; }
 
 # Playbooks must run from ansible/ (ansible.cfg + inventory live there).
-dump()      { ( cd "$ROOT/ansible" && "$AP" dump-topology.yml -e out="$TOPO" >/dev/null ); }
-provision() { ( cd "$ROOT/ansible" && $SUDO "$AP" setup.yml "${BECOME[@]}" ); }
-teardown()  { ( cd "$ROOT/ansible" && $SUDO "$AP" cleanup.yml "${BECOME[@]}" ); }
+dump()      { ( cd "$ROOT/ansible" && "$AP" lifecycle/dump-topology.yml -e out="$TOPO" >/dev/null ); }
+provision() { ( cd "$ROOT/ansible" && $SUDO "$AP" lifecycle/setup.yml "${BECOME[@]}" ); }
+teardown()  { ( cd "$ROOT/ansible" && $SUDO "$AP" lifecycle/cleanup.yml "${BECOME[@]}" ); }
 
 if [[ "${1:-}" == "--cleanup" ]]; then
   teardown; ok "cleanup done"; exit 0
@@ -53,7 +53,7 @@ dump
 clusters=$(jq 'length' "$TOPO"); ok "topology rendered ($clusters cluster(s))"
 
 echo "== provision =="
-provision; ok "setup.yml applied"
+provision; ok "lifecycle/setup.yml applied"
 
 echo "== assert networks active =="
 while read -r net; do

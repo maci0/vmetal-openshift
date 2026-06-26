@@ -49,7 +49,7 @@ ap setup.yml "${BECOME[@]}"
 
 if $MULTINODE; then
   log "Starting external HAProxy (api/ingress load balancer)"
-  ./scripts/haproxy.sh "$CLUSTER" up
+  ap haproxy.yml -e cluster="$CLUSTER"
 fi
 
 # Serve build/ over HTTP (the ISO, or the iPXE script + RHCOS artifacts + ignitions).

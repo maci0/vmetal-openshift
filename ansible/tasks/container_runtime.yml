@@ -1,0 +1,29 @@
+---
+# Find the container API socket for community.docker (host appliances), and set
+# docker_host. Works with docker (its daemon socket) or podman (the socket from
+# `podman system service` / podman.socket). We probe the sockets directly rather
+# than the CLI, since the socket is exactly what the module connects to.
+- name: Probe for a container API socket (docker or podman)
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /var/run/docker.sock
+    - "{{ lookup('ansible.builtin.env', 'XDG_RUNTIME_DIR') }}/podman/podman.sock"
+    - /run/podman/podman.sock
+  register: _container_sockets
+
+- name: Select the first socket that exists
+  ansible.builtin.set_fact:
+    docker_host: "unix://{{ (_container_sockets.results | selectattr('stat.exists') | map(attribute='stat.path') | first) }}"
+  when: _container_sockets.results | selectattr('stat.exists') | list | length > 0
+
+# No socket: docker isn't running, or podman is installed but its socket is off.
+# Podman has no daemon, so its Docker-compatible API is opt-in; ask to enable it.
+- name: No container socket found
+  ansible.builtin.fail:
+    msg: >-
+      No docker or podman API socket found. With docker, start the daemon. With
+      podman, enable its Docker-compatible socket so the community.docker module
+      can reach it: `systemctl --user enable --now podman.socket` (rootless) or
+      `sudo systemctl enable --now podman.socket` (rootful), then re-run.
+  when: docker_host is not defined

@@ -28,7 +28,7 @@ if [[ ! -d .venv || -n "${FORCE:-}" ]]; then
   # Runtime deps to operate the lab: sushy-tools (BMC), ansible-core, the
   # community.libvirt requirements (libvirt-python + lxml), jinja2/pyyaml, and
   # kubernetes (kubernetes.core for Day-2 operators).
-  deps=(sushy-tools ansible-core libvirt-python lxml pyyaml jinja2 kubernetes)
+  deps=(sushy-tools ansible-core libvirt-python lxml pyyaml jinja2 kubernetes docker)
   # Dev/CI only, not needed to run the lab: yamllint + ansible-lint (make lint)
   # and matplotlib (regenerates docs/bench.png). Install with DEV=1.
   dev_deps=(yamllint ansible-lint matplotlib)

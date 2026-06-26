@@ -7,3 +7,5 @@ collections:
     version: ">=8.0.0"
   - name: kubernetes.core     # k8s / k8s_info for Day-2 operator installs
     version: ">=3.0.0"
+  - name: community.docker    # docker_container for host appliances (docker or podman socket)
+    version: ">=3.4.0"

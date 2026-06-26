@@ -1,0 +1,68 @@
+---
+# Host HAProxy for a platform:none (upi) cluster: the external load balancer upi
+# has no in-cluster equivalent for. Runs as a host-network container (docker or
+# podman) on the machine gateway, fronting api (6443), machine-config (22623) and
+# ingress (80/443). Config: clusters/<cluster>/haproxy.cfg (from generate-configs).
+#
+#   ansible-playbook haproxy.yml -e cluster=cluster0            # up
+#   ansible-playbook haproxy.yml -e cluster=cluster0 -e action=down
+#
+- name: Host HAProxy appliance
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    cluster: cluster0
+    appliance_action: up
+    image: docker.io/library/haproxy:lts
+    container_name: "vmetal-haproxy-{{ cluster }}"
+    cfg: "{{ playbook_dir }}/../clusters/{{ cluster }}/haproxy.cfg"
+
+  tasks:
+    - name: Resolve the container runtime socket
+      ansible.builtin.import_tasks: tasks/container_runtime.yml
+
+    - name: Remove the HAProxy container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: absent
+        docker_host: "{{ docker_host }}"
+      when: appliance_action == 'down'
+
+    - name: Start HAProxy
+      when: appliance_action != 'down'
+      block:
+        - name: Require the rendered config
+          ansible.builtin.stat:
+            path: "{{ cfg }}"
+          register: cfg_stat
+
+        - name: Fail if no config
+          ansible.builtin.fail:
+            msg: "no {{ cfg }} (run 'make configs' / install-upi first)"
+          when: not cfg_stat.stat.exists
+
+        # --user 0 + NET_BIND_SERVICE: bind privileged ports (80/443) on the host
+        # network. The container is isolated; this is a lab load balancer.
+        - name: Run the HAProxy container
+          community.docker.docker_container:
+            name: "{{ container_name }}"
+            image: "{{ image }}"
+            state: started
+            recreate: true
+            restart_policy: unless-stopped
+            network_mode: host
+            user: "0"
+            capabilities: [NET_BIND_SERVICE]
+            mounts:
+              - source: "{{ cfg }}"
+                target: /usr/local/etc/haproxy/haproxy.cfg
+                type: bind
+                read_only: true
+            docker_host: "{{ docker_host }}"
+          register: hap
+
+        - name: HAProxy is up
+          ansible.builtin.debug:
+            msg: "HAProxy {{ container_name }} up (api 6443, machine-config 22623, ingress 80/443)"
+          when: hap is succeeded

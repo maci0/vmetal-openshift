@@ -27,7 +27,7 @@ skip() { printf '\033[1;33mSKIP\033[0m %s\n' "$*"; }
 echo "== ansible syntax-check =="
 ( cd ansible && "$AP" --syntax-check \
     setup.yml cleanup.yml dump-topology.yml generate-configs.yml \
-    bmc.yml sushy.yml host-dns.yml workers.yml operators.yml >/dev/null )
+    bmc.yml sushy.yml host-dns.yml workers.yml operators.yml haproxy.yml >/dev/null )
 pass "playbooks parse"
 
 echo "== yamllint =="

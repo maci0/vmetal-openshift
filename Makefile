@@ -100,10 +100,10 @@ lab:
 	./scripts/lab.sh $(CLUSTER)
 
 haproxy:
-	./scripts/haproxy.sh $(CLUSTER) up
+	cd ansible && $(AP) haproxy.yml -e cluster=$(CLUSTER)
 
 haproxy-down:
-	./scripts/haproxy.sh $(CLUSTER) down
+	cd ansible && $(AP) haproxy.yml -e cluster=$(CLUSTER) -e appliance_action=down
 
 mirror:
 	./scripts/mirror.sh $(CLUSTER) release

@@ -30,6 +30,27 @@ make nfs  CLUSTER=cluster0    # RWX  -> nfs-rwx (host appliance)
 make nfs-down CLUSTER=cluster0
 ```
 
+**What these run** (the manifests are rendered by `make configs` into
+`clusters/<c>/`, so you can apply them by hand):
+
+* `make lvms` (`scripts/lvms.sh`): apply the operator, wait for the CRD, then the
+  LVMCluster CR.
+  ```bash
+  oc apply -f clusters/cluster0/lvms-operator.yaml         # operator subscription
+  oc get crd lvmclusters.lvm.topolvm.io                    # wait until present
+  oc apply -f clusters/cluster0/lvms-cluster.yaml          # LVMCluster CR
+  oc -n openshift-storage get lvmcluster lvmcluster -o jsonpath='{.status.state}'  # -> Ready
+  ```
+* `make nfs` (`scripts/nfs.sh`): a host NFS-Ganesha container plus an in-cluster
+  provisioner + StorageClass.
+  ```bash
+  docker run -d --name vmetal-nfs-cluster0 --network host --privileged \
+    -v "$PWD/build/nfs-export/cluster0:/data/nfs" \
+    -e NFS_EXPORT_0="/data/nfs *(rw,sync,no_subtree_check,no_root_squash)" \
+    docker.io/janeczku/nfs-ganesha:latest
+  oc apply -f clusters/cluster0/nfs-ganesha.yaml           # provisioner + nfs-rwx SC
+  ```
+
 ### Disk bus + SSD presentation
 
 Node disks attach on a **virtio-scsi** controller (`disk_bus: scsi`, the default)
@@ -56,6 +77,18 @@ hardware), neither worth the tradeoff in a perf-dense lab.
 
 ```bash
 make virt CLUSTER=cluster0    # kubevirt-hyperconverged operator + HyperConverged
+```
+
+**What `make virt` runs** (`scripts/virt.sh`; manifests from `make configs`):
+
+```bash
+oc apply -f clusters/cluster0/cnv-operator.yaml          # operator subscription
+oc get crd hyperconvergeds.hco.kubevirt.io               # wait until present
+# optional, if cnv_migration_network: true
+oc apply -f clusters/cluster0/cnv-migration-network.yaml # live-migration NAD
+oc apply -f clusters/cluster0/cnv-hyperconverged.yaml    # HyperConverged CR
+oc -n openshift-cnv get hyperconverged kubevirt-hyperconverged \
+  -o jsonpath='{.status.conditions[?(@.type=="Available")].status}'   # -> True
 ```
 
 Needs nested virt (the lab's host-passthrough CPUs expose `/dev/kvm` + `vmx`/`svm`

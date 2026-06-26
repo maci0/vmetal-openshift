@@ -144,7 +144,7 @@ workers-remove:
 	./scripts/workers-remove.sh $(CLUSTER)
 
 metallb:
-	./scripts/metallb.sh $(CLUSTER)
+	cd ansible && $(AP) operators.yml -e op=metallb -e cluster=$(CLUSTER)
 
 metallb-bgp:
 	./scripts/metallb-bgp.sh $(CLUSTER) up
@@ -153,10 +153,10 @@ metallb-bgp-down:
 	./scripts/metallb-bgp.sh $(CLUSTER) down
 
 lvms:
-	./scripts/lvms.sh $(CLUSTER)
+	cd ansible && $(AP) operators.yml -e op=lvms -e cluster=$(CLUSTER)
 
 virt:
-	./scripts/virt.sh $(CLUSTER)
+	cd ansible && $(AP) operators.yml -e op=virt -e cluster=$(CLUSTER)
 
 nfs:
 	./scripts/nfs.sh $(CLUSTER) up

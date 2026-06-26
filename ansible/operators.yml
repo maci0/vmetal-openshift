@@ -1,0 +1,122 @@
+---
+# Install a Day-2 operator on a cluster, declaratively, with kubernetes.core
+# instead of `oc apply` + bash wait loops. The manifests are rendered by
+# generate-configs into clusters/<cluster>/.
+#
+#   ansible-playbook operators.yml -e op=lvms    -e cluster=cluster0
+#   ansible-playbook operators.yml -e op=virt    -e cluster=cluster0
+#   ansible-playbook operators.yml -e op=metallb -e cluster=cluster0
+#
+- name: Install a Day-2 operator
+  hosts: local
+  gather_facts: false
+  become: false
+  vars:
+    cluster: cluster0
+    dir: "{{ playbook_dir }}/../clusters/{{ cluster }}"
+    kubeconfig: "{{ playbook_dir }}/../clusters/{{ cluster }}/auth/kubeconfig"
+    # Per-operator: the operator manifest, the CRD that signals it is installed,
+    # an optional operator Deployment to wait on, the custom resources to apply,
+    # and how to know the CR is ready (a standard condition, or a status field).
+    specs:
+      lvms:
+        operator: lvms-operator.yaml
+        crd: lvmclusters.lvm.topolvm.io
+        rollout: { namespace: openshift-storage, name: lvms-operator }
+        crs: [lvms-cluster.yaml]
+        ready: { api_version: lvm.topolvm.io/v1alpha1, kind: LVMCluster, namespace: openshift-storage, name: lvmcluster, state_equals: Ready }
+      virt:
+        operator: cnv-operator.yaml
+        crd: hyperconvergeds.hco.kubevirt.io
+        crs: [cnv-migration-network.yaml, cnv-hyperconverged.yaml]
+        ready: { api_version: hco.kubevirt.io/v1beta1, kind: HyperConverged, namespace: openshift-cnv, name: kubevirt-hyperconverged, condition: Available }
+      metallb:
+        operator: metallb-operator.yaml
+        crd: metallbs.metallb.io
+        rollout: { namespace: metallb-system, name: metallb-operator-controller-manager }
+        crs: [metallb-config.yaml]
+
+  tasks:
+    - name: Validate op
+      ansible.builtin.assert:
+        that: op is defined and op in specs
+        fail_msg: "set -e op=<lvms|virt|metallb>"
+        quiet: true
+
+    - name: Select spec
+      ansible.builtin.set_fact:
+        spec: "{{ specs[op] }}"
+
+    - name: Install the operator
+      kubernetes.core.k8s:
+        src: "{{ dir }}/{{ spec.operator }}"
+        state: present
+        kubeconfig: "{{ kubeconfig }}"
+
+    - name: Wait for the operator CRD
+      kubernetes.core.k8s_info:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: "{{ spec.crd }}"
+        kubeconfig: "{{ kubeconfig }}"
+      register: crd
+      until: crd.resources | length > 0
+      retries: 60
+      delay: 10
+
+    - name: Wait for the operator deployment to be Available
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ spec.rollout.namespace }}"
+        name: "{{ spec.rollout.name }}"
+        kubeconfig: "{{ kubeconfig }}"
+        wait: true
+        wait_condition: { type: Available, status: "True" }
+        wait_timeout: 300
+      when: spec.rollout is defined
+
+    # Retry: the operator's admission webhook can lag the CRD right after install.
+    # Skip a manifest that rendered empty (e.g. the CNV migration NAD with no
+    # migration network).
+    - name: Apply the custom resources
+      kubernetes.core.k8s:
+        src: "{{ dir }}/{{ item }}"
+        state: present
+        kubeconfig: "{{ kubeconfig }}"
+      loop: "{{ spec.crs }}"
+      when: (lookup('file', dir ~ '/' ~ item, errors='ignore') | default('') | trim | length) > 0
+      register: crapply
+      until: crapply is succeeded
+      retries: 30
+      delay: 10
+
+    - name: Wait for the CR's Available condition
+      kubernetes.core.k8s_info:
+        api_version: "{{ spec.ready.api_version }}"
+        kind: "{{ spec.ready.kind }}"
+        namespace: "{{ spec.ready.namespace }}"
+        name: "{{ spec.ready.name }}"
+        kubeconfig: "{{ kubeconfig }}"
+        wait: true
+        wait_condition: { type: "{{ spec.ready.condition }}", status: "True" }
+        wait_timeout: 1800
+      when: spec.ready.condition is defined
+
+    - name: Wait for the CR's status.state to reach the ready value
+      kubernetes.core.k8s_info:
+        api_version: "{{ spec.ready.api_version }}"
+        kind: "{{ spec.ready.kind }}"
+        namespace: "{{ spec.ready.namespace }}"
+        name: "{{ spec.ready.name }}"
+        kubeconfig: "{{ kubeconfig }}"
+      register: cr
+      until: >-
+        cr.resources | length > 0 and
+        (cr.resources[0].status.state | default('')) == spec.ready.state_equals
+      retries: 60
+      delay: 10
+      when: spec.ready.state_equals is defined
+
+    - name: Done
+      ansible.builtin.debug:
+        msg: "{{ op }} installed on {{ cluster }}"

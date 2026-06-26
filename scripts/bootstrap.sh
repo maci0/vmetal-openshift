@@ -25,9 +25,14 @@ warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
 # --- 1. Python venv + deps ---
 if [[ ! -d .venv || -n "${FORCE:-}" ]]; then
   log "Creating Python venv (.venv)"
-  # libvirt-python + lxml are required by the community.libvirt modules;
-  # matplotlib renders the benchmark chart (scripts/plot-bench.py).
-  deps=(sushy-tools ansible-core yamllint ansible-lint libvirt-python lxml pyyaml jinja2 matplotlib)
+  # Runtime deps to operate the lab: sushy-tools (BMC), ansible-core, the
+  # community.libvirt requirements (libvirt-python + lxml), jinja2/pyyaml, and
+  # kubernetes (kubernetes.core for Day-2 operators).
+  deps=(sushy-tools ansible-core libvirt-python lxml pyyaml jinja2 kubernetes)
+  # Dev/CI only, not needed to run the lab: yamllint + ansible-lint (make lint)
+  # and matplotlib (regenerates docs/bench.png). Install with DEV=1.
+  dev_deps=(yamllint ansible-lint matplotlib)
+  [[ -n "${DEV:-}" ]] && deps+=("${dev_deps[@]}")
   if command -v uv >/dev/null 2>&1; then
     uv venv
     uv pip install --python .venv/bin/python "${deps[@]}"
@@ -36,6 +41,7 @@ if [[ ! -d .venv || -n "${FORCE:-}" ]]; then
     ./.venv/bin/pip install --upgrade pip
     ./.venv/bin/pip install "${deps[@]}"
   fi
+  [[ -z "${DEV:-}" ]] && log "(dev tools skipped; DEV=1 make bootstrap adds yamllint/ansible-lint/matplotlib)"
 else
   log "venv exists, skipping (FORCE=1 to recreate)"
 fi

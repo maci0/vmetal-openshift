@@ -33,7 +33,7 @@ make nfs-down CLUSTER=cluster0
 **What these run** (the manifests are rendered by `make configs` into
 `clusters/<c>/`, so you can apply them by hand):
 
-* `make lvms` (`scripts/lvms.sh`): apply the operator, wait for the CRD, then the
+* `make lvms` (`operators.yml`, kubernetes.core): apply the operator, wait for the CRD, then the
   LVMCluster CR.
   ```bash
   oc apply -f clusters/cluster0/lvms-operator.yaml         # operator subscription
@@ -79,7 +79,7 @@ hardware), neither worth the tradeoff in a perf-dense lab.
 make virt CLUSTER=cluster0    # kubevirt-hyperconverged operator + HyperConverged
 ```
 
-**What `make virt` runs** (`scripts/virt.sh`; manifests from `make configs`):
+**What `make virt` runs** (`operators.yml` via kubernetes.core; manifests from `make configs`):
 
 ```bash
 oc apply -f clusters/cluster0/cnv-operator.yaml          # operator subscription

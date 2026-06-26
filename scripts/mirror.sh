@@ -27,6 +27,9 @@ die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
 [[ -x "$ROOT/.venv/bin/ansible-playbook" ]] && AP="$ROOT/.venv/bin/ansible-playbook" || AP="ansible-playbook"
 OI="$ROOT/build/openshift-install/openshift-install"; [[ -x "$OI" ]] || OI="$(command -v openshift-install || true)"
 OC="$ROOT/build/oc422/oc"; [[ -x "$OC" ]] || OC="$ROOT/build/openshift-install/oc"; [[ -x "$OC" ]] || OC="$(command -v oc || true)"
+# Bash (not an Ansible module): the docker/podman CLIs are drop-in compatible for
+# `run`, so this works with either. community.docker needs a Docker API socket
+# (podman only via `podman system service`); containers.podman is podman-only.
 ENGINE="$(command -v docker || command -v podman || true)"
 [[ -n "$ENGINE" ]] || die "need docker or podman for the mirror registry"
 command -v jq >/dev/null || die "jq required"

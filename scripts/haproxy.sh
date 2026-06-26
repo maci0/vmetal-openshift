@@ -18,6 +18,10 @@ IMG="${HAPROXY_IMG:-docker.io/library/haproxy:lts}"
 die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
 log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 
+# Bash, not an Ansible module, on purpose: the docker/podman CLIs are drop-in
+# compatible for `run`, so this works with either. The Ansible container modules
+# do not: community.docker needs a Docker API socket (podman only via
+# `podman system service`), and containers.podman is podman-only.
 ENGINE="$(command -v docker || command -v podman || true)"
 [[ -n "$ENGINE" ]] || die "need docker or podman for the HAProxy appliance"
 

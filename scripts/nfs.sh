@@ -20,7 +20,10 @@ log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 command -v oc >/dev/null || die "oc not found"
 export KUBECONFIG="$DIR/auth/kubeconfig"
 
-# container runtime (host netns + privileged so ganesha can serve NFS)
+# container runtime (host netns + privileged so ganesha can serve NFS). Bash, not
+# an Ansible module, on purpose: the docker/podman CLIs are drop-in compatible, so
+# this runs on either. community.docker needs a Docker API socket (podman only via
+# `podman system service`); containers.podman is podman-only.
 if command -v podman >/dev/null; then RT="sudo podman"
 elif command -v docker >/dev/null; then RT="docker"; docker info >/dev/null 2>&1 || RT="sudo docker"
 else die "need podman or docker for the NFS appliance"; fi

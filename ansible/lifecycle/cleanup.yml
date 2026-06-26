@@ -56,7 +56,7 @@
       loop: "{{ domstate.results }}"
       loop_control:
         label: "{{ item.item.fullname }}"
-      when: not (item.failed | default(false))
+      when: item.status is defined   # status key present only for domains that exist
       failed_when: false
 
     - name: Destroy and undefine networks

@@ -25,7 +25,7 @@ interfaces:
   mtu: {{ bmtu }}
 {% endif %}
 {% if b.network is defined %}
-{% set gns.primary = b.bond %}
+{% if b.network == 'machine' %}{% set gns.primary = b.bond %}{% endif %}
   ipv4:
     enabled: true
     dhcp: false

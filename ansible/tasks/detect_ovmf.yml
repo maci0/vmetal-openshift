@@ -28,7 +28,7 @@
         ovmf_code: "{{ item.code }}"
         ovmf_vars: "{{ item.vars }}"
       when:
-        - ovmf_code | default('') == ''
+        - (ovmf_code | default('') == '') or (ovmf_vars | default('') == '')
         - item.code is exists
         - item.vars is exists
       loop: "{{ ovmf_candidates }}"
@@ -37,8 +37,10 @@
 
     - name: Fail if no OVMF firmware was found
       ansible.builtin.assert:
-        that: ovmf_code | default('') != ''
-        fail_msg: "No OVMF firmware found. Install edk2/OVMF, or set ovmf_code / ovmf_vars."
+        that:
+          - ovmf_code | default('') != ''
+          - ovmf_vars | default('') != ''
+        fail_msg: "No OVMF CODE+VARS pair found. Install edk2/OVMF, or set both ovmf_code and ovmf_vars."
         quiet: true
 
 - name: Show OVMF firmware in use

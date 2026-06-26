@@ -22,6 +22,12 @@ networking:
   - 172.30.0.0/16
   machineNetwork:
   - cidr: {{ cluster.machine_cidr }}
+{% if ntp_servers | default([]) %}
+additionalNTPSources:
+{% for s in ntp_servers %}
+- {{ s }}
+{% endfor %}
+{% endif %}
 platform:
   baremetal:
     apiVIPs:

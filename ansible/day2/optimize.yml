@@ -3,8 +3,9 @@
 #   1. KSM          - dedup identical guest pages (same RHCOS on every node)
 #   2. zram         - compressed-RAM swap (zstd); evicted pages compress in RAM
 #   3. libvirt hook - per-VM memory.high so cold pages get pushed into zram early
-# Runtime settings (reset on reboot). Needs root: run with passwordless sudo, -K,
-# or as root.
+# KSM + zram are runtime settings (reset on reboot); the libvirt hook is a
+# persistent on-disk file (/etc/libvirt/hooks/qemu) removed only by mode=undo.
+# Needs root: run with passwordless sudo, -K, or as root.
 #
 #   ansible-playbook optimize.yml -e mode=apply
 #   ansible-playbook optimize.yml -e mode=undo
@@ -126,7 +127,8 @@
         - name: Find per-VM cgroup scopes
           ansible.builtin.find:
             paths: /sys/fs/cgroup/machine.slice
-            patterns: "*qemu*node*.scope"
+            # node* = control-plane/workers; worker* = day-2 workers (cluster0-day2-workerN)
+            patterns: ["*qemu*node*.scope", "*qemu*worker*.scope"]
             file_type: directory
           register: scopes
 

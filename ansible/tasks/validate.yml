@@ -68,6 +68,21 @@
   loop_control:
     label: "{{ item.name }}"
 
+# IPI baremetal requires VIPs + an etcd quorum; single-node (control_plane 1) has
+# neither and the installer rejects platform: baremetal for it. Use agent for SNO.
+- name: Validate IPI is not single-node
+  ansible.builtin.assert:
+    that:
+      - (item.install_mode | default(install_mode)) != 'ipi' or
+        (item.control_plane | default(control_plane_count_default) | int) == 3
+    fail_msg: >-
+      cluster '{{ item.name }}': install_mode ipi requires control_plane 3
+      (IPI baremetal has no single-node form here). Use install_mode agent for SNO.
+    quiet: true
+  loop: "{{ clusters }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 # Multi-node upi uses a transient bootstrap node + an external (host) HAProxy and
 # is netboot-only here, so it requires boot_via: pxe. Single-node upi works with
 # either boot method (ISO embed or pxe).

@@ -38,10 +38,11 @@
 {%   set pxe = (mode == 'upi') and (boot == 'pxe') %}
 {%   set disc = c.disconnected | default(disconnected) %}
 {%   set oob_cidr = (networks.oob.cidr | replace('{c}', ci | string)) if networks.oob is defined else '' %}
-{#   BMC host: the oob LAN gateway normally. For upi the in-cluster metal3/ironic
-     must reach the BMC, and cluster nodes have no route to the host-only oob net,
-     so upi points the BMC at the machine gateway (sushy binds 0.0.0.0). #}
-{%   set bmc_host = (mp3 ~ '.1') if mode == 'upi' else ((oob_cidr.split('/')[0].rsplit('.', 1)[0] ~ '.1') if oob_cidr else (mp3 ~ '.1')) %}
+{#   BMC host: the oob LAN gateway normally. For upi AND ipi the in-cluster
+     metal3/ironic must reach the BMC, and cluster nodes have no route to the
+     host-only oob net, so they point the BMC at the machine gateway (sushy binds
+     0.0.0.0). Agent uses the oob gateway (host-driven BMC control only). #}
+{%   set bmc_host = (mp3 ~ '.1') if mode in ['upi', 'ipi'] else ((oob_cidr.split('/')[0].rsplit('.', 1)[0] ~ '.1') if oob_cidr else (mp3 ~ '.1')) %}
 {#   provisioning interface for IPI Managed: the vlan/bond carrying it #}
 {%   set pn = namespace(dev='') %}
 {%   for b in nic_layout %}
@@ -168,7 +169,9 @@
       bmc_address: "redfish-virtualmedia://{{ bmc_host }}:{{ sushy_port }}/redfish/v1/Systems/{{ '%08x' | format(ci) }}-0000-4000-8000-{{ '%012x' | format(node_o) }}"
       memory_mib: {{ node_mem }}
       vcpus: {{ node_cpu }}
-{%     set node_disks = worker_disks if (role == 'worker' and worker_disks is defined) else (c.disks | default(default_disks)) %}
+{#     Workload-running nodes (workers, and schedulable masters on SNO/compact) get
+       the dedicated storage disk for LVMS/ODF; non-schedulable masters do not. #}
+{%     set node_disks = worker_disks if (((role == 'worker') or (role == 'master' and masters_sched)) and worker_disks is defined) else (c.disks | default(default_disks)) %}
 {#     A bond attaches to this node if it has no role restriction, or the node's
        role is listed, or it is a schedulable control-plane node (runs workloads)
        and the bond is for workers. Non-schedulable masters skip the data-plane

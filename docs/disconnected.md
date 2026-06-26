@@ -31,24 +31,94 @@ operator catalogs are the remaining manual piece.
 
 ## Doing it in this lab
 
-1. **Mirror the release**: `make mirror CLUSTER=c`. This starts a TLS `registry:2`
-   container on the machine gateway (`<gw>:5000`, a host appliance like NFS/FRR/
-   HAProxy) and runs `oc adm release mirror` to copy the release payload for the
-   bootstrapped version into `<gw>:5000/openshift/release`. It emits a self-signed
-   CA at `certs/mirror/ca.pem`. (`make mirror-down` stops the registry; `OCP_VERSION`
-   overrides the version.)
-2. **Flip the switch**: set `disconnected: true` (global in `group_vars`, or per
-   cluster). `generate-configs` then injects into `install-config.yaml`:
-   * `imageDigestSources` mapping `ocp-release` / `ocp-v4.0-art-dev` to the mirror,
-   * `additionalTrustBundle` from `certs/mirror/ca.pem`.
-3. **Cut the cord** (optional, for a true air gap): change the machine network's
-   `kind` from `nat` to `isolated` in the `networks` map. `isolated` renders a
-   libvirt network with no forward, keeping DHCP/DNS but no route out:
-   ```yaml
-   networks:
-     machine: { cidr: "10.{c}.0.0/24", kind: isolated, dns: true }
-   ```
-4. Build and install as usual (`make iso` / `make install` / `make install-upi`).
+The automated path is two commands:
+
+```bash
+make mirror CLUSTER=cluster0     # registry on the gateway + mirror the release
+# set `disconnected: true` in group_vars, then build/install as usual
+```
+
+Each step and its manual equivalent follow, so you can customize or do it by hand.
+
+### 1. Mirror the release (`make mirror`)
+
+`scripts/mirror.sh` does three things (substitute your cluster's machine gateway
+for `GW`):
+
+**a. A TLS cert** for the registry, valid for the gateway IP (it is its own CA,
+injected later as the trust bundle):
+
+```bash
+GW=10.0.0.1
+mkdir -p certs/mirror
+openssl req -x509 -newkey rsa:4096 -nodes -days 3650 \
+  -keyout certs/mirror/key.pem -out certs/mirror/cert.pem -subj "/CN=$GW" \
+  -addext "subjectAltName=IP:${GW},IP:127.0.0.1,DNS:localhost"
+cp certs/mirror/cert.pem certs/mirror/ca.pem
+```
+
+**b. The registry** on the host network, reachable at `<gw>:5000` from the nodes
+(a host appliance, like NFS-Ganesha / FRR / HAProxy):
+
+```bash
+docker run -d --name vmetal-mirror --network host \
+  -v "$PWD/build/mirror/data:/var/lib/registry" -v "$PWD/certs/mirror:/certs:ro" \
+  -e REGISTRY_HTTP_ADDR=0.0.0.0:5000 \
+  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/cert.pem \
+  -e REGISTRY_HTTP_TLS_KEY=/certs/key.pem \
+  docker.io/library/registry:2
+```
+
+**c. The mirror** itself, using your pull secret for quay.io (`--insecure` skips
+TLS verify against the self-signed registry):
+
+```bash
+VER=4.22.0
+oc adm release mirror --insecure \
+  --registry-config=pull-secret.json \
+  --from="quay.io/openshift-release-dev/ocp-release:${VER}-x86_64" \
+  --to="${GW}:5000/openshift/release" \
+  --to-release-image="${GW}:5000/openshift/release:${VER}"
+```
+
+This pulls ~20-30 GB and prints the `imageContentSources` mapping it created.
+`make mirror-down` stops the registry; `OCP_VERSION=...` overrides the version.
+
+### 2. Inject the mirror into install-config (`disconnected: true`)
+
+Set `disconnected: true` (global in `group_vars`, or per cluster) and
+`generate-configs` adds the block below to the agent and IPI install-configs. To
+do it by hand, paste it into the generated `clusters/<c>/install-config.yaml`:
+
+```yaml
+imageDigestSources:
+- mirrors:
+  - 10.0.0.1:5000/openshift/release
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+- mirrors:
+  - 10.0.0.1:5000/openshift/release
+  source: quay.io/openshift-release-dev/ocp-release
+additionalTrustBundle: |
+  -----BEGIN CERTIFICATE-----
+  ... contents of certs/mirror/ca.pem ...
+  -----END CERTIFICATE-----
+```
+
+### 3. Cut the cord (optional, for a true air gap)
+
+Change the machine network's `kind` from `nat` to `isolated` in the `networks`
+map. `isolated` renders a libvirt network with no forward, keeping DHCP/DNS but
+no route out:
+
+```yaml
+networks:
+  machine: { cidr: "10.{c}.0.0/24", kind: isolated, dns: true }
+```
+
+### 4. Build and install
+
+As usual (`make iso` / `make install` / `make install-upi`); the nodes now pull
+the release from the mirror.
 
 ## Remaining manual pieces
 

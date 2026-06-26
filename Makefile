@@ -21,6 +21,7 @@
 #   make haproxy CLUSTER=c              external HAProxy for multi-node UPI (host appliance)
 #   make haproxy-down CLUSTER=c         stop the UPI HAProxy appliance
 #   make mirror CLUSTER=c               disconnected: registry on the gateway + mirror the release
+#   make mirror-operators CLUSTER=c     disconnected: mirror operator catalogs (oc-mirror, air-gap)
 #   make mirror-down CLUSTER=c          stop the mirror registry
 #   make metallb CLUSTER=c              install MetalLB (LoadBalancer services, L2 pool)
 #   make metallb-bgp CLUSTER=c          MetalLB BGP mode + FRR peer on the host (ECMP)
@@ -56,7 +57,7 @@ PY           := $(shell [ -x .venv/bin/python ] && echo $(CURDIR)/.venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install install-upi lab ignition configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-down pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-operators mirror-down pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -108,6 +109,9 @@ haproxy-down:
 
 mirror:
 	./scripts/mirror.sh $(CLUSTER) release
+
+mirror-operators:
+	./scripts/mirror.sh $(CLUSTER) operators
 
 mirror-down:
 	./scripts/mirror.sh $(CLUSTER) down

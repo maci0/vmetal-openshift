@@ -106,6 +106,10 @@ boot_via: redfish
 disconnected: false
 mirror_registry_port: 5000        # host registry (machine gateway) for the mirror
 mirror_ca_file: certs/mirror/ca.pem   # CA emitted by mirror.sh, injected as trust bundle
+# OCP minor (e.g. "4.22") for the operator catalog index tag. Needed only for
+# fully air-gapped Day-2 operators (make mirror-operators / oc-mirror). Empty =
+# release-only disconnect (operators still pull from the internet).
+ocp_minor: ""
 
 # sushy-emulator Redfish endpoint. BMCs live on each cluster's OOB LAN
 # (172.16.{c}.1). Credentials are placeholders, sushy runs without auth by

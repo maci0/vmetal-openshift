@@ -89,6 +89,20 @@ else
   chmod 0755 "$BUILD_DIR/coreos-installer"
 fi
 
+# oc-mirror (v2): mirrors operator catalogs for fully air-gapped Day-2 operators
+# (make mirror-operators). Optional; only needed for a true air gap.
+if [[ -x "$INSTALL_DIR/oc-mirror" && -z "${FORCE:-}" ]]; then
+  log "oc-mirror present"
+else
+  OCM_TARBALL="$BUILD_DIR/oc-mirror.tar.gz"
+  log "Downloading oc-mirror ($RELEASE_PATH, $ARCH)"
+  if curl -fL --retry 3 -o "$OCM_TARBALL" "${MIRROR}/${RELEASE_PATH}/oc-mirror.tar.gz"; then
+    tar -xzf "$OCM_TARBALL" -C "$INSTALL_DIR" oc-mirror && chmod 0755 "$INSTALL_DIR/oc-mirror"
+  else
+    warn "oc-mirror download failed (only needed for air-gapped operators; make mirror-operators)"
+  fi
+fi
+
 # --- 4. TLS cert for sushy-emulator ---
 if [[ ! -f "$CERTS_DIR/localhost-cert.pem" || ! -f "$CERTS_DIR/localhost-key.pem" || -n "${FORCE:-}" ]]; then
   log "Generating self-signed TLS cert in $CERTS_DIR"

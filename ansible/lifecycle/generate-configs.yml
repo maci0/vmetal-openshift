@@ -136,6 +136,23 @@
       vars:
         cluster: "{{ item.0 }}"
 
+    # Air-gapped Day-2 operators: the oc-mirror ImageSetConfiguration (host side)
+    # and the CatalogSource + ImageDigestMirrorSet (cluster side). Only for a
+    # disconnected cluster with ocp_minor set; otherwise operators pull online.
+    - name: Render operator-mirror configs (disconnected air-gap)
+      ansible.builtin.template:
+        src: "{{ playbook_dir | dirname }}/templates/install/{{ item.1 }}"
+        dest: "{{ out_dir }}/{{ item.0.name }}/{{ item.1 | replace('.j2', '') }}"
+        mode: "0644"
+      loop: "{{ topology | product(['imageset-config.yaml.j2', 'operator-catalog.yaml.j2']) | list }}"
+      loop_control:
+        label: "{{ item.0.name }}/{{ item.1 }}"
+      vars:
+        cluster: "{{ item.0 }}"
+      when:
+        - item.0.disconnected | default(disconnected)
+        - ocp_minor | default('') | length > 0
+
     - name: Render FRR config for the MetalLB BGP peer
       ansible.builtin.template:
         src: "{{ playbook_dir | dirname }}/templates/frr/frr.conf.j2"

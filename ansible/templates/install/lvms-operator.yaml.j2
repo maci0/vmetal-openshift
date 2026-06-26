@@ -29,6 +29,6 @@ spec:
   channel: {{ lvms_channel }}
 {% endif %}
   name: lvms-operator
-  source: redhat-operators
+  source: {{ 'vmetal-operators' if (cluster.disconnected | default(disconnected)) else 'redhat-operators' }}
   sourceNamespace: openshift-marketplace
   installPlanApproval: Automatic

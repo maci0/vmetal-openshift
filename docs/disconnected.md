@@ -4,9 +4,10 @@
 
 By default the machine network NATs to the host uplink, so the lab is
 **connected**: nodes pull the release payload and operator images from the
-internet. Production baremetal is frequently disconnected. `make mirror` plus a
-`disconnected: true` switch wire most of this up; the release payload is covered,
-operator catalogs are the remaining manual piece.
+internet. Production baremetal is frequently disconnected. A `disconnected: true`
+switch plus `make mirror` (release payload) and `make mirror-operators` (operator
+catalogs) wire up a full air gap: install and Day-2 operators both from the host
+registry.
 
 ## What disconnected needs
 
@@ -121,14 +122,30 @@ networks:
 As usual (`make iso` / `make install` / `make install-upi`); the nodes now pull
 the release from the mirror.
 
+## Day-2 operators (air-gapped)
+
+`make mirror` covers the **release payload** (the install). The Day-2 operators
+(MetalLB, LVMS, CNV) come from the operator catalog, which `make mirror-operators`
+mirrors with `oc-mirror` (v2):
+
+1. Set `disconnected: true` on the cluster and `ocp_minor: "4.22"` (your release's
+   minor) in `group_vars/all.yml`, then `make configs`. This renders, per cluster:
+   * `imageset-config.yaml` (the `ImageSetConfiguration`: the operator index +
+     the lvms / metallb / kubevirt-hyperconverged packages), and
+   * `operator-catalog.yaml` (a `CatalogSource` named `vmetal-operators` backed by
+     the mirrored index, plus an `ImageDigestMirrorSet` redirecting the Red Hat
+     operator registries to the host mirror).
+2. `make mirror CLUSTER=c` then `make mirror-operators CLUSTER=c` populate the host
+   registry (release, then operators via oc-mirror). Both are large/slow.
+3. `oc apply -f clusters/c/operator-catalog.yaml` (or just `make lvms/metallb/virt`,
+   which applies it automatically when disconnected). The operator subscriptions
+   then resolve `source: vmetal-operators` instead of `redhat-operators`.
+
+Applying the `ImageDigestMirrorSet` triggers a one-time node rollout. `oc-mirror`
+is fetched by `make bootstrap`.
+
 ## Remaining manual pieces
 
-`make mirror` covers the **release payload**, which is what an install needs.
-Still manual:
-
-* **Operator catalogs**: mirror with `oc-mirror` (an `ImageSetConfiguration`) into
-  the same registry and apply the generated `CatalogSource` / `ImageDigestMirrorSet`.
-  The Day-2 operators here (MetalLB, LVMS, CNV) need this in a true air gap.
 * **NTP**: point `ntp_servers` at an internal source (not a pool) for a real air gap.
 * **Proxy / telemetry**: add `proxy:` to install-config if egress is via a proxy;
   Insights is disabled by the disconnected pull secret.

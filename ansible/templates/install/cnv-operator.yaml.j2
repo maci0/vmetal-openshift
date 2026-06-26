@@ -22,7 +22,7 @@ metadata:
   name: hco-operatorhub
   namespace: openshift-cnv
 spec:
-  source: redhat-operators
+  source: {{ 'vmetal-operators' if (cluster.disconnected | default(disconnected)) else 'redhat-operators' }}
   sourceNamespace: openshift-marketplace
   name: kubevirt-hyperconverged
 {% if cnv_channel | default('') %}

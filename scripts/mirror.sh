@@ -8,6 +8,7 @@
 #   scripts/mirror.sh [cluster] up        # start the registry only
 #   scripts/mirror.sh [cluster] down      # stop the registry
 #   scripts/mirror.sh [cluster] release   # start + mirror the release (default)
+#   scripts/mirror.sh [cluster] operators # start + mirror operator catalogs (oc-mirror)
 #
 # Env: MIRROR_PORT (5000), OCP_VERSION (else the bootstrapped installer's version).
 set -euo pipefail
@@ -80,6 +81,25 @@ curl -sk --max-time 5 "https://127.0.0.1:${PORT}/v2/" >/dev/null \
   || die "registry not responding at https://127.0.0.1:${PORT}/v2/"
 log "Registry up: https://${REG} (CA: $CERTS/ca.pem)"
 [[ "$ACTION" == "up" ]] && exit 0
+
+# Mirror operator catalogs for fully air-gapped Day-2 operators (oc-mirror v2).
+# The ImageSetConfiguration is rendered into clusters/<c>/ when the cluster is
+# disconnected and ocp_minor is set (see make configs).
+if [[ "$ACTION" == "operators" ]]; then
+  IMGSET="$ROOT/clusters/$CLUSTER/imageset-config.yaml"
+  [[ -f "$IMGSET" ]] || die "no $IMGSET: set 'disconnected: true' + ocp_minor in group_vars, then 'make configs'"
+  OCM="$ROOT/build/openshift-install/oc-mirror"; [[ -x "$OCM" ]] || OCM="$(command -v oc-mirror || true)"
+  [[ -n "$OCM" && -x "$OCM" ]] || die "oc-mirror not found; run scripts/bootstrap.sh"
+  [[ -s pull-secret.json ]] || die "pull-secret.json required to mirror operator images"
+  WORK="$ROOT/build/mirror/ocmirror"; mkdir -p "$WORK"
+  log "Mirroring operator catalog + packages into $REG (large, slow)"
+  "$OCM" --config "$IMGSET" --workspace "file://$WORK" \
+    --authfile pull-secret.json --dest-tls-verify=false "docker://$REG" --v2
+  log "Operators mirrored. Apply the cluster side:"
+  log "  oc apply -f clusters/$CLUSTER/operator-catalog.yaml   # CatalogSource + ImageDigestMirrorSet"
+  log "Then make lvms/metallb/virt use source: vmetal-operators automatically (disconnected)."
+  exit 0
+fi
 
 # Mirror the release. Version = OCP_VERSION or the bootstrapped installer's version.
 [[ -n "$OI" && -x "$OI" ]] || die "openshift-install not found; run scripts/bootstrap.sh"

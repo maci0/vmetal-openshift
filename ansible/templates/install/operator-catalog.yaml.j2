@@ -1,0 +1,35 @@
+{# Disconnected-only: the cluster side of air-gapped Day-2 operators. A CatalogSource
+   backed by the mirrored operator index, plus an ImageDigestMirrorSet that redirects
+   the Red Hat operator registries to the host mirror. Apply this BEFORE the operator
+   subscriptions (which use source: vmetal-operators when disconnected). Pairs with
+   `make mirror-operators` (oc-mirror) on the host. #}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: vmetal-operators
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: {{ cluster.mirror_registry }}/redhat/redhat-operator-index:v{{ ocp_minor }}
+  displayName: vmetal mirrored operators
+  publisher: vmetal
+  updateStrategy:
+    registryPoll:
+      interval: 30m
+---
+apiVersion: config.openshift.io/v1
+kind: ImageDigestMirrorSet
+metadata:
+  name: vmetal-operators
+spec:
+  imageDigestMirrors:
+    - source: registry.redhat.io
+      mirrors:
+        - {{ cluster.mirror_registry }}
+    - source: registry.connect.redhat.com
+      mirrors:
+        - {{ cluster.mirror_registry }}
+    - source: registry.access.redhat.com
+      mirrors:
+        - {{ cluster.mirror_registry }}

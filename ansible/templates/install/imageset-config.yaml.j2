@@ -1,0 +1,25 @@
+{# oc-mirror (v2) ImageSetConfiguration: the operator catalog + the Day-2 operators
+   this lab uses, for a fully air-gapped install. `make mirror-operators` runs
+   oc-mirror against this into the host registry. Rendered only when a cluster is
+   disconnected (needs ocp_minor, e.g. "4.22", set in group_vars). #}
+kind: ImageSetConfiguration
+apiVersion: mirror.openshift.io/v2alpha1
+mirror:
+  operators:
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v{{ ocp_minor }}
+      packages:
+        - name: lvms-operator
+{% if lvms_channel | default('') %}
+          channels:
+            - name: {{ lvms_channel }}
+{% endif %}
+        - name: metallb-operator
+{% if metallb_channel | default('') %}
+          channels:
+            - name: {{ metallb_channel }}
+{% endif %}
+        - name: kubevirt-hyperconverged
+{% if cnv_channel | default('') %}
+          channels:
+            - name: {{ cnv_channel }}
+{% endif %}

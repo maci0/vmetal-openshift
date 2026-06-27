@@ -29,7 +29,6 @@ Net effect: identical pages collapse (KSM), cold pages compress (zram), and the
 host kernel does it transparently per-VM.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart LR
   ram["VM guest RAM<br/>(same RHCOS on every node)"]
   ksm["1. KSM dedup<br/>identical pages -> 1 CoW page"]

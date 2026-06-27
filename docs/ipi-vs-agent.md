@@ -10,7 +10,6 @@ Set per cluster with `install_mode: agent | ipi | upi` in
 `ansible/group_vars/all.yml`.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
   topo["one derived topology<br/>(group_vars/all.yml)"]
   topo --> agent & ipi & upi

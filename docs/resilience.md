@@ -84,7 +84,6 @@ Three control-plane nodes tolerate one failure (quorum 2/3). Kill one master and
 confirm the API stays up.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','actorBkg':'#eef2ff','actorBorder':'#6366f1','actorTextColor':'#0f172a','noteBkgColor':'#f1f5f9','noteBorderColor':'#cbd5e1','noteTextColor':'#0f172a','lineColor':'#475569','signalColor':'#334155','signalTextColor':'#0f172a','labelBoxBkgColor':'#eef2ff','labelBoxBorderColor':'#6366f1'}}}%%
 sequenceDiagram
   participant U as you
   participant V as virsh (host)

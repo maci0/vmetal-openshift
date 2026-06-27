@@ -33,6 +33,7 @@ no storage/live-migration NICs, matching a real split design.
 ### Node NIC layout (default `nic_layout`)
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart LR
   subgraph node["Node (virtual baremetal): 6 vNICs"]
     direction TB
@@ -42,7 +43,7 @@ flowchart LR
       b0["bond0 · active-backup"]
     end
     subgraph card["4-port data card"]
-      b1["bond1 · active-active (LACP-style)"]
+      b1["bond1 · balance-tlb (active-active TX)"]
     end
     m["machine 10.x.0.10<br/>(untagged, VIP/DHCP/DNS)"]
     p["bond0.20<br/>provisioning"]
@@ -92,6 +93,7 @@ The VIPs cover the API and ingress. For app `Service type=LoadBalancer` (no clou
 LB on baremetal) the lab runs **MetalLB**, in either mode:
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
   svc["Service type=LoadBalancer"] --> ctl["MetalLB controller<br/>assigns a pool IP"]
   ctl --> l2box
@@ -139,6 +141,7 @@ virtual-media calls into **libvirt** operations. The KVM domains *are* the
 "baremetal" nodes, each with **bonded NICs** on the data networks.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart LR
   installer["openshift-install<br/>(agent installer)"]
 
@@ -187,6 +190,7 @@ IPI metal3/bootstrap-VM and UPI PXE/HAProxy paths are in
 [IPI vs agent](ipi-vs-agent.md)).
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','actorBkg':'#eef2ff','actorBorder':'#6366f1','actorTextColor':'#0f172a','noteBkgColor':'#f1f5f9','noteBorderColor':'#cbd5e1','noteTextColor':'#0f172a','lineColor':'#475569','signalColor':'#334155','signalTextColor':'#0f172a','labelBoxBkgColor':'#eef2ff','labelBoxBorderColor':'#6366f1'}}}%%
 sequenceDiagram
   autonumber
   actor U as You
@@ -239,6 +243,7 @@ Single node, control plane + workloads collapsed onto one box; both VIPs land on
 the node IP. Schedulable, so it sits on both buses.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
   subgraph mgmt["Management / OOB"]
     sushy{{"sushy Redfish BMC"}}
@@ -272,6 +277,7 @@ Edge shape: one control-plane node plus workers joined after install with
 one while compute scales out. Every node runs workloads, so all sit on both buses.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
   subgraph mgmt["Management / OOB"]
     sushy{{"sushy Redfish BMC"}}
@@ -309,6 +315,7 @@ Three masters, **schedulable** (auto, no separate workers), so the control plane
 also runs workloads and every node sits on both buses.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
   subgraph mgmt["Management / OOB"]
     sushy{{"sushy Redfish BMC"}}
@@ -343,6 +350,7 @@ link to the data bus is the role-aware split. Set `masters_schedulable: true` to
 override.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
   subgraph mgmt["Management / OOB"]
     sushy{{"sushy Redfish BMC"}}
@@ -381,6 +389,7 @@ Setting `online` on a `BareMetalHost` (or `make bmc`) drives the whole emulated
 chain. This is what powered node2 off/on in the lab.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','actorBkg':'#eef2ff','actorBorder':'#6366f1','actorTextColor':'#0f172a','noteBkgColor':'#f1f5f9','noteBorderColor':'#cbd5e1','noteTextColor':'#0f172a','lineColor':'#475569','signalColor':'#334155','signalTextColor':'#0f172a','labelBoxBkgColor':'#eef2ff','labelBoxBorderColor':'#6366f1'}}}%%
 sequenceDiagram
   autonumber
   actor U as Admin
@@ -402,6 +411,7 @@ sequenceDiagram
 ## Test layers
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart TD
   lint["scripts/lint.sh<br/>offline · no libvirt"] --> e2e["scripts/e2e.sh<br/>live provision + assert + teardown"]
   subgraph offline["Offline (CI-safe)"]

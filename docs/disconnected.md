@@ -10,6 +10,7 @@ catalogs) wire up a full air gap: install and Day-2 operators both from the host
 registry.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif','clusterBkg':'#f8fafc','clusterBorder':'#cbd5e1','titleColor':'#334155','lineColor':'#475569','primaryColor':'#eef2ff','primaryBorderColor':'#94a3b8','primaryTextColor':'#0f172a','edgeLabelBackground':'#ffffff'}}}%%
 flowchart LR
   subgraph net["internet (mirror once, then disconnect)"]
     quay["quay.io<br/>release payload"]

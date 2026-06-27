@@ -197,7 +197,7 @@ BMC_ACTION=boot-iso` -> wait; `make install` just chains those.
    Subnets, bridges, MACs, DHCP reservations, VIPs, node roles, replica counts,
    domain UUIDs, and BMC URLs are all computed from there.
 3. **generate-configs** renders `clusters/<name>/install-config.yaml` plus, for
-   agent clusters, `agent-config.yaml` and `baremetalhosts.yaml` (Day-2 BMC
+   agent/upi clusters, `agent-config.yaml` and `baremetalhosts.yaml` (Day-2 BMC
    adoption). `build-iso.sh` wraps that and builds the agent ISO.
 4. **setup.yml** creates the libvirt networks, volumes, and VMs.
 5. **sushy-emulator** presents each VM as a Redfish BMC; `bmc.yml` powers nodes
@@ -427,8 +427,6 @@ docs/                     architecture, requirements, ipi-vs-agent, fidelity, di
 ## 📋 TODO
 
 * macOS host support
-* mirror operator catalogs (`oc-mirror`) for fully air-gapped Day-2 operators
-  (the release payload is covered, see [docs/disconnected.md](docs/disconnected.md))
 
 ## License
 

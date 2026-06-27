@@ -182,7 +182,9 @@ flowchart LR
 
 ## Install flow
 
-End-to-end, from a bare host to a running cluster.
+End-to-end, from a bare host to a running cluster (the **agent** path shown; the
+IPI metal3/bootstrap-VM and UPI PXE/HAProxy paths are in
+[IPI vs agent](ipi-vs-agent.md)).
 
 ```mermaid
 sequenceDiagram

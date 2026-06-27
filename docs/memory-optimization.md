@@ -171,9 +171,8 @@ Measured (8 GiB workload, squeezed to 30%):
 So the two mechanisms are complementary, not competing: KSM reclaims *identical*
 pages, zram reclaims *compressible* ones. Identical RHCOS nodes lean on KSM;
 diverse or overcommitted guests lean on zram. Running both costs little and covers
-both shapes.
-* **Performance is flat (~24.2-24.6M, <1.5% spread)** across all settings: at steady
-  state KSM and zram cost effectively no throughput.
+both shapes. Throughput stays flat (~24.2-24.6M, <1.5% spread) across all settings:
+at steady state KSM and zram cost effectively no CPU.
 
 ## Disk
 

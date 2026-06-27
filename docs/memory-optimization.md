@@ -28,19 +28,12 @@ How a page of guest RAM is handled, in order:
 Net effect: identical pages collapse (KSM), cold pages compress (zram), and the
 host kernel does it transparently per-VM.
 
-```mermaid
-flowchart LR
-  ram["VM guest RAM<br/>(same RHCOS on every node)"]
-  ksm["1. KSM dedup<br/>identical pages -> 1 CoW page"]
-  wall["2. cgroup wall<br/>memory.high (per-VM, libvirt hook)"]
-  squeeze["3. squeeze<br/>reclaim coldest pages early"]
-  zram["4. zram (zstd)<br/>compress cold pages in RAM"]
-  ram --> ksm --> wall --> squeeze --> zram
-  classDef src fill:#3e8635,stroke:#1f5419,color:#fff;
-  classDef step fill:#6366f1,stroke:#3730a3,color:#fff;
-  classDef out fill:#f0ab00,stroke:#b07e00,color:#1f2937;
-  class ram,ksm src; class wall,squeeze step; class zram out;
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/memory-optimization-01-dark.svg">
+    <img alt="The pipeline diagram" src="diagrams/memory-optimization-01.svg">
+  </picture>
+</p>
 
 ## zram vs zswap
 

@@ -36,6 +36,7 @@
 #   make creds CLUSTER=c      console URL + kubeadmin + kubeconfig
 #   make lint / make e2e      offline checks / live test
 #   make bench / bench-zram   memory benchmarks: KSM+zram on the cluster / where zram wins
+#   make diagrams            re-render docs/diagrams/*.mmd to light + dark SVG
 #   make pdf                  export docs/architecture.pdf
 #
 # Pass extra ansible flags via ANSIBLE_ARGS, e.g.:
@@ -57,7 +58,7 @@ PY           := $(shell [ -x .venv/bin/python ] && echo $(CURDIR)/.venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install install-upi lab ignition configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-operators mirror-down pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-operators mirror-down diagrams pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -180,6 +181,9 @@ bench:
 
 bench-zram:
 	./scripts/bench/bench-zram-demo.sh
+
+diagrams:
+	./tools/render-diagrams.sh
 
 pdf:
 	./scripts/export-pdf.sh

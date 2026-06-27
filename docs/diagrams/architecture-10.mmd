@@ -1,0 +1,13 @@
+flowchart TD
+  lint["scripts/lint.sh<br/>offline · no libvirt"] --> e2e["scripts/e2e.sh<br/>live provision + assert + teardown"]
+  subgraph offline["Offline (CI-safe)"]
+    sc["ansible --syntax-check"]
+    rc["render_check.py<br/>xmllint + unique subnet/bridge/MAC"]
+  end
+  subgraph live["Live"]
+    dump["dump-topology.yml → JSON oracle"]
+    asserts["virsh: nets active · domains running ·<br/>NIC counts (bonding) · DNS · Redfish"]
+  end
+  lint --- offline
+  e2e --- live
+

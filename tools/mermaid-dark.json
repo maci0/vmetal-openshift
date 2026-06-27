@@ -1,0 +1,15 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+    "clusterBkg": "#161b22", "clusterBorder": "#30363d", "titleColor": "#c9d1d9",
+    "lineColor": "#8b949e", "primaryColor": "#21262d", "primaryBorderColor": "#6e7681",
+    "primaryTextColor": "#c9d1d9", "edgeLabelBackground": "#0d1117",
+    "actorBkg": "#21262d", "actorBorder": "#6366f1", "actorTextColor": "#c9d1d9",
+    "noteBkgColor": "#161b22", "noteBorderColor": "#30363d", "noteTextColor": "#c9d1d9",
+    "signalColor": "#8b949e", "signalTextColor": "#c9d1d9",
+    "labelBoxBkgColor": "#21262d", "labelBoxBorderColor": "#6366f1"
+  },
+  "flowchart": { "curve": "basis", "padding": 14, "useMaxWidth": true },
+  "themeCSS": ".cluster rect{rx:12px;ry:12px} .node rect,.node polygon,.node circle{rx:8px;ry:8px} .edgePath path{stroke-width:1.4px}"
+}

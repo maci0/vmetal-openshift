@@ -83,22 +83,12 @@ withdrawn and ECMP re-spreads, see [architecture](architecture.md).)
 Three control-plane nodes tolerate one failure (quorum 2/3). Kill one master and
 confirm the API stays up.
 
-```mermaid
-sequenceDiagram
-  participant U as you
-  participant V as virsh (host)
-  participant E as etcd (3 masters)
-  participant A as kube-apiserver
-  Note over E: 3/3 healthy, quorum = 2
-  U->>V: V destroy cluster0-node0
-  V-->>E: master0 down (2/3 left)
-  Note over E: quorum holds (2 >= 2)
-  E->>A: API keeps serving
-  U->>V: V start cluster0-node0
-  V-->>E: master0 rejoins
-  E->>E: re-sync -> 3/3 healthy
-  Note over E,A: a 2nd loss (1/3) would lose quorum<br/>and freeze the API
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/resilience-01-dark.svg">
+    <img alt="3. etcd quorum (control-plane loss) diagram" src="diagrams/resilience-01.svg">
+  </picture>
+</p>
 
 ```bash
 $OC get nodes -l node-role.kubernetes.io/control-plane

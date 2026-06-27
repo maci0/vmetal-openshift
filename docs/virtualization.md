@@ -128,27 +128,12 @@ jumbo VLAN. Nodes can reach each other on it out of the box (`ping -I bond1.40`)
 
 #### How the pieces connect
 
-```mermaid
-flowchart TB
-  subgraph node["each worker (already from install)"]
-    b1["bond1 (balance-tlb)"]
-    v["bond1.40<br/>VLAN 40 · 10.0.20.x · MTU 9000"]
-    b1 --> v
-  end
-  nad["NetworkAttachmentDefinition 'migration'<br/>ipvlan over bond1.40 · whereabouts IPAM · MTU 9000"]
-  hco["HyperConverged<br/>liveMigrationConfig.network: migration"]
-  kv["KubeVirt config<br/>migrations.network: migration"]
-  pod["virt-launcher migration pods<br/>2nd NIC on 10.0.20.x"]
-  v --> nad
-  hco --> kv
-  nad --> pod
-  kv --> pod
-  pod -- "RAM copy over bond1.40" --> pod
-  classDef vlan fill:#f0ab00,stroke:#b07e00,color:#1f2937;
-  classDef cfg fill:#6366f1,stroke:#3730a3,color:#fff;
-  classDef pod fill:#0066cc,stroke:#004080,color:#fff;
-  class b1,v vlan; class nad,hco,kv cfg; class pod pod;
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/virtualization-01-dark.svg">
+    <img alt="How the pieces connect diagram" src="diagrams/virtualization-01.svg">
+  </picture>
+</p>
 
 1. **Node interface** `bond1.40` already exists (install).
 2. **NetworkAttachmentDefinition** `migration` puts pods onto that VLAN.

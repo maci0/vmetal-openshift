@@ -70,35 +70,12 @@ emulated.
 - 🛡️ **Resilience-tested**: bond, etcd-quorum, VIP, and node-drain failure drills ([docs](docs/resilience.md))
 - 🧪 **Tested**: offline lint + render checks + live e2e; ansible-lint production profile
 
-```mermaid
-flowchart LR
-  admin["you · make / oc"]
-  subgraph host["single KVM host"]
-    ansible["Ansible<br/>topology → XML + configs"]
-    sushy["sushy-emulator<br/>Redfish BMC (TLS)"]
-    libvirt[("libvirtd")]
-    subgraph nodes["KVM nodes = virtual baremetal"]
-      vms["bonded NICs · VLANs<br/>machine / storage / migration"]
-    end
-  end
-  oi["openshift-install<br/>agent / IPI"]
-  ocp(["OpenShift cluster<br/>VIPs · DNS · metal3 BMH"])
-
-  admin --> ansible --> libvirt --> vms
-  admin --> oi -- "discovery ISO / virtual media" --> vms
-  admin -- "power · virtual media" --> sushy -- "libvirt API" --> libvirt
-  vms --> ocp
-  oi -. "wait-for install-complete" .-> ocp
-
-  classDef a fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef b fill:#0ea5e9,stroke:#075985,color:#fff,stroke-width:2px;
-  classDef c fill:#10b981,stroke:#065f46,color:#fff,stroke-width:2px;
-  classDef d fill:#ef4444,stroke:#7f1d1d,color:#fff,stroke-width:2px;
-  class admin,oi a;
-  class sushy,ansible b;
-  class libvirt,vms c;
-  class ocp d;
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/README-01-dark.svg">
+    <img alt="Highlights diagram" src="docs/diagrams/README-01.svg">
+  </picture>
+</p>
 
 ## Contents
 

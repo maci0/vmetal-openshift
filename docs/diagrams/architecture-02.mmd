@@ -1,0 +1,21 @@
+flowchart TB
+  svc["Service type=LoadBalancer"] --> ctl["MetalLB controller<br/>assigns a pool IP"]
+  ctl --> l2box
+  ctl --> bgpbox
+  subgraph l2box["L2 mode (make metallb)"]
+    direction TB
+    l2["speaker ARP-owns the IP<br/>pool on machine net (.100-.119)"]
+    l2 --> l2n["one elected node answers ARP<br/>(fails over on node loss)"]
+  end
+  subgraph bgpbox["BGP mode (make metallb-bgp)"]
+    direction TB
+    bgp["speakers BGP-peer the router<br/>off-link pool 198.51.x.0/24"]
+    bgp --> frr["FRR on host (ASN 64513)<br/>zebra installs /32 routes"]
+    frr --> ecmp["ECMP multipath across all speakers"]
+  end
+  classDef ctl fill:#6366f1,stroke:#3730a3,color:#fff;
+  classDef l2c fill:#3e8635,stroke:#1f5419,color:#fff;
+  classDef bgpc fill:#0066cc,stroke:#004080,color:#fff;
+  class svc,ctl ctl; class l2,l2n l2c; class bgp,frr,ecmp bgpc;
+  style l2box fill:#f0fdf4,stroke:#d2d2d2;
+  style bgpbox fill:#eff6ff,stroke:#d2d2d2;

@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  actor U as Admin
+  participant BMO as baremetal-operator
+  participant IR as Ironic
+  participant S as sushy-emulator (BMC)
+  participant L as libvirt
+  participant N as node VM
+
+  U->>BMO: oc patch bmh ... online=false
+  BMO->>IR: reconcile desired power
+  IR->>S: Redfish ComputerSystem.Reset (ForceOff/Graceful)
+  S->>L: virsh destroy / shutdown
+  L->>N: power off
+  Note over BMO,N: online=true reverses it (PowerOn). Status: poweredOn + state.
+  Note over U: If the BMO/webhook pod was on that node,<br/>recover out-of-band via the BMC (curl Redfish / make bmc).

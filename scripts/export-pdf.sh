@@ -42,6 +42,7 @@ CSS
 EMBED="--embed-resources"
 pandoc --help 2>/dev/null | grep -q -- '--embed-resources' || EMBED="--self-contained"
 pandoc "$WORK/patched.md" -o "$WORK/doc.html" --standalone $EMBED \
+  --resource-path="$(dirname "$SRC"):$ROOT" \
   --css "$WORK/style.css" --metadata title="$(basename "${SRC%.md}")"
 
 # 3. HTML -> PDF (headless chromium).

@@ -1,0 +1,30 @@
+sequenceDiagram
+  autonumber
+  actor U as You
+  participant B as scripts/bootstrap.sh
+  participant OI as openshift-install
+  participant A as Ansible
+  participant S as sushy-emulator
+  participant N as KVM nodes
+
+  U->>B: scripts/bootstrap.sh
+  Note over B: venv + ansible-core + collection<br/>self-contained installer + TLS cert
+
+  U->>A: ansible-playbook lifecycle/generate-configs.yml
+  A-->>U: clusters/<c>/{install,agent}-config.yaml<br/>(VIPs · roles · bond nmstate)
+  U->>OI: agent create image
+  OI-->>U: build/discovery_image_<cluster>.iso
+
+  U->>A: ansible-playbook lifecycle/setup.yml
+  Note over A: derive topology →<br/>networks · volumes · VMs w/ bonded NICs
+
+  alt boot_via = redfish (default) / IPI
+    U->>S: make bmc BMC_ACTION=boot-iso
+    S->>N: Redfish VirtualMedia (ISO) + PowerOn
+  else boot_via = iso
+    A->>N: virsh start (boots the attached ISO, no BMC)
+  end
+
+  N->>N: bond up · rendezvous · bootstrap ·<br/>form control plane
+  U->>OI: wait-for install-complete
+  OI-->>U: kubeconfig + console URL

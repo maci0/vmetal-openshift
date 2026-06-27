@@ -1,0 +1,39 @@
+flowchart LR
+  installer["openshift-install<br/>(agent installer)"]
+
+  subgraph host["KVM Host"]
+    sushy["sushy-emulator<br/>Redfish BMC · TLS"]
+    libvirt[("libvirtd<br/>qemu:///system")]
+
+    subgraph oob["OOB / BMC LAN (&lt;cluster&gt;-oob)"]
+      direction TB
+      oobnote["out-of-band · no guest NIC"]
+    end
+
+    subgraph data["Data networks"]
+      direction TB
+      mnet["&lt;cluster&gt;-machine<br/>NAT · DHCP · DNS<br/>api VIP + ingress VIP"]
+      tnet["&lt;cluster&gt;-trunk (L2, no IP)<br/>VLAN 30 storage · VLAN 40 migration"]
+    end
+
+    subgraph node0["KVM domain: &lt;cluster&gt;-node0 (virtual baremetal)"]
+      direction TB
+      b0["bond0 · 2× NIC onboard<br/>machine + VLAN 20 prov"]
+      b1["bond1 · 4× NIC data card<br/>VLAN 30 storage · VLAN 40 migration"]
+    end
+  end
+
+  installer == "Redfish HTTPS (OOB):<br/>PowerOn/Off · SetBoot ·<br/>VirtualMedia (discovery ISO)" ==> sushy
+  sushy --> oob
+  sushy -- "libvirt API:<br/>start/stop · attach CDROM" --> libvirt
+  libvirt --> node0
+  b0 --- mnet
+  b1 --- tnet
+  installer -. "resolve api / api-int / *.apps" .-> mnet
+  classDef inst fill:#6366f1,stroke:#3730a3,color:#fff;
+  classDef bmc fill:#06b6d4,stroke:#0e7490,color:#fff;
+  classDef virt fill:#3e8635,stroke:#1f5419,color:#fff;
+  classDef net fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  classDef oobc fill:#8476d1,stroke:#5d4fa3,color:#fff;
+  classDef vm fill:#ee0000,stroke:#a30000,color:#fff;
+  class installer inst; class sushy bmc; class libvirt virt; class mnet,tnet net; class oobnote oobc; class b0,b1 vm;

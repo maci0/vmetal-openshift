@@ -9,28 +9,12 @@ switch plus `make mirror` (release payload) and `make mirror-operators` (operato
 catalogs) wire up a full air gap: install and Day-2 operators both from the host
 registry.
 
-```mermaid
-flowchart LR
-  subgraph net["internet (mirror once, then disconnect)"]
-    quay["quay.io<br/>release payload"]
-    rh["registry.redhat.io<br/>operator catalog + images"]
-  end
-  subgraph host["KVM host (machine gateway)"]
-    reg[("registry:2<br/>&lt;gw&gt;:5000 · TLS")]
-  end
-  subgraph ocp["OpenShift (no egress)"]
-    nodes["nodes pull all images"]
-    cs["CatalogSource<br/>vmetal-operators"]
-  end
-  quay -- "make mirror<br/>(oc adm release mirror)" --> reg
-  rh -- "make mirror-operators<br/>(oc-mirror v2)" --> reg
-  reg -- "imageDigestSources + CA bundle<br/>(install-config)" --> nodes
-  reg -- "ImageDigestMirrorSet +<br/>CatalogSource" --> cs --> nodes
-  classDef net fill:#ef4444,stroke:#7f1d1d,color:#fff;
-  classDef host fill:#10b981,stroke:#065f46,color:#fff;
-  classDef ocp fill:#0ea5e9,stroke:#075985,color:#fff;
-  class quay,rh net; class reg host; class nodes,cs ocp;
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/disconnected-01-dark.svg">
+    <img alt="Disconnected (air-gapped) install diagram" src="diagrams/disconnected-01.svg">
+  </picture>
+</p>
 
 ## What disconnected needs
 

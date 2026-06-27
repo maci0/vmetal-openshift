@@ -1,0 +1,27 @@
+flowchart LR
+  subgraph node["Node (virtual baremetal): 6 vNICs"]
+    direction TB
+    e0["eth0"]; e1["eth1"]
+    e2["eth2"]; e3["eth3"]; e4["eth4"]; e5["eth5"]
+    subgraph onboard["2 onboard NICs"]
+      b0["bond0 · active-backup"]
+    end
+    subgraph card["4-port data card"]
+      b1["bond1 · balance-tlb (active-active TX)"]
+    end
+    m["machine 10.x.0.10<br/>(untagged, VIP/DHCP/DNS)"]
+    p["bond0.20<br/>provisioning"]
+    s["bond1.30<br/>storage · MTU 9000"]
+    mig["bond1.40<br/>live-migration · MTU 9000"]
+  end
+  e0 --> b0; e1 --> b0
+  e2 --> b1; e3 --> b1; e4 --> b1; e5 --> b1
+  b0 --> m
+  b0 --> p
+  b1 --> s
+  b1 --> mig
+  classDef nic fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef bond fill:#6366f1,stroke:#3730a3,color:#fff;
+  classDef untag fill:#3e8635,stroke:#1f5419,color:#fff;
+  classDef vlan fill:#f0ab00,stroke:#b07e00,color:#1f2937;
+  class e0,e1,e2,e3,e4,e5 nic; class b0,b1 bond; class m untag; class p,s,mig vlan;

@@ -9,27 +9,12 @@ third mode, `upi`, runs `platform: none` with an external load balancer (see
 Set per cluster with `install_mode: agent | ipi | upi` in
 `ansible/group_vars/all.yml`.
 
-```mermaid
-flowchart TB
-  topo["one derived topology<br/>(group_vars/all.yml)"]
-  topo --> agent & ipi & upi
-  subgraph agent["agent (default) · platform: baremetal"]
-    direction TB
-    a1["build discovery ISO"] --> a2["nodes boot it<br/>(redfish vmedia / virsh)"] --> a3["rendezvous node<br/>self-orchestrates"] --> a4(["cluster"])
-  end
-  subgraph ipi["IPI · platform: baremetal"]
-    direction TB
-    i1["metal3 / Ironic"] --> i2["Redfish virtual media"] --> i3["transient bootstrap VM"] --> i4["inspect + provision nodes"] --> i5(["cluster"])
-  end
-  subgraph upi["UPI · platform: none"]
-    direction TB
-    u1["ISO (SNO) or PXE (multi)"] --> u2["host HAProxy +<br/>bootstrap VM (multi-node)"] --> u3["approve CSRs"] --> u4(["cluster"])
-  end
-  classDef t fill:#6366f1,stroke:#3730a3,color:#fff,stroke-width:2px;
-  classDef s fill:#0ea5e9,stroke:#075985,color:#fff;
-  classDef o fill:#10b981,stroke:#065f46,color:#fff;
-  class topo t; class a1,a2,a3,i1,i2,i3,i4,u1,u2,u3 s; class a4,i5,u4 o;
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/ipi-vs-agent-01-dark.svg">
+    <img alt="IPI vs agent-based diagram" src="diagrams/ipi-vs-agent-01.svg">
+  </picture>
+</p>
 
 All three wire up the BMCs (sushy Redfish + BareMetalHost manifests) for Day-2
 power control afterward; they differ only in the install-time path.

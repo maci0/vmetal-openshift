@@ -405,6 +405,9 @@ docs/                     architecture, requirements, ipi-vs-agent, fidelity, di
 
 * macOS host support
 
+More enterprise-baremetal fidelity to simulate (OVS switch fabric, Secure Boot +
+NBDE, SAN/multipath, site services, ...) is brainstormed in [IDEAS.md](IDEAS.md).
+
 ## License
 
 [MIT](LICENSE)

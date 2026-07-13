@@ -50,12 +50,17 @@
     # Disconnected only: the mirrored CatalogSource + ImageDigestMirrorSet (rendered
     # by generate-configs when disconnected). Idempotent; the subscription's source
     # then resolves to vmetal-operators. Applying the IDMS triggers a node rollout.
+    - name: Check for a mirrored operator catalog (air-gap)
+      ansible.builtin.stat:
+        path: "{{ dir }}/operator-catalog.yaml"
+      register: op_catalog
+
     - name: Apply the mirrored operator catalog (air-gap)
       kubernetes.core.k8s:
         src: "{{ dir }}/operator-catalog.yaml"
         state: present
         kubeconfig: "{{ kubeconfig }}"
-      when: (lookup('file', dir ~ '/operator-catalog.yaml', errors='ignore') | default('') | trim | length) > 0
+      when: op_catalog.stat.exists
 
     - name: Install the operator
       kubernetes.core.k8s:
@@ -104,7 +109,7 @@
         state: present
         kubeconfig: "{{ kubeconfig }}"
       loop: "{{ spec.crs }}"
-      when: (lookup('file', dir ~ '/' ~ item, errors='ignore') | default('') | trim | length) > 0
+      when: (lookup('file', dir ~ '/' ~ item, errors='ignore') | default('', true) | trim | length) > 0
       register: crapply
       until: crapply is succeeded
       retries: 30

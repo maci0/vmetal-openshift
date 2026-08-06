@@ -111,9 +111,11 @@ mirror_ca_file: certs/mirror/ca.pem   # CA emitted by mirror.sh, injected as tru
 # release-only disconnect (operators still pull from the internet).
 ocp_minor: ""
 
-# sushy-emulator Redfish endpoint. BMCs live on each cluster's OOB LAN
-# (172.16.{c}.1). Credentials are placeholders, sushy runs without auth by
-# default; install-config still requires the fields.
+# sushy-emulator Redfish endpoint. sushy binds 0.0.0.0; BMH / install-config
+# BMC URLs use the machine gateway (10.{c}.0.1) so in-cluster metal3 can reach
+# them (nodes have no route to the host-only OOB LAN). Credentials are
+# placeholders; sushy runs without auth by default, but install-config still
+# requires the fields.
 sushy_port: 8000
 bmc_username: admin
 bmc_password: password

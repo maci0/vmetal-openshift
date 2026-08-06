@@ -7,13 +7,16 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
+
 CLUSTER="${1:-${CLUSTER:-cluster0}}"
+require_cluster_name "$CLUSTER"
 EXPECT="${2:-0}"
 TIMEOUT="${3:-2400}"
-OC="$ROOT/build/openshift-install/oc"; [[ -x "$OC" ]] || OC="$(command -v oc)"
+resolve_oc
 export KUBECONFIG="$ROOT/clusters/$CLUSTER/auth/kubeconfig"
-
-log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
+[[ -f "$KUBECONFIG" ]] || die "no kubeconfig for '$CLUSTER'"
 
 deadline=$(( $(cut -d. -f1 /proc/uptime) + TIMEOUT ))
 while [[ "$(cut -d. -f1 /proc/uptime)" -lt "$deadline" ]]; do
@@ -23,8 +26,13 @@ while [[ "$(cut -d. -f1 /proc/uptime)" -lt "$deadline" ]]; do
     # shellcheck disable=SC2086
     "$OC" adm certificate approve $pending >/dev/null 2>&1 && log "approved: $(echo "$pending" | tr '\n' ' ')" || true
   fi
-  ready="$("$OC" get nodes --no-headers 2>/dev/null | awk '$2 ~ /^Ready/' | wc -l)"
-  [[ "$EXPECT" -gt 0 && "$ready" -ge "$EXPECT" ]] && { log "all $EXPECT nodes Ready"; exit 0; }
+  ready="$("$OC" get nodes --no-headers 2>/dev/null | awk '$2 ~ /^Ready/' | wc -l || true)"
+  ready="${ready// /}"
+  [[ "$EXPECT" -gt 0 && "${ready:-0}" -ge "$EXPECT" ]] && { log "all $EXPECT nodes Ready"; exit 0; }
   sleep 15
 done
+if [[ "$EXPECT" -gt 0 ]]; then
+  die "csr-approve: timed out after ${TIMEOUT}s (expected $EXPECT Ready nodes)"
+fi
 log "csr-approve: timed out after ${TIMEOUT}s"
+exit 0

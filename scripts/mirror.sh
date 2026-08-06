@@ -15,18 +15,26 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-CLUSTER="${1:-${CLUSTER:-cluster0}}"
-ACTION="${2:-release}"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
+
+# Allow `mirror.sh release` (action-first) as well as `mirror.sh cluster0 release`.
+if [[ "${1:-}" =~ ^(up|down|release|operators)$ ]]; then
+  ACTION="$1"
+  CLUSTER="${CLUSTER:-cluster0}"
+else
+  CLUSTER="${1:-${CLUSTER:-cluster0}}"
+  ACTION="${2:-release}"
+fi
+require_cluster_name "$CLUSTER"
 PORT="${MIRROR_PORT:-5000}"
 NAME="vmetal-mirror"
 CERTS="$ROOT/certs/mirror"
 DATA="$ROOT/build/mirror/data"
+ARCH="${ARCH:-x86_64}"
 
-log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
-die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
-
-[[ -x "$ROOT/.venv/bin/ansible-playbook" ]] && AP="$ROOT/.venv/bin/ansible-playbook" || AP="ansible-playbook"
-OI="$ROOT/build/openshift-install/openshift-install"; [[ -x "$OI" ]] || OI="$(command -v openshift-install || true)"
+resolve_ansible
+resolve_openshift_install
 OC="$ROOT/build/oc422/oc"; [[ -x "$OC" ]] || OC="$ROOT/build/openshift-install/oc"; [[ -x "$OC" ]] || OC="$(command -v oc || true)"
 # This script stays bash (the registry container is not split into a playbook)
 # because its main job, `oc adm release mirror`, has no Ansible module. The CLI is
@@ -38,9 +46,10 @@ command -v jq >/dev/null || die "jq required"
 
 # Machine gateway = where the registry listens and what the nodes pull from.
 gw() {
-  local topo; topo="$(mktemp)"
-  ( cd ansible && "$AP" lifecycle/dump-topology.yml -e out="$topo" ) >/dev/null 2>&1
-  jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .machine_gateway' "$topo"; rm -f "$topo"
+  local topo
+  topo="$(dump_topology)"
+  jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .machine_gateway' "$topo"
+  rm -f "$topo"
 }
 
 if [[ "$ACTION" == "down" ]]; then
@@ -52,8 +61,16 @@ GW="$(gw)"; [[ -n "$GW" ]] || die "could not resolve machine_gateway for '$CLUST
 REG="${GW}:${PORT}"
 
 # Self-signed TLS cert valid for the gateway IP (and localhost); the cert is its
-# own CA, injected as the install-config trust bundle.
-if [[ ! -s "$CERTS/cert.pem" || ! -s "$CERTS/key.pem" ]]; then
+# own CA, injected as the install-config trust bundle. Regenerate when the
+# gateway SAN no longer matches (cluster addressing changed).
+need_cert=false
+if [[ ! -s "$CERTS/cert.pem" || ! -s "$CERTS/key.pem" || ! -s "$CERTS/ca.pem" ]]; then
+  need_cert=true
+elif ! openssl x509 -in "$CERTS/cert.pem" -noout -ext subjectAltName 2>/dev/null | grep -q "IP Address:${GW}"; then
+  log "Mirror cert SAN missing $GW; regenerating"
+  need_cert=true
+fi
+if $need_cert; then
   log "Generating mirror TLS cert (SAN: $GW)"
   mkdir -p "$CERTS"
   openssl req -x509 -newkey rsa:4096 -nodes -days 3650 \
@@ -63,7 +80,8 @@ if [[ ! -s "$CERTS/cert.pem" || ! -s "$CERTS/key.pem" ]]; then
 fi
 
 # Start (or restart) the registry on the host network.
-if ! "$ENGINE" ps --filter "name=$NAME" --filter status=running --format '{{.Names}}' | grep -q "$NAME"; then
+if ! "$ENGINE" ps --filter "name=^/${NAME}$" --filter status=running --format '{{.Names}}' 2>/dev/null | grep -qx "$NAME" \
+   && ! "$ENGINE" ps --filter "name=$NAME" --filter status=running --format '{{.Names}}' | grep -qx "$NAME"; then
   mkdir -p "$DATA"
   "$ENGINE" rm -f "$NAME" >/dev/null 2>&1 || true
   log "Starting mirror registry ($REG)"
@@ -110,7 +128,7 @@ VER="${OCP_VERSION:-$("$OI" version | awk '/^openshift-install/{print $2; exit}'
 log "Mirroring OpenShift $VER release into $REG/openshift/release (large, slow)"
 "$OC" adm release mirror --insecure \
   --registry-config=pull-secret.json \
-  --from="quay.io/openshift-release-dev/ocp-release:${VER}-x86_64" \
+  --from="quay.io/openshift-release-dev/ocp-release:${VER}-${ARCH}" \
   --to="${REG}/openshift/release" \
   --to-release-image="${REG}/openshift/release:${VER}"
 log "Mirror complete. Set 'disconnected: true' on the cluster and rebuild configs."

@@ -30,3 +30,10 @@ spec:
             - matchExpressions:
                 - key: node-role.kubernetes.io/worker
                   operator: Exists
+{#           Compact / SNO schedulable masters carry worker_disks but may lack the
+             worker label; also select masters when the topology marks them schedulable. #}
+{% if cluster.masters_schedulable | default(false) %}
+            - matchExpressions:
+                - key: node-role.kubernetes.io/master
+                  operator: Exists
+{% endif %}

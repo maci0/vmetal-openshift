@@ -13,25 +13,16 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
 
 CLUSTER="${1:-${CLUSTER:-cluster0}}"
+require_cluster_name "$CLUSTER"
 CLUSTER_DIR="$ROOT/clusters/$CLUSTER"
+ARCH="${ARCH:-x86_64}"
 
-log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
-die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
-
-# ansible-playbook (prefer project venv)
-if [[ -x "$ROOT/.venv/bin/ansible-playbook" ]]; then
-  AP="$ROOT/.venv/bin/ansible-playbook"
-else
-  command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found, run scripts/bootstrap.sh"
-  AP="ansible-playbook"
-fi
-
-# openshift-install (self-contained copy first, then PATH)
-OI="$ROOT/build/openshift-install/openshift-install"
-[[ -x "$OI" ]] || OI="$(command -v openshift-install || true)"
-[[ -n "$OI" && -x "$OI" ]] || die "openshift-install not found, run scripts/bootstrap.sh"
+resolve_ansible
+resolve_openshift_install
 
 # coreos-installer (self-contained copy first, then PATH)
 CI="$ROOT/build/coreos-installer"
@@ -40,14 +31,7 @@ CI="$ROOT/build/coreos-installer"
 
 command -v jq >/dev/null || die "jq required"
 
-# Clear stale artifacts so a re-build never reuses an old ignition or state.
-if [[ -d "$CLUSTER_DIR" ]]; then
-  log "Clearing previous build artifacts in $CLUSTER_DIR"
-  rm -rf "$CLUSTER_DIR/openshift" "$CLUSTER_DIR/auth"
-  rm -f "$CLUSTER_DIR"/*.ign \
-        "$CLUSTER_DIR/.openshift_install_state.json" \
-        "$CLUSTER_DIR/.openshift_install.log"
-fi
+clear_install_artifacts "$CLUSTER_DIR"
 
 log "Rendering install config"
 ( cd ansible && "$AP" lifecycle/generate-configs.yml )
@@ -68,8 +52,8 @@ ign="$CLUSTER_DIR/bootstrap-in-place-for-live-iso.ign"
 rhcos="$ROOT/build/rhcos-live.iso"
 if [[ ! -f "$rhcos" ]]; then
   url="$("$OI" coreos print-stream-json \
-        | jq -r '.architectures.x86_64.artifacts.metal.formats.iso.disk.location')"
-  [[ -n "$url" && "$url" != null ]] || die "could not resolve RHCOS live ISO URL from coreos stream"
+        | jq -r --arg a "$ARCH" '.architectures[$a].artifacts.metal.formats.iso.disk.location')"
+  [[ -n "$url" && "$url" != null ]] || die "could not resolve RHCOS live ISO URL from coreos stream (arch=$ARCH)"
   log "Downloading RHCOS live ISO: $url"
   curl -fL --retry 3 -o "$rhcos.tmp" "$url"
   mv -f "$rhcos.tmp" "$rhcos"

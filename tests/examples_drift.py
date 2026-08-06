@@ -33,6 +33,8 @@ def illustrative(b):
 
 
 def main():
+    if len(sys.argv) < 3:
+        sys.exit(f"usage: {sys.argv[0]} <examples.md> <corpus.txt>")
     with open(sys.argv[1], encoding="utf-8") as fh:
         doc = fh.read()
     with open(sys.argv[2], encoding="utf-8") as fh:

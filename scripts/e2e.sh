@@ -25,9 +25,9 @@ fi
 
 # Need root for qemu:///system unless the user is in the libvirt group.
 if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then
-  BECOME=(-e use_become=false); SUDO=""
+  BECOME=(-e use_become=false); SUDO=""; VIRSH=(virsh -c "$URI")
 else
-  BECOME=(); SUDO="sudo"
+  BECOME=(); SUDO="sudo"; VIRSH=(sudo virsh -c "$URI")
 fi
 
 ok()   { printf '\033[1;32mok  \033[0m %s\n' "$*"; }
@@ -58,13 +58,13 @@ provision; ok "lifecycle/setup.yml applied"
 # setup.yml only auto-starts ISO-boot clusters; power the rest on so the infra
 # asserts below hold regardless of boot_via (redfish/ipi/upi normally boot via BMC).
 echo "== power on domains =="
-while read -r dom; do virsh -c "$URI" start "$dom" >/dev/null 2>&1 || true; done \
+while read -r dom; do "${VIRSH[@]}" start "$dom" >/dev/null 2>&1 || true; done \
   < <(jq -r '.[].nodes[].fullname' "$TOPO")
 sleep 2; ok "domains started"
 
 echo "== assert networks active =="
 while read -r net; do
-  state=$(virsh -c "$URI" net-info "$net" 2>/dev/null | awk '/Active:/{print $2}')
+  state=$("${VIRSH[@]}" net-info "$net" 2>/dev/null | awk '/Active:/{print $2}')
   [[ "$state" == "yes" ]] || fail "network $net not active"
 done < <(jq -r '.[].networks[].name' "$TOPO")
 ok "all networks active"
@@ -72,9 +72,10 @@ ok "all networks active"
 echo "== assert domains running + NIC counts (bonding) =="
 while read -r row; do
   dom=${row%%|*}; want=${row##*|}
-  st=$(virsh -c "$URI" domstate "$dom" 2>/dev/null || true)
+  st=$("${VIRSH[@]}" domstate "$dom" 2>/dev/null || true)
   [[ "$st" == "running" ]] || fail "domain $dom not running ($st)"
-  got=$(virsh -c "$URI" domiflist "$dom" | awk 'NR>2 && NF' | wc -l)
+  got=$("${VIRSH[@]}" domiflist "$dom" | awk 'NR>2 && NF' | wc -l)
+  got=${got// /}
   [[ "$got" == "$want" ]] || fail "$dom NIC count: want $want got $got"
 done < <(jq -r '.[].nodes[] | "\(.fullname)|\(.interfaces|length)"' "$TOPO")
 ok "domains running with expected NIC counts"

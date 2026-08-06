@@ -41,7 +41,12 @@
       loop_control:
         label: "{{ item.item.fullname }}"
       when: (item.status | default('')) == 'running'
-      failed_when: false
+      register: dom_destroy
+      # Ignore "not found" races; surface real libvirt/permission errors.
+      failed_when: >-
+        dom_destroy is failed and
+        ('not found' not in (dom_destroy.msg | default('') | lower)) and
+        ('no domain' not in (dom_destroy.msg | default('') | lower))
 
     # flags nvram + delete_volumes = `virsh undefine --nvram --remove-all-storage`:
     # removes the domain, its UEFI nvram, and all its qcow2 volumes in one go.
@@ -57,7 +62,11 @@
       loop_control:
         label: "{{ item.item.fullname }}"
       when: item.status is defined   # status key present only for domains that exist
-      failed_when: false
+      register: dom_undefine
+      failed_when: >-
+        dom_undefine is failed and
+        ('not found' not in (dom_undefine.msg | default('') | lower)) and
+        ('no domain' not in (dom_undefine.msg | default('') | lower))
 
     - name: Destroy and undefine networks
       community.libvirt.virt_net:
@@ -67,3 +76,21 @@
       loop: "{{ topology | subelements('networks') }}"
       loop_control:
         label: "{{ item.1.name }}"
+
+    # Drop host split-DNS drop-ins written by host-dns.yml (best-effort; root needed).
+    - name: Remove host NetworkManager dnsmasq drop-ins
+      ansible.builtin.file:
+        path: "/etc/NetworkManager/dnsmasq.d/ocp-{{ item.name }}.conf"
+        state: absent
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      failed_when: false
+      notify: Reload NetworkManager
+
+  handlers:
+    - name: Reload NetworkManager
+      ansible.builtin.service:
+        name: NetworkManager
+        state: reloaded
+      failed_when: false

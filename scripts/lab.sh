@@ -10,20 +10,21 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
+
 CLUSTER="${1:-${CLUSTER:-cluster0}}"
+require_cluster_name "$CLUSTER"
 
-die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
-log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
-
-[[ -x "$ROOT/.venv/bin/ansible-playbook" ]] && AP="$ROOT/.venv/bin/ansible-playbook" || AP="ansible-playbook"
-OI="$ROOT/build/openshift-install/openshift-install"; [[ -x "$OI" ]] || OI="$(command -v openshift-install || echo openshift-install)"
+resolve_ansible
+resolve_openshift_install
 command -v jq >/dev/null || die "jq required"
-if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_become=false); else BECOME=(); fi
+libvirt_become_args
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
-topo="$(mktemp)"; trap 'rm -f "$topo"' EXIT
-ap lifecycle/dump-topology.yml -e out="$topo" >/dev/null 2>&1
-read -r MODE FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | "\(.mode) \(.fqdn)"' "$topo") || true
+topo="$(dump_topology)"
+trap 'rm -f "$topo"' EXIT
+IFS=$'\t' read -r MODE FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | [.mode, .fqdn] | @tsv' "$topo") || true
 [[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology"
 
 # Practice mode targets the agent flow (discovery ISO + `agent wait-for`).

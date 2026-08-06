@@ -8,7 +8,9 @@
 - name: Configure host split-DNS for cluster domains
   hosts: local
   gather_facts: false
-  become: true
+  become: "{{ use_become | default(true) }}"
+  vars:
+    dns_action: up   # up | down
   tasks:
     - name: Build topology from addressing scheme
       ansible.builtin.set_fact:
@@ -22,6 +24,17 @@
       loop: "{{ topology }}"
       loop_control:
         label: "{{ item.fqdn }} -> {{ item.machine_gateway }}"
+      when: dns_action != 'down'
+      notify: Reload NetworkManager
+
+    - name: Remove NetworkManager dnsmasq forward per cluster
+      ansible.builtin.file:
+        path: "/etc/NetworkManager/dnsmasq.d/ocp-{{ item.name }}.conf"
+        state: absent
+      loop: "{{ topology }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: dns_action == 'down'
       notify: Reload NetworkManager
 
   handlers:

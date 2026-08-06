@@ -19,10 +19,29 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build", "bench-results.csv")
 out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "docs", "bench.png")
 
-with open(src) as fh:
+if not os.path.isfile(src):
+    sys.exit(f"no such file: {src}")
+
+with open(src, encoding="utf-8") as fh:
     rows = list(csv.DictReader(fh))
-def col(r, k):  # tolerate an empty cell from a truncated/partial CSV row
-    return int(r[k] or 0)
+
+if not rows:
+    sys.exit(f"no data rows in {src}")
+
+required = {"state", "vm_rss_mib", "ksm_saved_mib", "zram_compr_mib", "perf_ops_s"}
+missing = required - rows[0].keys()
+if missing:
+    sys.exit(f"{src}: missing columns {sorted(missing)}")
+
+
+def col(r, k):
+    try:
+        v = r[k]
+    except KeyError as e:
+        raise SystemExit(f"missing column {k!r}") from e
+    if v is None or v == "":
+        return 0
+    return int(float(v))
 
 
 states = [r["state"] for r in rows]
@@ -34,12 +53,19 @@ perf = [col(r, "perf_ops_s") for r in rows]
 # vm_rss alone undercounts zram states (squeezed pages left RSS but still cost RAM).
 used = [r + z for r, z in zip(rss, zsw)]
 
+# Prefer an explicit baseline row; fall back to the first sample.
+baseline = used[0]
+for i, s in enumerate(states):
+    if s == "baseline" or s.startswith("baseline"):
+        baseline = used[i]
+        break
+
 x = range(len(states))
 width = max(12, len(states) * 1.5)
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(width, 5))
 fig.suptitle("vmetal-openshift: memory optimization (3 masters + 2 workers)", fontsize=13, weight="bold")
 
-saved = [used[0] - u for u in used]   # RAM saved vs the baseline (first row)
+saved = [baseline - u for u in used]
 w = 0.2
 ax1.bar([i - 1.5 * w for i in x], used, w, label="memory footprint, RSS + zram (GiB)", color="#ef4444")
 ax1.bar([i - 0.5 * w for i in x], saved, w, label="RAM saved vs baseline (GiB)", color="#f59e0b")
@@ -65,6 +91,8 @@ for i, v in zip(x, perf):
     ax2.text(i, v, f"{v:,}", ha="center", va="bottom", fontsize=7)
 
 fig.tight_layout(rect=(0, 0, 1, 0.95))
-os.makedirs(os.path.dirname(out), exist_ok=True)
+parent = os.path.dirname(out)
+if parent:
+    os.makedirs(parent, exist_ok=True)
 fig.savefig(out, dpi=130, bbox_inches="tight")
 print(f"wrote {out}")

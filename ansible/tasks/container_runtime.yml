@@ -6,10 +6,15 @@
 - name: Probe for a container API socket (docker or podman)
   ansible.builtin.stat:
     path: "{{ item }}"
-  loop:
-    - /var/run/docker.sock
-    - "{{ lookup('ansible.builtin.env', 'XDG_RUNTIME_DIR') }}/podman/podman.sock"
-    - /run/podman/podman.sock
+  loop: "{{ _socket_candidates }}"
+  vars:
+    _xdg: "{{ lookup('ansible.builtin.env', 'XDG_RUNTIME_DIR') | default('', true) }}"
+    _socket_candidates: >-
+      {{
+        ['/var/run/docker.sock']
+        + ([_xdg ~ '/podman/podman.sock'] if _xdg | length > 0 else [])
+        + ['/run/podman/podman.sock']
+      }}
   register: _container_sockets
 
 - name: Select the first socket that exists

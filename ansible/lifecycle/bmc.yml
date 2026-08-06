@@ -28,7 +28,8 @@
 - name: Redfish BMC control
   hosts: local
   gather_facts: false
-  become: false
+  # Libvirt tasks (boot-iso media attach verify) need the same privilege model as setup.
+  become: "{{ use_become | default(true) }}"
   vars:
     cluster: cluster0
     bmc_action: status

@@ -97,6 +97,10 @@ def main():
     if args.self_check:
         self_check()
         return
+    if args.mib <= 0:
+        ap.error("--mib must be positive")
+    if not (0.0 < args.comp_frac < 1.0):
+        ap.error("--comp-frac must be between 0 and 1 (exclusive)")
     run(args.mib, args.comp_frac, args.seconds)
 
 

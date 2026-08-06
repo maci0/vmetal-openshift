@@ -24,10 +24,10 @@ metadata:
   namespace: openshift-machine-api
 spec:
   online: true
-{% if cluster.mode == 'upi' %}
-{#  upi nodes are already installed; adopt for power only, never reprovision #}
+{#  Day-2 BMHs are for power management of already-installed nodes (agent + upi).
+    Always mark externallyProvisioned so metal3 never tries to reimage them.
+    Green-field BMH enrollment is not what these manifests are for. #}
   externallyProvisioned: true
-{% endif %}
   bootMACAddress: {{ node.mac }}
   bmc:
     address: {{ node.bmc_address }}

@@ -9,36 +9,20 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
 
 CLUSTER="${1:-${CLUSTER:-cluster0}}"
+require_cluster_name "$CLUSTER"
 CLUSTER_DIR="$ROOT/clusters/$CLUSTER"
 
-log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
-die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
-
-# ansible-playbook (prefer project venv)
-if [[ -x "$ROOT/.venv/bin/ansible-playbook" ]]; then
-  AP="$ROOT/.venv/bin/ansible-playbook"
-else
-  command -v ansible-playbook >/dev/null 2>&1 || die "ansible-playbook not found, run scripts/bootstrap.sh"
-  AP="ansible-playbook"
-fi
-
-# openshift-install (self-contained copy first, then PATH)
-OI="$ROOT/build/openshift-install/openshift-install"
-[[ -x "$OI" ]] || OI="$(command -v openshift-install || true)"
-[[ -n "$OI" && -x "$OI" ]] || die "openshift-install not found, run scripts/bootstrap.sh"
+resolve_ansible
+resolve_openshift_install
 
 # Clear stale artifacts from a prior build BEFORE rendering, so old manifests
 # (e.g. openshift/cluster-scheduler-02-config.yml) never leak into a new ISO.
-# generate-configs re-renders the install/agent yamls fresh.
-if [[ -d "$CLUSTER_DIR" ]]; then
-  log "Clearing previous build artifacts in $CLUSTER_DIR"
-  rm -rf "$CLUSTER_DIR/openshift" "$CLUSTER_DIR/auth"
-  rm -f "$CLUSTER_DIR"/agent.*.iso \
-        "$CLUSTER_DIR/.openshift_install_state.json" \
-        "$CLUSTER_DIR/.openshift_install.log"
-fi
+# Never wipe auth/ — that holds the live kubeconfig after install.
+clear_install_artifacts "$CLUSTER_DIR"
 
 log "Rendering install + agent configs"
 ( cd ansible && "$AP" lifecycle/generate-configs.yml )
@@ -46,8 +30,13 @@ log "Rendering install + agent configs"
 [[ -f "$CLUSTER_DIR/install-config.yaml" ]] \
   || die "no config for '$CLUSTER': add it to the clusters list in ansible/group_vars/all.yml"
 
-# IPI clusters have no agent-config and build no ISO (metal3 drives the BMC).
+# Detect install mode: agent has agent-config; IPI/UPI do not.
 if [[ ! -f "$CLUSTER_DIR/agent-config.yaml" ]]; then
+  if grep -qE '^\s*bootstrapInPlace:' "$CLUSTER_DIR/install-config.yaml" 2>/dev/null \
+     || grep -qE '^\s*none:\s*\{\}' "$CLUSTER_DIR/install-config.yaml" 2>/dev/null; then
+    die "'$CLUSTER' looks like a UPI cluster (no discovery ISO). Use:
+       make install-upi CLUSTER=$CLUSTER"
+  fi
   die "'$CLUSTER' is an IPI cluster (no discovery ISO). Provision with:
        openshift-install --dir clusters/$CLUSTER create cluster"
 fi

@@ -25,10 +25,11 @@ pass() { printf '\033[1;32mPASS\033[0m %s\n' "$*"; }
 skip() { printf '\033[1;33mSKIP\033[0m %s\n' "$*"; }
 
 echo "== ansible syntax-check =="
-( cd ansible && "$AP" --syntax-check \
-    lifecycle/setup.yml lifecycle/cleanup.yml lifecycle/dump-topology.yml lifecycle/generate-configs.yml \
-    lifecycle/bmc.yml lifecycle/sushy.yml lifecycle/host-dns.yml lifecycle/workers.yml day2/operators.yml appliances/haproxy.yml appliances/nfs.yml appliances/metallb-bgp.yml day2/adopt.yml day2/optimize.yml >/dev/null )
-pass "playbooks parse"
+# Auto-discover playbooks so new ones cannot silently skip CI.
+mapfile -t PLAYBOOKS < <(cd ansible && compgen -G 'lifecycle/*.yml' && compgen -G 'day2/*.yml' && compgen -G 'appliances/*.yml' | sort -u)
+[[ "${#PLAYBOOKS[@]}" -gt 0 ]] || { echo "no playbooks found under ansible/" >&2; exit 1; }
+( cd ansible && "$AP" --syntax-check "${PLAYBOOKS[@]}" >/dev/null )
+pass "playbooks parse (${#PLAYBOOKS[@]})"
 
 echo "== yamllint =="
 if [[ -x "$YAMLLINT" ]] || command -v "$YAMLLINT" >/dev/null 2>&1; then

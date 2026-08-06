@@ -5,6 +5,11 @@
 - name: Auto-detect OVMF firmware pair
   when: (ovmf_code | default('')) == '' or (ovmf_vars | default('')) == ''
   block:
+    - name: Remember user-pinned OVMF paths
+      ansible.builtin.set_fact:
+        _ovmf_code_pinned: "{{ ovmf_code | default('') }}"
+        _ovmf_vars_pinned: "{{ ovmf_vars | default('') }}"
+
     - name: Candidate OVMF pairs (secure-boot first)
       ansible.builtin.set_fact:
         ovmf_candidates:
@@ -25,12 +30,14 @@
 
     - name: Pick the first pair whose CODE and VARS both exist
       ansible.builtin.set_fact:
-        ovmf_code: "{{ item.code }}"
-        ovmf_vars: "{{ item.vars }}"
+        # Never overwrite a user-pinned path; only fill empty fields.
+        ovmf_code: "{{ _ovmf_code_pinned if _ovmf_code_pinned | length > 0 else item.code }}"
+        ovmf_vars: "{{ _ovmf_vars_pinned if _ovmf_vars_pinned | length > 0 else item.vars }}"
       when:
+        - (_ovmf_code_pinned | length == 0) or (_ovmf_vars_pinned | length == 0)
+        - (_ovmf_code_pinned | length > 0) or (item.code is exists)
+        - (_ovmf_vars_pinned | length > 0) or (item.vars is exists)
         - (ovmf_code | default('') == '') or (ovmf_vars | default('') == '')
-        - item.code is exists
-        - item.vars is exists
       loop: "{{ ovmf_candidates }}"
       loop_control:
         label: "{{ item.code }}"

@@ -18,8 +18,8 @@ try:
     import yaml
     from jinja2 import Environment, FileSystemLoader
 except ImportError:
-    print("SKIP: pyyaml/jinja2 not installed (activate .venv)")
-    sys.exit(0)
+    print("FAIL: pyyaml/jinja2 not installed (activate .venv)", file=sys.stderr)
+    sys.exit(2)
 
 HAVE_XMLLINT = shutil.which("xmllint") is not None
 if not HAVE_XMLLINT:
@@ -28,8 +28,11 @@ if not HAVE_XMLLINT:
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANS = os.path.join(ROOT, "ansible")
 env = Environment(loader=FileSystemLoader(os.path.join(ANS, "templates")))
-base = yaml.safe_load(open(os.path.join(ANS, "group_vars", "all.yml")))
-base["playbook_dir"] = ANS
+with open(os.path.join(ANS, "group_vars", "all.yml"), encoding="utf-8") as _fh:
+    base = yaml.safe_load(_fh)
+# Match real lifecycle playbooks (playbook_dir = ansible/lifecycle).
+base["playbook_dir"] = os.path.join(ANS, "lifecycle")
+base["repo_root"] = ROOT
 
 failures = []
 
@@ -95,6 +98,10 @@ check("default", base["clusters"])
 check("multi-3node+SNO", [
     {"name": "c0", "control_plane": 3, "workers": 0, "subnet_index": 0},
     {"name": "c1", "control_plane": 1, "workers": 0, "subnet_index": 1},
+])
+# Non-schedulable masters + workers: exercises role-aware bond1 filtering.
+check("ha+workers", [
+    {"name": "ha", "control_plane": 3, "workers": 2, "subnet_index": 0},
 ])
 
 if failures:

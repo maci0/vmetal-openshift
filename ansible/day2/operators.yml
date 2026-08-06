@@ -35,6 +35,8 @@
         crd: metallbs.metallb.io
         rollout: { namespace: metallb-system, name: metallb-operator-controller-manager }
         crs: [metallb-config.yaml]
+        # MetalLB CR lives in metallb-config.yaml; wait for the controller Deployment.
+        ready_deploy: { namespace: metallb-system, name: controller }
 
   tasks:
     - name: Validate op
@@ -46,6 +48,24 @@
     - name: Select spec
       ansible.builtin.set_fact:
         spec: "{{ specs[op] }}"
+
+    - name: Require kubeconfig
+      ansible.builtin.stat:
+        path: "{{ kubeconfig }}"
+      register: kc
+    - name: Fail without kubeconfig
+      ansible.builtin.fail:
+        msg: "no kubeconfig at {{ kubeconfig }} (install the cluster first)"
+      when: not kc.stat.exists
+
+    - name: Require operator manifest
+      ansible.builtin.stat:
+        path: "{{ dir }}/{{ spec.operator }}"
+      register: opm
+    - name: Fail without operator manifest
+      ansible.builtin.fail:
+        msg: "missing {{ dir }}/{{ spec.operator }} (run 'make configs' first)"
+      when: not opm.stat.exists
 
     # Disconnected only: the mirrored CatalogSource + ImageDigestMirrorSet (rendered
     # by generate-configs when disconnected). Idempotent; the subscription's source
@@ -126,14 +146,14 @@
         wait_condition: { type: "{{ spec.ready.condition }}", status: "True" }
         wait_timeout: 1800
       register: ready_cr
-      when: spec.ready.condition is defined
+      when: spec.ready is defined and spec.ready.condition is defined
 
     - name: Assert the CR appeared
       ansible.builtin.assert:
         that: ready_cr.resources | default([]) | length > 0
         fail_msg: "{{ spec.ready.kind }}/{{ spec.ready.name }} never appeared; the operator did not create it."
         quiet: true
-      when: spec.ready.condition is defined
+      when: spec.ready is defined and spec.ready.condition is defined
 
     - name: Wait for the CR's status.state to reach the ready value
       kubernetes.core.k8s_info:
@@ -148,7 +168,26 @@
         (cr.resources[0].status.state | default('')) == spec.ready.state_equals
       retries: 60
       delay: 10
-      when: spec.ready.state_equals is defined
+      when: spec.ready is defined and spec.ready.state_equals is defined
+
+    - name: Wait for operand Deployment (e.g. MetalLB controller)
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ spec.ready_deploy.namespace }}"
+        name: "{{ spec.ready_deploy.name }}"
+        kubeconfig: "{{ kubeconfig }}"
+        wait: true
+        wait_condition: { type: Available, status: "True" }
+        wait_timeout: 600
+      register: ready_dep
+      when: spec.ready_deploy is defined
+
+    - name: Assert operand Deployment appeared
+      ansible.builtin.assert:
+        that: ready_dep.resources | default([]) | length > 0
+        fail_msg: "operand deployment {{ spec.ready_deploy.namespace }}/{{ spec.ready_deploy.name }} never appeared."
+        quiet: true
+      when: spec.ready_deploy is defined
 
     - name: Done
       ansible.builtin.debug:

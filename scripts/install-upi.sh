@@ -10,30 +10,31 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
+
 CLUSTER="${1:-${CLUSTER:-cluster0}}"
+require_cluster_name "$CLUSTER"
 HTTP_PORT="${HTTP_PORT:-8099}"
-VIRSH=(virsh -c qemu:///system)
 
-die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
-log() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
-
-[[ -x "$ROOT/.venv/bin/ansible-playbook" ]] && AP="$ROOT/.venv/bin/ansible-playbook" || AP="ansible-playbook"
-[[ -x "$ROOT/.venv/bin/python" ]] && PY="$ROOT/.venv/bin/python" || PY=python3
-OI="$ROOT/build/openshift-install/openshift-install"; [[ -x "$OI" ]] || OI="$(command -v openshift-install || true)"
-[[ -n "$OI" && -x "$OI" ]] || die "openshift-install not found; run scripts/bootstrap.sh"
+resolve_ansible
+resolve_openshift_install
+resolve_virsh
 command -v jq >/dev/null || die "jq required"
-if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then BECOME=(-e use_become=false); else BECOME=(); fi
+libvirt_become_args
 ap() { ( cd "$ROOT/ansible" && "$AP" "$@" ); }
 
 # Topology facts.
-topo="$(mktemp)"; ap lifecycle/dump-topology.yml -e out="$topo" >/dev/null 2>&1
-# tab-delimited so an empty field never collapses and shifts the columns
-IFS=$'\t' read -r PXE BMC_HOST FQDN < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | [.pxe, .bmc_host, .fqdn] | @tsv' "$topo") || true
+topo="$(dump_topology)"
+IFS=$'\t' read -r MODE PXE BMC_HOST FQDN GW < <(
+  jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | [.mode, .pxe, .bmc_host, .fqdn, .machine_gateway] | @tsv' "$topo"
+) || true
 mapfile -t ALL_VMS  < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[].fullname' "$topo")
 mapfile -t BOOT_VMS < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[] | select(.role=="bootstrap") | .fullname' "$topo")
 EXPECT="$(jq -r --arg c "$CLUSTER" '[.[] | select(.name==$c) | .nodes[] | select(.role!="bootstrap")] | length' "$topo")"
 rm -f "$topo"
 [[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology"
+[[ "$MODE" == "upi" ]] || die "cluster '$CLUSTER' is mode=$MODE; use make install (agent) or openshift-install create cluster (ipi)"
 is_pxe() { [[ "$PXE" == "True" || "$PXE" == "true" ]]; }
 MULTINODE=false; [[ "${#BOOT_VMS[@]}" -gt 0 ]] && MULTINODE=true
 $MULTINODE && ! is_pxe && die "multi-node upi requires boot_via: pxe"
@@ -45,6 +46,7 @@ else
 fi
 
 log "Provisioning libvirt (networks, volumes, VMs)"
+# setup.yml provisions every cluster in group_vars; CLUSTER selects which we boot.
 ap lifecycle/setup.yml "${BECOME[@]}"
 
 if $MULTINODE; then
@@ -52,26 +54,21 @@ if $MULTINODE; then
   ap appliances/haproxy.yml -e cluster="$CLUSTER"
 fi
 
-# Serve build/ over HTTP (the ISO, or the iPXE script + RHCOS artifacts + ignitions).
-"$PY" -m http.server "$HTTP_PORT" --directory "$ROOT/build" >/tmp/vmetal-iso-http.log 2>&1 &
-http_pid=$!
-trap 'kill "$http_pid" 2>/dev/null || true' EXIT
+trap 'kill "${http_pid:-}" 2>/dev/null || true; kill "${csr_pid:-}" 2>/dev/null || true' EXIT
 
 if is_pxe; then
   log "Netbooting ${#ALL_VMS[@]} node(s) (UEFI PXE -> iPXE -> RHCOS live)"
-  for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/boot.ipxe" && break; sleep 1; done
-  curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/boot.ipxe" \
-    || die "iPXE HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
+  # Guests pull iPXE artifacts from the machine gateway, not loopback.
+  start_http_server "$HTTP_PORT" "$ROOT/build" "${GW:-0.0.0.0}" "boot.ipxe"
   for vm in "${ALL_VMS[@]}"; do "${VIRSH[@]}" start "$vm" >/dev/null 2>&1 || "${VIRSH[@]}" reset "$vm" >/dev/null 2>&1 || true; done
 else
   log "Serving the ISO + driving the BMC"
   curl -sk --max-time 5 "https://${BMC_HOST}:8000/redfish/v1/" | grep -q RedfishVersion \
     || die "sushy Redfish not reachable at ${BMC_HOST}:8000. Start it: make sushy-install"
   iso="upi_image_${CLUSTER}.iso"
-  for _ in $(seq 1 10); do curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" && break; sleep 1; done
-  curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:${HTTP_PORT}/${iso}" \
-    || die "ISO HTTP server not serving on :${HTTP_PORT} (port in use? see /tmp/vmetal-iso-http.log)"
-  ap lifecycle/bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" -e iso_name="$iso"
+  start_http_server "$HTTP_PORT" "$ROOT/build" "127.0.0.1" "$iso"
+  ap lifecycle/bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso \
+    -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" -e iso_name="$iso" "${BECOME[@]}"
 fi
 
 getent hosts "api.${FQDN}" >/dev/null 2>&1 || log "note: host cannot resolve api.${FQDN}; run 'make host-dns' if wait-for stalls"
@@ -85,14 +82,18 @@ if $MULTINODE; then
     "${VIRSH[@]}" undefine "$vm" --nvram --remove-all-storage >/dev/null 2>&1 || true
   done
   log "Approving node CSRs in the background (until $EXPECT nodes Ready)"
-  # nohup + disown so it survives even if wait-for install-complete errors out
-  # (workers join via CSR while the control plane is still settling).
-  nohup ./scripts/approve-csrs.sh "$CLUSTER" "$EXPECT" 3000 >/tmp/vmetal-csr-approve.log 2>&1 &
-  disown
+  ./scripts/approve-csrs.sh "$CLUSTER" "$EXPECT" 3000 >/tmp/vmetal-csr-approve.log 2>&1 &
+  csr_pid=$!
 fi
 
 log "Waiting for install to complete (this takes a while)"
 "$OI" --dir "clusters/${CLUSTER}" wait-for install-complete --log-level=info
+
+if [[ -n "${csr_pid:-}" ]]; then
+  # Give CSR approver a moment to finish after install-complete, then stop it.
+  wait "$csr_pid" 2>/dev/null || true
+  csr_pid=
+fi
 
 log "Install complete. Access details:"
 ./scripts/creds.sh "$CLUSTER" || true

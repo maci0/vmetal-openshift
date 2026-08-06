@@ -118,7 +118,9 @@ mirror-down:
 	./scripts/mirror.sh $(CLUSTER) down
 
 serve-iso:
-	$(PY) -m http.server $(HTTP_PORT) --directory build
+	# Bind loopback by default (Redfish virtual-media is host-local). For PXE guests
+	# override: make serve-iso HTTP_BIND=0.0.0.0
+	$(PY) -m http.server $(HTTP_PORT) --bind $(or $(HTTP_BIND),127.0.0.1) --directory build
 
 status:
 	./scripts/status.sh $(CLUSTER)

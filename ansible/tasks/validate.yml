@@ -9,9 +9,13 @@
 
 # Effective index = pinned subnet_index, else the cluster's list position. A
 # collision (pinned vs another cluster's auto position) reuses subnets/MACs/UUIDs.
+- name: Reset effective cluster indices
+  ansible.builtin.set_fact:
+    eff_idx: []
+
 - name: Compute effective cluster indices
   ansible.builtin.set_fact:
-    eff_idx: "{{ (eff_idx | default([])) + [item.subnet_index | default(idx)] }}"
+    eff_idx: "{{ eff_idx + [item.subnet_index | default(idx)] }}"
   loop: "{{ clusters }}"
   loop_control:
     index_var: idx
@@ -112,3 +116,93 @@
   loop: "{{ clusters }}"
   loop_control:
     label: "{{ item.name }}"
+
+- name: Validate clusters list is non-empty
+  ansible.builtin.assert:
+    that:
+      - clusters | length > 0
+    fail_msg: "`clusters` is empty; add at least one cluster entry in group_vars."
+    quiet: true
+
+- name: Validate cluster names are DNS-safe
+  ansible.builtin.assert:
+    that:
+      - item.name is match('^[a-z0-9]([a-z0-9-]*[a-z0-9])?$')
+      - (item.name | length) <= 63
+    fail_msg: >-
+      cluster name '{{ item.name }}' must be a DNS label (lowercase alnum/hyphen,
+      start/end alnum, <= 63 chars).
+    quiet: true
+  loop: "{{ clusters }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Validate boot_via values
+  ansible.builtin.assert:
+    that:
+      - (item.boot_via | default(boot_via)) in ['redfish', 'iso', 'pxe']
+    fail_msg: >-
+      cluster '{{ item.name }}': boot_via must be redfish, iso, or pxe (got
+      '{{ item.boot_via | default(boot_via) }}').
+    quiet: true
+  loop: "{{ clusters }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Validate boot_via pxe is only used with upi
+  ansible.builtin.assert:
+    that:
+      - (item.boot_via | default(boot_via)) != 'pxe' or
+        (item.install_mode | default(install_mode)) == 'upi'
+    fail_msg: >-
+      cluster '{{ item.name }}': boot_via: pxe is only valid with install_mode: upi.
+    quiet: true
+  loop: "{{ clusters }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Validate subnet_index is in MAC/octet range
+  ansible.builtin.assert:
+    that:
+      - (item.subnet_index | default(idx) | int) >= 0
+      - (item.subnet_index | default(idx) | int) <= 255
+    fail_msg: >-
+      cluster '{{ item.name }}': subnet_index must be 0..255 (got
+      {{ item.subnet_index | default(idx) }}); MAC and IP derivation use a single octet.
+    quiet: true
+  loop: "{{ clusters }}"
+  loop_control:
+    index_var: idx
+    label: "{{ item.name }}"
+
+- name: Validate VIP offsets do not collide with node IPs or each other
+  ansible.builtin.assert:
+    that:
+      - (item.api_vip_offset | default(api_vip_offset) | int) != (item.ingress_vip_offset | default(ingress_vip_offset) | int) or
+        (item.control_plane | default(control_plane_count_default) | int) == 1
+      - (item.api_vip_offset | default(api_vip_offset) | int) < (node_ip_offset | int)
+      - (item.ingress_vip_offset | default(ingress_vip_offset) | int) < (node_ip_offset | int)
+      - (item.api_vip_offset | default(api_vip_offset) | int) != 1
+      - (item.ingress_vip_offset | default(ingress_vip_offset) | int) != 1
+    fail_msg: >-
+      cluster '{{ item.name }}': api/ingress VIP offsets must be distinct (multi-node),
+      below node_ip_offset ({{ node_ip_offset }}), and not .1 (gateway).
+      Got api={{ item.api_vip_offset | default(api_vip_offset) }},
+      ingress={{ item.ingress_vip_offset | default(ingress_vip_offset) }}.
+    quiet: true
+  loop: "{{ clusters }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Validate bond modes that break agent IP-collision checks
+  ansible.builtin.assert:
+    that:
+      - (item.mode | default(default_bond_mode | default('active-backup'))) not in ['balance-alb', '802.3ad', 'balance-xor']
+    fail_msg: >-
+      nic_layout bond '{{ item.bond | default("?") }}' uses mode
+      '{{ item.mode | default(default_bond_mode) }}' which puts the bond IP on multiple MACs
+      and fails the agent installer IP-collision check. Use active-backup or balance-tlb.
+    quiet: true
+  loop: "{{ nic_layout }}"
+  loop_control:
+    label: "{{ item.bond | default(item) }}"

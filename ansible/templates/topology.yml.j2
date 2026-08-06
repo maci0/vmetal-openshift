@@ -37,12 +37,11 @@
      over tftp, then serves an iPXE script over http that boots RHCOS live. #}
 {%   set pxe = (mode == 'upi') and (boot == 'pxe') %}
 {%   set disc = c.disconnected | default(disconnected) %}
-{%   set oob_cidr = (networks.oob.cidr | replace('{c}', ci | string)) if networks.oob is defined else '' %}
-{#   BMC host: the oob LAN gateway normally. For upi AND ipi the in-cluster
-     metal3/ironic must reach the BMC, and cluster nodes have no route to the
-     host-only oob net, so they point the BMC at the machine gateway (sushy binds
-     0.0.0.0). Agent uses the oob gateway (host-driven BMC control only). #}
-{%   set bmc_host = (mp3 ~ '.1') if mode in ['upi', 'ipi'] else ((oob_cidr.split('/')[0].rsplit('.', 1)[0] ~ '.1') if oob_cidr else (mp3 ~ '.1')) %}
+{#   BMC host: always the machine gateway. Cluster nodes have no route to the
+     host-only oob net, and Day-2 metal3 (agent adopt / IPI / UPI) must reach
+     sushy from inside the cluster. sushy binds 0.0.0.0 so host-side BMC control
+     still works via the machine gateway too. #}
+{%   set bmc_host = mp3 ~ '.1' %}
 {#   provisioning interface for IPI Managed: the vlan/bond carrying it #}
 {%   set pn = namespace(dev='') %}
 {%   for b in nic_layout %}
@@ -87,10 +86,15 @@
   machine_cidr: {{ machine_cidr }}
   machine_gateway: {{ mp3 }}.1
   rendezvous_ip: {{ mp3 }}.{{ node_ip_offset }}
-  discovery_iso: {{ playbook_dir }}/../build/discovery_image_{{ c.name }}.iso
+{#   playbook_dir is ansible/lifecycle/*.yml for every real consumer. Offline
+     render_check sets the same. ../../build is the repo build/ directory. #}
+  discovery_iso: {{ playbook_dir }}/../../build/discovery_image_{{ c.name }}.iso
   bmc_host: {{ bmc_host }}
   bmc_user: {{ bmc_username }}
   bmc_pass: {{ bmc_password }}
+{%   if c.upi_install_disk is defined and c.upi_install_disk %}
+  upi_install_disk: {{ c.upi_install_disk }}
+{%   endif %}
 {%   if prov_cidr %}
   provisioning_mode: {{ c.provisioning_network_mode | default(provisioning_network_mode) }}
   provisioning_cidr: {{ prov_cidr }}

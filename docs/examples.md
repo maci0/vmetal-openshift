@@ -211,7 +211,7 @@ platform:
       role: master
       bootMACAddress: 52:54:00:00:00:0a
       bmc:
-        address: redfish-virtualmedia://172.16.0.1:8000/redfish/v1/Systems/00000000-0000-4000-8000-00000000000a
+        address: redfish-virtualmedia://10.0.0.1:8000/redfish/v1/Systems/00000000-0000-4000-8000-00000000000a
         username: admin
         password: REDACTED
         disableCertificateVerification: true
@@ -258,9 +258,10 @@ metadata:
   namespace: openshift-machine-api
 spec:
   online: true
+  externallyProvisioned: true
   bootMACAddress: 52:54:00:00:00:0a
   bmc:
-    address: redfish-virtualmedia://172.16.0.1:8000/redfish/v1/Systems/00000000-0000-4000-8000-00000000000a
+    address: redfish-virtualmedia://10.0.0.1:8000/redfish/v1/Systems/00000000-0000-4000-8000-00000000000a
     credentialsName: prod-node0-bmc-secret
     disableCertificateVerification: true
   rootDeviceHints:

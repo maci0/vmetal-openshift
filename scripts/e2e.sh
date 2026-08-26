@@ -11,30 +11,23 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
 
-URI="${LIBVIRT_URI:-qemu:///system}"
 SUSHY_URL="${SUSHY_URL:-https://localhost:8000}"
-TOPO="$(mktemp /tmp/topology.XXXXXX.json)"
+TOPO=""
 trap 'rm -f "$TOPO"' EXIT
 
-if [[ -x "$ROOT/.venv/bin/ansible-playbook" ]]; then
-  AP="$ROOT/.venv/bin/ansible-playbook"
-else
-  AP="ansible-playbook"
-fi
-
-# Need root for qemu:///system unless the user is in the libvirt group.
-if [[ "$(id -u)" == 0 ]] || id -nG | grep -qw libvirt; then
-  BECOME=(-e use_become=false); SUDO=""; VIRSH=(virsh -c "$URI")
-else
-  BECOME=(); SUDO="sudo"; VIRSH=(sudo virsh -c "$URI")
-fi
+resolve_ansible
+libvirt_become_args
+resolve_virsh
+# setup.yml/cleanup.yml need root for qemu:///system unless we are in libvirt.
+SUDO=""; have_libvirt_access || SUDO="sudo"
 
 ok()   { printf '\033[1;32mok  \033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31mFAIL\033[0m %s\n' "$*" >&2; exit 1; }
 
 # Playbooks must run from ansible/ (ansible.cfg + inventory live there).
-dump()      { ( cd "$ROOT/ansible" && "$AP" lifecycle/dump-topology.yml -e out="$TOPO" >/dev/null ); }
 provision() { ( cd "$ROOT/ansible" && $SUDO "$AP" lifecycle/setup.yml "${BECOME[@]}" ); }
 teardown()  { ( cd "$ROOT/ansible" && $SUDO "$AP" lifecycle/cleanup.yml "${BECOME[@]}" ); }
 
@@ -49,7 +42,7 @@ echo "== offline lint =="
 scripts/lint.sh >/dev/null && ok "lint"
 
 echo "== render topology =="
-dump
+TOPO="$(dump_topology)"
 clusters=$(jq 'length' "$TOPO"); ok "topology rendered ($clusters cluster(s))"
 
 echo "== provision =="

@@ -11,8 +11,8 @@ CLUSTER="${1:-${CLUSTER:-cluster0}}"
 require_cluster_name "$CLUSTER"
 kubeconfig="$ROOT/clusters/$CLUSTER/auth/kubeconfig"
 
-[[ -f "$kubeconfig" ]] || { echo "no kubeconfig for '$CLUSTER' (not installed?)" >&2; exit 1; }
-resolve_oc
+[[ -f "$kubeconfig" ]] || die "no kubeconfig for '$CLUSTER' (not installed?)"
+require_oc
 export KUBECONFIG="$kubeconfig"
 
 echo "== nodes =="

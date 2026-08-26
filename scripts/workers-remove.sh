@@ -13,7 +13,7 @@ CLUSTER="${1:-${CLUSTER:-cluster0}}"
 require_cluster_name "$CLUSTER"
 
 resolve_ansible
-resolve_oc
+require_oc
 command -v jq >/dev/null || die "jq required"
 
 kubeconfig="$ROOT/clusters/$CLUSTER/auth/kubeconfig"

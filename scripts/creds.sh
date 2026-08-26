@@ -12,13 +12,13 @@ CLUSTER="${1:-${CLUSTER:-cluster0}}"
 require_cluster_name "$CLUSTER"
 AUTH="$ROOT/clusters/$CLUSTER/auth"
 
-[[ -f "$AUTH/kubeconfig" ]] || { echo "no kubeconfig for '$CLUSTER' (not installed?)" >&2; exit 1; }
+[[ -f "$AUTH/kubeconfig" ]] || die "no kubeconfig for '$CLUSTER' (not installed?)"
 
 kubeconfig="$AUTH/kubeconfig"
+# The console URL is a bonus: print the rest even with no oc or no API.
 console=""
-# Prefer bootstrapped oc; console lookup is best-effort.
-if OC_CAND="$ROOT/build/openshift-install/oc"; [[ -x "$OC_CAND" ]] || OC_CAND="$(command -v oc || true)"; [[ -n "${OC_CAND:-}" ]]; then
-  console="$(KUBECONFIG="$kubeconfig" "$OC_CAND" -n openshift-console get route console \
+if resolve_oc; then
+  console="$(KUBECONFIG="$kubeconfig" "$OC" -n openshift-console get route console \
              -o jsonpath='{.spec.host}' 2>/dev/null || true)"
 fi
 

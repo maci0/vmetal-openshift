@@ -7,12 +7,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
 
-if [[ -x "$ROOT/.venv/bin/ansible-playbook" ]]; then
-  AP="$ROOT/.venv/bin/ansible-playbook"; PY="$ROOT/.venv/bin/python"
-else
-  AP="ansible-playbook"; PY="python3"
-fi
+resolve_ansible
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

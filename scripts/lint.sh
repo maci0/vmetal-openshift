@@ -3,21 +3,18 @@
 #   * ansible syntax-check (all playbooks)
 #   * yamllint (if available)
 #   * shellcheck (if available)
+#   * ruff + black + mypy over tools/ and tests/ (if uv is installed)
 #   * offline template render + XML validation
 #   * render install/agent configs + YAML parse
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
 
-# Prefer the project venv if present (absolute paths, we cd around).
-if [[ -x "$ROOT/.venv/bin/ansible-playbook" ]]; then
-  AP="$ROOT/.venv/bin/ansible-playbook"
-  PY="$ROOT/.venv/bin/python"
-else
-  AP="ansible-playbook"
-  PY="python3"
-fi
+# Absolute paths: the checks below cd around.
+resolve_ansible
 if [[ -x "$ROOT/.venv/bin/yamllint" ]]; then YAMLLINT="$ROOT/.venv/bin/yamllint"; else YAMLLINT="yamllint"; fi
 if [[ -x "$ROOT/.venv/bin/ansible-lint" ]]; then ANSIBLELINT="$ROOT/.venv/bin/ansible-lint"; else ANSIBLELINT="ansible-lint"; fi
 
@@ -55,6 +52,17 @@ if command -v shellcheck >/dev/null 2>&1; then
   pass "shell clean"
 else
   skip "shellcheck not installed"
+fi
+
+echo "== python (ruff / black / mypy) =="
+if command -v uv >/dev/null 2>&1; then
+  # uvx, not the venv: these are dev gates, not runtime deps of the lab.
+  uvx ruff check tools tests
+  uvx black --check --quiet tools tests
+  uvx --with pyyaml --with jinja2 --with types-PyYAML mypy
+  pass "python clean"
+else
+  skip "uv not installed (https://astral.sh/uv); ruff/black/mypy not run"
 fi
 
 echo "== render + xmllint =="

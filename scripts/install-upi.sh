@@ -31,7 +31,7 @@ IFS=$'\t' read -r MODE PXE BMC_HOST FQDN GW < <(
 ) || true
 mapfile -t ALL_VMS  < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[].fullname' "$topo")
 mapfile -t BOOT_VMS < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[] | select(.role=="bootstrap") | .fullname' "$topo")
-EXPECT="$(jq -r --arg c "$CLUSTER" '[.[] | select(.name==$c) | .nodes[] | select(.role!="bootstrap")] | length' "$topo")"
+mapfile -t JOINERS  < <(jq -r --arg c "$CLUSTER" '.[] | select(.name==$c) | .nodes[] | select(.role!="bootstrap") | .fullname' "$topo")
 rm -f "$topo"
 [[ -n "${FQDN:-}" ]] || die "cluster '$CLUSTER' not found in topology"
 [[ "$MODE" == "upi" ]] || die "cluster '$CLUSTER' is mode=$MODE; use make install (agent) or openshift-install create cluster (ipi)"
@@ -81,8 +81,9 @@ if $MULTINODE; then
     "${VIRSH[@]}" destroy "$vm" >/dev/null 2>&1 || true
     "${VIRSH[@]}" undefine "$vm" --nvram --remove-all-storage >/dev/null 2>&1 || true
   done
-  log "Approving node CSRs in the background (until $EXPECT nodes Ready)"
-  ./scripts/approve-csrs.sh "$CLUSTER" "$EXPECT" 3000 >/tmp/vmetal-csr-approve.log 2>&1 &
+  log "Approving node CSRs in the background (until ${#JOINERS[@]} nodes Ready)"
+  CSR_TIMEOUT=3000 ./scripts/approve-csrs.sh "$CLUSTER" "${JOINERS[@]}" \
+    >"$SCRATCH/csr-approve.log" 2>&1 &
   csr_pid=$!
 fi
 

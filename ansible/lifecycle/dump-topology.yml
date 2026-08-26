@@ -1,6 +1,6 @@
 ---
 # Render the derived topology to JSON for tests / inspection. No libvirt, no root.
-#   ansible-playbook dump-topology.yml -e out=/tmp/topology.json
+#   ansible-playbook dump-topology.yml -e out=../.scratch/topology.json
 - name: Dump derived topology
   hosts: local
   gather_facts: false

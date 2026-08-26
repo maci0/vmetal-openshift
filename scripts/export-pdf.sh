@@ -8,20 +8,23 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib.sh
+source "$ROOT/scripts/lib.sh"
 SRC="${1:-$ROOT/docs/architecture.md}"
 OUT="${2:-${SRC%.md}.pdf}"
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "missing: $1 ($2)" >&2; exit 1; }; }
+need() { command -v "$1" >/dev/null 2>&1 || die "missing: $1 ($2)"; }
 need pandoc "dnf/apt install pandoc"
-MMDC="$(command -v mmdc || echo "npx -y @mermaid-js/mermaid-cli")"
+MMDC="$(command -v mmdc || echo "bunx @mermaid-js/mermaid-cli")"
 CHROME="$(command -v chromium || command -v chromium-browser || command -v google-chrome || true)"
-[[ -n "$CHROME" ]] || { echo "missing: chromium/chrome" >&2; exit 1; }
-[[ -f "$SRC" ]] || { echo "no such file: $SRC" >&2; exit 1; }
+[[ -n "$CHROME" ]] || die "missing: chromium/chrome"
+[[ -f "$SRC" ]] || die "no such file: $SRC"
 
+resolve_python
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 # 1. Render mermaid blocks to PNG and rewrite them as image links.
-MMDC="$MMDC" python3 "$ROOT/tools/render_md_mermaid.py" "$SRC" "$WORK"
+MMDC="$MMDC" "$PY" "$ROOT/tools/render_md_mermaid.py" "$SRC" "$WORK"
 
 # 2. Markdown -> standalone HTML (images inlined).
 cat >"$WORK/style.css" <<'CSS'

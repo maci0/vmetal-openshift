@@ -10,6 +10,9 @@ certs/
 build/
 *.iso
 
+# Scratch: temp files, run logs, staged artifacts
+.scratch/
+
 # Python venv + caches
 .venv/
 __pycache__/

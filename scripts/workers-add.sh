@@ -15,7 +15,7 @@ require_cluster_name "$CLUSTER"
 HTTP_PORT="${HTTP_PORT:-8099}"
 
 resolve_ansible
-resolve_oc
+require_oc
 command -v jq >/dev/null || die "jq required"
 
 # `oc adm node-image create` needs a 4.17+ client.
@@ -57,17 +57,6 @@ ap lifecycle/bmc.yml -e cluster="$CLUSTER" -e bmc_action=boot-iso -e node_set=da
   -e iso_name="node_$CLUSTER.iso" -e iso_base_url="http://127.0.0.1:${HTTP_PORT}" "${BECOME[@]}"
 
 log "Approving CSRs until workers join (Ctrl-C to stop watching)"
-deadline=$(( SECONDS + 2400 ))
-while (( SECONDS < deadline )); do
-  "$OC" get csr --no-headers 2>/dev/null | awk '/Pending/{print $1}' \
-    | xargs -r "$OC" adm certificate approve >/dev/null 2>&1 || true
-  ready=0
-  for w in "${WORKERS[@]}"; do
-    [[ "$("$OC" get node "$w" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" == "True" ]] && ready=$((ready + 1))
-  done
-  log "workers Ready: $ready/${#WORKERS[@]}"
-  [[ "$ready" -eq "${#WORKERS[@]}" ]] && { log "all workers joined"; joined=true; break; }
-  sleep 20
-done
-"$OC" get nodes
-[[ "${joined:-false}" == true ]] || die "timed out after 2400s: only ${ready:-0}/${#WORKERS[@]} workers joined"
+rc=0; ./scripts/approve-csrs.sh "$CLUSTER" "${WORKERS[@]}" || rc=$?
+"$OC" get nodes   # show the node list even on timeout, then propagate the failure
+exit "$rc"

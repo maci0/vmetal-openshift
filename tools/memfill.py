@@ -20,6 +20,7 @@ evict them to zram. The process holds the mapping and sleeps until killed.
 `--comp-frac` is the fraction of each page that is a zero run (the rest is random,
 incompressible): it sets the rough compression ceiling (0.66 -> about 3x).
 """
+
 import argparse
 import ctypes
 import mmap
@@ -32,13 +33,13 @@ PAGE = 4096
 MADV_MERGEABLE = 12  # from <linux/mman.h>; tells KSM this region is a merge candidate
 
 
-def build_template(comp_frac):
+def build_template(comp_frac: float) -> bytes:
     """One page body shared by every page: a zero run then an incompressible tail."""
     zlen = max(8, min(PAGE - 8, int(PAGE * comp_frac)))
     return bytes(zlen) + os.urandom(PAGE - zlen)
 
 
-def madvise_mergeable(mm, length):
+def madvise_mergeable(mm: mmap.mmap, length: int) -> None:
     """Mark the mapping MADV_MERGEABLE so KSM will actually scan it (else it ignores us)."""
     addr = ctypes.addressof(ctypes.c_char.from_buffer(mm))
     libc = ctypes.CDLL("libc.so.6", use_errno=True)
@@ -48,14 +49,14 @@ def madvise_mergeable(mm, length):
         print(f"warning: madvise(MERGEABLE) failed: {os.strerror(err)}", file=sys.stderr)
 
 
-def fill(mm, npages, template):
+def fill(mm: mmap.mmap, npages: int, template: bytes) -> None:
     for p in range(npages):
         base = p * PAGE
-        mm[base:base + PAGE] = template                  # fast memcpy of the shared body
-        mm[base:base + 8] = p.to_bytes(8, "little")      # unique header -> KSM cannot merge
+        mm[base : base + PAGE] = template  # fast memcpy of the shared body
+        mm[base : base + 8] = p.to_bytes(8, "little")  # unique header -> KSM cannot merge
 
 
-def run(mib, comp_frac, seconds):
+def run(mib: int, comp_frac: float, seconds: int) -> None:
     length = mib * 1024 * 1024
     npages = length // PAGE
     mm = mmap.mmap(-1, length, prot=mmap.PROT_READ | mmap.PROT_WRITE)
@@ -69,7 +70,7 @@ def run(mib, comp_frac, seconds):
         time.sleep(seconds)
 
 
-def self_check():
+def self_check() -> None:
     n = 256
     template = build_template(0.66)
     pages = []
@@ -87,7 +88,7 @@ def self_check():
     print(f"self-check OK: {n} unique pages, ~{ratio:.1f}x per-page compressible (zlib proxy)")
 
 
-def main():
+def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--mib", type=int, default=2048)
     ap.add_argument("--comp-frac", type=float, default=0.66)

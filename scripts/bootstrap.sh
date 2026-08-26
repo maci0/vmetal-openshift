@@ -33,14 +33,10 @@ if [[ ! -d .venv || -n "${FORCE:-}" ]]; then
   # and matplotlib (regenerates docs/bench.png). Install with DEV=1.
   dev_deps=(yamllint ansible-lint matplotlib)
   [[ -n "${DEV:-}" ]] && deps+=("${dev_deps[@]}")
-  if command -v uv >/dev/null 2>&1; then
-    uv venv
-    uv pip install --python .venv/bin/python "${deps[@]}"
-  else
-    python3 -m venv .venv
-    ./.venv/bin/pip install --upgrade pip
-    ./.venv/bin/pip install "${deps[@]}"
-  fi
+  command -v uv >/dev/null 2>&1 \
+    || { warn "uv not found; install it: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
+  uv venv
+  uv pip install --python .venv/bin/python "${deps[@]}"
   [[ -z "${DEV:-}" ]] && log "(dev tools skipped; DEV=1 make bootstrap adds yamllint/ansible-lint/matplotlib)"
 else
   log "venv exists, skipping (FORCE=1 to recreate)"

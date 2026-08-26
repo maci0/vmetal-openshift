@@ -56,7 +56,7 @@ LSO on the storage network). Thin-provisioned, but plan real headroom in
 * NetworkManager with the dnsmasq plugin (or systemd-resolved) for split-DNS
 * `nmstate` (provides `nmstatectl`), required to build an agent ISO with static /
   bonded networking; not pip-installable, use the distro/AUR package
-* Python 3 + `uv`/`pip`; `curl`, `jq`, `tar`, `openssl`
+* Python 3 + [`uv`](https://astral.sh/uv); `curl`, `jq`, `tar`, `openssl`
 * `ansible-core` + the `community.libvirt` / `community.general` / `kubernetes.core`
   / `community.docker` collections, with the `libvirt-python` / `kubernetes` /
   `docker` / `lxml` python libs (all installed into the venv by bootstrap)

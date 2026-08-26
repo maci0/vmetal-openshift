@@ -21,7 +21,7 @@ resolve_openshift_install
 
 # Clear stale artifacts from a prior build BEFORE rendering, so old manifests
 # (e.g. openshift/cluster-scheduler-02-config.yml) never leak into a new ISO.
-# Never wipe auth/ — that holds the live kubeconfig after install.
+# Never wipe auth/, which holds the live kubeconfig after install.
 clear_install_artifacts "$CLUSTER_DIR"
 
 log "Rendering install + agent configs"

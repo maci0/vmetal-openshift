@@ -105,7 +105,7 @@ else
 fi
 
 echo "== core tools =="
-for t in curl jq tar openssl python3; do
+for t in curl jq tar openssl python3 uv; do
   if have "$t"; then pass "$t"; else bad "$t missing"; fi
 done
 if have nmstatectl; then pass "nmstatectl ($(nmstatectl --version 2>/dev/null | head -1))"

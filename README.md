@@ -104,7 +104,7 @@ Host packages (the rest is installed into a venv by `make bootstrap`):
   CPU `host-passthrough` so the virt extensions are exposed. Enable on the host:
   `echo 'options kvm_intel nested=1' | sudo tee /etc/modprobe.d/kvm-nested.conf`
   (`kvm_amd` on AMD), then reload the module or reboot
-* **Python 3** + `uv` (or `pip`), and `curl`, `jq`, `tar`, `openssl`
+* **Python 3** + [`uv`](https://astral.sh/uv), and `curl`, `jq`, `tar`, `openssl`
 * a **pull secret** at `pull-secret.json` ([console.redhat.com](https://console.redhat.com/openshift/install/pull-secret))
 * optional: `pandoc` / `mmdc` / `chromium` (docs PDF); `oc` or `kubectl` (`make adopt`)
 
@@ -374,7 +374,7 @@ and KSM gets nothing, run `make bench-zram` (host-side, no cluster). See
 ## 🧪 Tests
 
 ```bash
-make lint            # offline, CI-safe: syntax-check, ansible-lint, yamllint, shellcheck, render, config parse
+make lint            # offline, CI-safe: syntax-check, ansible-lint, yamllint, shellcheck, ruff/black/mypy, render, config parse
 make e2e             # live: provision, assert nets/domains/NIC bonding/DNS/Redfish, teardown
 make bench           # memory/perf matrix: baseline / KSM / zram / KSM+zram
 KEEP=1 scripts/e2e.sh
@@ -397,8 +397,10 @@ ansible/                  see ansible/README.md for the full map
   appliances/             haproxy, nfs, metallb-bgp (host containers, community.docker)
   templates/              topology.yml.j2 + libvirt/ + install/ + sushy/
   tasks/                  preflight, detect_ovmf, validate, container_runtime
-tests/render_check.py     offline template + XML validation
+tests/                    render_check (template + XML), parse_configs, examples_drift
 docs/                     architecture, requirements, ipi-vs-agent, fidelity, disconnected, variables, examples, memory-optimization, virtualization, resilience, cloud, troubleshooting
+pyproject.toml            ruff / black / mypy config for tools/ and tests/
+.scratch/                 temp files and run logs (git-ignored)
 ```
 
 ## 📋 TODO

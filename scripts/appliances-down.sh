@@ -3,7 +3,7 @@
 # day-2 helpers start. Called by `make down` so a teardown leaves nothing running.
 # Best-effort: never fails the teardown. Tries every available runtime so a
 # container started via docker is still removed when podman is preferred (and
-# vice versa) — matches ansible/tasks/container_runtime.yml socket probing.
+# vice versa). Matches ansible/tasks/container_runtime.yml socket probing.
 set -uo pipefail
 
 remove_vmetal() {

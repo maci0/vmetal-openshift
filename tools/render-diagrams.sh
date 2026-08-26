@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Render docs/diagrams/*.mmd to light + dark SVGs for the doc <picture> embeds.
-# Run after editing any .mmd source. Needs mmdc (mermaid-cli) or npx.
+# Run after editing any .mmd source. Needs mmdc (mermaid-cli) or bunx.
 #   make diagrams   (or: tools/render-diagrams.sh)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-MMDC="$(command -v mmdc || echo 'npx -y @mermaid-js/mermaid-cli')"
+MMDC="$(command -v mmdc || echo 'bunx @mermaid-js/mermaid-cli')"
 n=0
 for m in docs/diagrams/*.mmd; do
   base="${m%.mmd}"

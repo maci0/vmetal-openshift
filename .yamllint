@@ -1,7 +1,7 @@
 extends: relaxed
 rules:
   # Derived/aligned lines run long and the network_profile dicts are
-  # column-aligned on purpose — don't flag either.
+  # column-aligned on purpose, so flag neither.
   line-length: disable
   commas: disable
   comments-indentation: disable

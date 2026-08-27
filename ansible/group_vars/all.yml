@@ -135,6 +135,7 @@ metallb_bgp_router_asn: 64513
 metallb_channel: ""
 lvms_channel: ""
 cnv_channel: ""
+mtv_channel: ""
 
 # LVM Storage operator (make lvms): local RWO StorageClass from the workers' spare
 # disks. An optional NFS-Ganesha layer (make nfs) re-exports an LVMS volume as RWX.

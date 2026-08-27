@@ -64,6 +64,7 @@ emulated.
 - 🔀 **Real BGP peering** ([details](#-bgp-peering)): MetalLB speakers peer with an FRR router on the host over eBGP, off-link pool, ECMP multipath (`make metallb-bgp`). Plain L2/ARP too (`make metallb`)
 - 💾 **Storage**: LVM Storage RWO (`make lvms`) + a host **NFS-Ganesha appliance** for RWX (`make nfs`)
 - 🖧 **OpenShift Virtualization** (`make virt`): live migration on a dedicated VLAN ([docs](docs/virtualization.md))
+- 🚚 **Migration Toolkit for Virtualization** (`make mtv`): Forklift operator for importing VMs from vSphere/RHV/OVA ([docs](docs/virtualization.md#migration-toolkit-for-virtualization-mtv))
 - ⚡ **In-cluster BareMetalHost** power management (metal3 → Redfish → libvirt)
 - 📡 **Disconnected**: `make mirror` (TLS registry on the gateway) + a `disconnected: true` switch injects the mirror into install-config ([docs](docs/disconnected.md))
 - 📦 **Multi-cluster**: SNO, compact, dedicated workers, or SNO + day-2 workers (edge)

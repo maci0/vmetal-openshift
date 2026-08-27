@@ -6,6 +6,7 @@
 #   ansible-playbook operators.yml -e op=lvms    -e cluster=cluster0
 #   ansible-playbook operators.yml -e op=virt    -e cluster=cluster0
 #   ansible-playbook operators.yml -e op=metallb -e cluster=cluster0
+#   ansible-playbook operators.yml -e op=mtv     -e cluster=cluster0
 #
 - name: Install a Day-2 operator
   hosts: local
@@ -30,6 +31,13 @@
         crd: hyperconvergeds.hco.kubevirt.io
         crs: [cnv-migration-network.yaml, cnv-hyperconverged.yaml]
         ready: { api_version: hco.kubevirt.io/v1beta1, kind: HyperConverged, namespace: openshift-cnv, name: kubevirt-hyperconverged, condition: Available }
+      mtv:
+        operator: mtv-operator.yaml
+        crd: forkliftcontrollers.forklift.konveyor.io
+        crs: [mtv-forkliftcontroller.yaml]
+        # ForkliftController has no standard Available condition; wait for the
+        # migration controller it deploys.
+        ready_deploy: { namespace: openshift-mtv, name: forklift-controller }
       metallb:
         operator: metallb-operator.yaml
         crd: metallbs.metallb.io
@@ -42,7 +50,7 @@
     - name: Validate op
       ansible.builtin.assert:
         that: op is defined and op in specs
-        fail_msg: "set -e op=<lvms|virt|metallb>"
+        fail_msg: "set -e op=<lvms|virt|metallb|mtv>"
         quiet: true
 
     - name: Select spec

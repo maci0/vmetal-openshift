@@ -28,6 +28,7 @@
 #   make metallb-bgp-down CLUSTER=c     stop the FRR peer + remove BGP config
 #   make lvms CLUSTER=c                 LVM Storage operator -> RWO StorageClass (workers' spare disk)
 #   make virt CLUSTER=c                 OpenShift Virtualization (CNV) operator + HyperConverged
+#   make mtv CLUSTER=c                  Migration Toolkit for Virtualization (needs make virt first)
 #   make nfs CLUSTER=c                  host NFS-Ganesha appliance -> RWX StorageClass
 #   make nfs-down CLUSTER=c             stop the NFS appliance + provisioner
 #   make workers-add CLUSTER=c          add day-2 workers (set day2_workers: N first)
@@ -58,7 +59,7 @@ PY           := $(shell [ -x .venv/bin/python ] && echo $(CURDIR)/.venv/bin/pyth
 
 .DEFAULT_GOAL := help
 .PHONY: check optimize optimize-undo bootstrap install install-upi lab ignition configs iso sushy sushy-install host-dns up down \
-        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-operators mirror-down diagrams pdf clean help
+        serve-iso bmc adopt metallb metallb-bgp metallb-bgp-down workers-add workers-remove lvms nfs nfs-down virt mtv status creds lint e2e bench bench-zram haproxy haproxy-down mirror mirror-operators mirror-down diagrams pdf clean help
 
 help:
 	@grep -E '^#' $(MAKEFILE_LIST)
@@ -165,6 +166,9 @@ lvms:
 
 virt:
 	cd ansible && $(AP) day2/operators.yml -e op=virt -e cluster=$(CLUSTER)
+
+mtv:
+	cd ansible && $(AP) day2/operators.yml -e op=mtv -e cluster=$(CLUSTER)
 
 nfs:
 	cd ansible && $(AP) appliances/nfs.yml -e cluster=$(CLUSTER)

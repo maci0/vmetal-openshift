@@ -1,0 +1,30 @@
+{# Migration Toolkit for Virtualization (MTV): the mtv-operator (Forklift).
+   Day-2; needs OpenShift Virtualization already installed (make virt). #}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-mtv
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: migration
+  namespace: openshift-mtv
+spec:
+  targetNamespaces:
+    - openshift-mtv
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: mtv-operator
+  namespace: openshift-mtv
+spec:
+  source: {{ 'vmetal-operators' if (cluster.disconnected | default(disconnected)) else 'redhat-operators' }}
+  sourceNamespace: openshift-marketplace
+  name: mtv-operator
+{% if mtv_channel | default('') %}
+  channel: {{ mtv_channel }}
+{% endif %}
+  installPlanApproval: Automatic

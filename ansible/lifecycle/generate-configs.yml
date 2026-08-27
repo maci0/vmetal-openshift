@@ -22,6 +22,8 @@
       - cnv-operator.yaml.j2
       - cnv-migration-network.yaml.j2
       - cnv-hyperconverged.yaml.j2
+      - mtv-operator.yaml.j2
+      - mtv-forkliftcontroller.yaml.j2
 
   tasks:
     - name: Validate cluster definitions

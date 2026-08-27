@@ -21,7 +21,7 @@ playbooks, grouped (run from this dir, e.g. ansible-playbook lifecycle/setup.yml
     host-dns.yml         point the host resolver at each cluster domain
     dump-topology.yml    render the derived topology to JSON (test oracle)
   day2/                post-install cluster + host changes:
-    operators.yml        day-2 operator install (op=lvms|virt|metallb, kubernetes.core)
+    operators.yml        day-2 operator install (op=lvms|virt|mtv|metallb, kubernetes.core)
     adopt.yml            in-cluster BMH adoption (metal3 power mgmt, kubernetes.core)
     optimize.yml         host memory tuning: KSM + zram + hook (mode=apply|undo, become)
   appliances/          host-side containers (community.docker):

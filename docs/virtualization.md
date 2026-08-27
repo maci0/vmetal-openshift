@@ -259,3 +259,40 @@ oc -n vmtest get vmi testvm -o jsonpath='{.status.phase} {.status.nodeName}{"\n"
 Validated on the 3 + 2 cluster: the VM live-migrated worker-to-worker, phase stayed
 `Running` (zero downtime), with the RWX disk on the host NFS appliance. See
 [resilience](resilience.md) for draining a node (VMs migrate off automatically).
+
+## Migration Toolkit for Virtualization (MTV)
+
+Forklift: imports VMs from VMware vSphere, oVirt/RHV, OpenStack, OVA, or another
+OpenShift cluster into CNV. Needs CNV installed first.
+
+```bash
+make virt CLUSTER=cluster0    # prerequisite
+make mtv CLUSTER=cluster0     # mtv-operator + ForkliftController
+```
+
+**What `make mtv` runs** (`operators.yml -e op=mtv`; manifests from `make configs`):
+
+```bash
+oc apply -f clusters/cluster0/mtv-operator.yaml           # namespace + OperatorGroup + Subscription
+oc get crd forkliftcontrollers.forklift.konveyor.io       # wait until present
+oc apply -f clusters/cluster0/mtv-forkliftcontroller.yaml # ForkliftController CR
+oc -n openshift-mtv rollout status deploy/forklift-controller
+```
+
+The CR turns on the console plugin, the validation service, the disk conversion
+(virt-v2v) path, and the volume populator. `mtv_channel` pins a subscription
+channel; empty uses the catalog's default. Disconnected clusters get the mirrored
+`vmetal-operators` CatalogSource automatically, same as the other Day-2 operators
+(`make mirror-operators`).
+
+Check it landed:
+
+```bash
+oc -n openshift-mtv get pods
+oc get providers -A     # the `host` provider (this cluster) should be Ready/Connected
+```
+
+Adding a source provider (vSphere, oVirt, OVA...) and running a Plan is done from
+the **Migration** section of the console, or by applying `Provider`, `NetworkMap`,
+`StorageMap`, and `Plan` CRs. The lab ships no source hypervisor, so migrations
+need one you point at yourself.

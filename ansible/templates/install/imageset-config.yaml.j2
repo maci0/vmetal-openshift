@@ -23,3 +23,8 @@ mirror:
           channels:
             - name: {{ cnv_channel }}
 {% endif %}
+        - name: mtv-operator
+{% if mtv_channel | default('') %}
+          channels:
+            - name: {{ mtv_channel }}
+{% endif %}

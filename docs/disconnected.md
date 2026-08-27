@@ -138,13 +138,13 @@ mirrors with `oc-mirror` (v2):
 1. Set `disconnected: true` on the cluster and `ocp_minor: "4.22"` (your release's
    minor) in `group_vars/all.yml`, then `make configs`. This renders, per cluster:
    * `imageset-config.yaml` (the `ImageSetConfiguration`: the operator index +
-     the lvms / metallb / kubevirt-hyperconverged packages), and
+     the lvms / metallb / kubevirt-hyperconverged / mtv packages), and
    * `operator-catalog.yaml` (a `CatalogSource` named `vmetal-operators` backed by
      the mirrored index, plus an `ImageDigestMirrorSet` redirecting the Red Hat
      operator registries to the host mirror).
 2. `make mirror CLUSTER=c` then `make mirror-operators CLUSTER=c` populate the host
    registry (release, then operators via oc-mirror). Both are large/slow.
-3. `oc apply -f clusters/c/operator-catalog.yaml` (or just `make lvms/metallb/virt`,
+3. `oc apply -f clusters/c/operator-catalog.yaml` (or just `make lvms/metallb/virt/mtv`,
    which applies it automatically when disconnected). The operator subscriptions
    then resolve `source: vmetal-operators` instead of `redhat-operators`.
 
